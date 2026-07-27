@@ -54,11 +54,10 @@ public class TrackingList<T> : IList<T>
 
     public void Add(T item)
     {
-        if (_set.Contains(item))
+        if (!_set.Add(item))
             throw new ArgumentException("Item already exists in list");
 
         _list.Add(item);
-        _set.Add(item);
     }
 
     public void Clear()

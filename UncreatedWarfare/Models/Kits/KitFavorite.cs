@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
@@ -23,6 +24,10 @@ public class KitFavorite
     [ForeignKey(nameof(PlayerData))]
     [Column("Steam64")]
     public ulong Steam64 { get; set; }
+
+    [Required]
+    [Column("DateFavoritedUTC")]
+    public DateTime DateFavorited { get; set; }
 
     [Required, JsonIgnore]
     public WarfareUserData PlayerData { get; set; }

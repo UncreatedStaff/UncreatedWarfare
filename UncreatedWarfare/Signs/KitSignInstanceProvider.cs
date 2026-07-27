@@ -7,6 +7,7 @@ using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Loadouts;
 using Uncreated.Warfare.Kits.Requests;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Cooldowns;
@@ -344,8 +345,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
     private void TranslateFavoriteSign(StringBuilder bldr, int favoriteIndex, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
     {
         KitPlayerComponent? kitPlayerComponent = player?.Component<KitPlayerComponent>();
-
-        Kit? kit = kitPlayerComponent?.Favorites.ElementAtOrDefault(favoriteIndex);
+        Kit? kit = kitPlayerComponent?.GetFavoriteAtIndex(favoriteIndex);
 
         if (kit == null)
         {
@@ -387,7 +387,6 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
 
         KitSignBuffer.Append("</color>");
     }
-
 
     void IKitRequirementVisitor<StringBuilder>.AcceptGenericRequirementNotMet(in KitRequirementResolutionContext<StringBuilder> ctx, string message)
     {

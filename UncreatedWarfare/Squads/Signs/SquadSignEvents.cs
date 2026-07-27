@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;

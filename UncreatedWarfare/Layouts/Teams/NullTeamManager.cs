@@ -17,6 +17,9 @@ public class NullTeamManager : ITeamManager<Team>
     public IReadOnlyList<uint> Factions => Array.Empty<uint>();
 
     /// <inheritdoc />
+    public bool HasFaction(uint factionId) => false;
+
+    /// <inheritdoc />
     public Team? FindTeam(string? teamSearch) => null;
 
     /// <inheritdoc />

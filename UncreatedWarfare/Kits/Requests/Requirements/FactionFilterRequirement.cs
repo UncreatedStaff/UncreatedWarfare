@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Kits.Requests.Requirements;
@@ -9,7 +10,7 @@ namespace Uncreated.Warfare.Kits.Requests.Requirements;
 /// </summary>
 public sealed class FactionFilterRequirement : IKitRequirement
 {
-    private static bool IsCurrentFactionAllowed(Kit kit, Team team)
+    internal static bool IsCurrentFactionAllowed(Kit kit, Team team)
     {
         if (!kit.Faction.IsDefaultFaction)
         {
@@ -20,13 +21,24 @@ public sealed class FactionFilterRequirement : IKitRequirement
         if (kit.FactionFilter.IsNullOrEmpty())
             return true;
 
-        for (int i = 0; i < kit.FactionFilter.Length; ++i)
+        if (!kit.FactionFilterIsWhitelist)
         {
-            if (kit.FactionFilter[i].Equals(team.Faction))
-                return kit.FactionFilterIsWhitelist;
+            foreach (FactionInfo blacklistedFaction in kit.FactionFilter)
+            {
+                if (team.IsFriendly(blacklistedFaction.PrimaryKey))
+                    return false;
+            }
+        }
+        else
+        {
+            foreach (FactionInfo whitelistedFaction in kit.FactionFilter)
+            {
+                if (team.IsOpponent(whitelistedFaction.PrimaryKey))
+                    return false;
+            }
         }
 
-        return !kit.FactionFilterIsWhitelist;
+        return true;
     }
 
     public KitRequirementResult AcceptCached<TState>(IKitRequirementVisitor<TState> visitor, in KitRequirementResolutionContext<TState> ctx)

@@ -2,15 +2,17 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Uncreated.Warfare.Database;
 
 namespace Uncreated.Warfare.Migrations
 {
     [DbContext(typeof(WarfareDbContext))]
-    partial class WarfareDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260727012928_AddKitFavoriteTimestamp")]
+    partial class AddKitFavoriteTimestamp
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -447,11 +449,11 @@ namespace Uncreated.Warfare.Migrations
                         .HasColumnType("bigint unsigned")
                         .HasColumnName("Steam64");
 
-                    b.Property<DateTime>("DateFavorited")
+                    b.Property<DateTime?>("DateFavorited")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime(6)")
                         .HasColumnName("DateFavoritedUTC")
-                        .HasDefaultValueSql("'2026-07-27 00:00:00'");
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.HasKey("KitId", "Steam64");
 

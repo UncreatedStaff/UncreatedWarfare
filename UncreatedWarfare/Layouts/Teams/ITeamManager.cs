@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using System;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Layouts.Teams;
@@ -19,6 +20,11 @@ public interface ITeamManager<out TTeam> where TTeam : Team
     /// Array of all active factions without duplicates, used for kit queries.
     /// </summary>
     IReadOnlyList<uint> Factions { get; }
+
+    /// <summary>
+    /// Gets whether or not a faciton on a team in the current layout.
+    /// </summary>
+    bool HasFaction(uint factionId);
 
     /// <summary>
     /// Find a team from a string value, such as from config.
@@ -72,4 +78,16 @@ public interface ITeamManager<out TTeam> where TTeam : Team
     /// <remarks>The player may not have joined the server yet.</remarks>
     /// <returns>The spawn position as a <see cref="Vector4"/>, where <see cref="Vector4.w"/> is yaw rotation.</returns>
     Vector4? GetSpawnPointWhenRespawningAtMain(IPlayer player, Team team, ZoneStore globalZoneStore);
+}
+
+/// <summary>
+/// Extensions for <see cref="ITeamManager{TTeam}"/>.
+/// </summary>
+public static class TeamManagerExtensions
+{
+    /// <inheritdoc cref="ITeamManager{TTeam}.HasFaction"/>
+    public static bool HasFaction(this ITeamManager<Team> teamManager, FactionInfo faction)
+    {
+        return !faction.IsDefaultFaction && teamManager.HasFaction(faction.PrimaryKey);
+    }
 }

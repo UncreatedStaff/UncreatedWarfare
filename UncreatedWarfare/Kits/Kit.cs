@@ -151,6 +151,10 @@ public class Kit : IRequestable<Kit>, ITranslationArgument
     /// <summary>
     /// If the faction filter acts as a whitelist instead of a blacklist.
     /// </summary>
+    /// <remarks>
+    /// A whitelist only applies if that team is an opponent.
+    /// For example, if USA is on a USMC kit's whitelist, any team can use it unless USA is one of their opponents.
+    /// </remarks>
     public bool FactionFilterIsWhitelist { get; private set; }
 
     /// <summary>

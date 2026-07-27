@@ -117,7 +117,8 @@ public partial class MySqlKitFavoriteService : IKitFavoriteService, IDisposable
                 KitFavorite favorite = new KitFavorite
                 {
                     KitId = kitPrimaryKey,
-                    Steam64 = player.m_SteamID
+                    Steam64 = player.m_SteamID,
+                    DateFavorited = DateTime.UtcNow
                 };
                 
                 _dbContext.KitFavorites.Add(favorite);
@@ -195,6 +196,7 @@ public partial class MySqlKitFavoriteService : IKitFavoriteService, IDisposable
             }
 
             _kitSignService.UpdateSigns(value, onlinePlayer);
+            _kitSignService.UpdateFavoriteSigns(onlinePlayer);
         }
 
         try

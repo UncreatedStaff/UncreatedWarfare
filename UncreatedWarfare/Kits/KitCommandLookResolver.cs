@@ -76,12 +76,31 @@ public class KitCommandLookResolver
         return new KitCommandLookResult(kit, argIndex + requiredExtraArguments, argIndex, isSign);
     }
 
-    private async Task<Kit?> GetSignTarget(WarfarePlayer player, BarricadeDrop sign, KitInclude include, CancellationToken token)
+    public async Task<Kit?> GetSignTarget(WarfarePlayer player, BarricadeDrop sign, KitInclude include, CancellationToken token)
     {
         await UniTask.SwitchToMainThread();
 
         if (_signInstancer.GetSignProvider(sign) is not KitSignInstanceProvider kitSign)
             return null;
+
+        return await GetSignTarget(player, kitSign, include, token);
+    }
+
+    public async Task<Kit?> GetSignTarget(WarfarePlayer player, KitSignInstanceProvider kitSign, KitInclude include, CancellationToken token)
+    {
+        await UniTask.SwitchToMainThread();
+
+        if (kitSign.FavoriteIndex >= 0)
+        {
+            Kit? kit = player.Component<KitPlayerComponent>().GetFavoriteAtIndex(kitSign.FavoriteIndex);
+            if (kit == null)
+                return null;
+
+            if ((include | KitInclude.Cached) == KitInclude.Cached)
+                return kit;
+
+            return await _kitDataStore.QueryKitAsync(kit.Key, include, token).ConfigureAwait(false);
+        }
 
         if (kitSign.LoadoutNumber >= 0)
         {

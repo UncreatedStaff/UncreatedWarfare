@@ -87,6 +87,17 @@ public class TwoSidedTeamManager : ITeamManager<Team>
         Factions = Array.Empty<uint>();
     }
 
+    public bool HasFaction(uint faction)
+    {
+        foreach (Team team in _teams)
+        {
+            if (team.Faction.PrimaryKey == faction)
+                return true;
+        }
+
+        return false;
+    }
+
     /// <inheritdoc />
     public Team GetTeam(CSteamID groupId)
     {

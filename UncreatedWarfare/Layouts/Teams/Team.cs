@@ -119,6 +119,22 @@ public class Team : IEquatable<Team>
         return false;
     }
 
+    public virtual bool IsOpponent(uint factionId)
+    {
+        if (Faction.PrimaryKey == factionId || _opponents == null)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < _opponents.Count; ++i)
+        {
+            if (_opponents[i].Faction.PrimaryKey == factionId)
+                return true;
+        }
+
+        return false;
+    }
+
     public virtual bool IsFriendly(Team other)
     {
         return other.Equals(this);
@@ -127,6 +143,11 @@ public class Team : IEquatable<Team>
     public virtual bool IsFriendly(CSteamID otherGroupId)
     {
         return otherGroupId.m_SteamID == GroupId.m_SteamID;
+    }
+
+    public virtual bool IsFriendly(uint factionId)
+    {
+        return factionId == Faction.PrimaryKey;
     }
 
     public virtual bool Equals(Team? other)

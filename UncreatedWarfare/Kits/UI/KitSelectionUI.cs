@@ -89,6 +89,8 @@ public sealed partial class KitSelectionUI : UnturnedUI,
 
     public const string CooldownKitRequestInField = "RequestKitInField";
 
+    private const KitInclude KitIncludeFavoritesList = KitInclude.Default | KitInclude.Items | KitInclude.FactionFilter | KitInclude.MapFilter;
+
     // maps AttachmentType -> UI array index
     private readonly int[] _attachmentMap =
     [
@@ -553,8 +555,15 @@ public sealed partial class KitSelectionUI : UnturnedUI,
                 if (kit == null)
                     return;
 
-                Kit[] favoriteKits = await GetFavoriteKits(player, player.DisconnectToken).ConfigureAwait(false);
+                Kit[] favoriteKits = await _kitDataStore.QueryFavoriteKits(
+                    player.Steam64.m_SteamID,
+                    _teamManager,
+                    KitIncludeFavoritesList,
+                    player.DisconnectToken
+                ).ConfigureAwait(false);
+
                 await UniTask.SwitchToMainThread();
+                
                 if (!player.IsOnline || !data.HasUI)
                     return;
 
@@ -871,7 +880,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
                 .ConfigureAwait(false);
         }
 
-        Kit[] favoriteKits = await GetFavoriteKits(player, token).ConfigureAwait(false);
+        Kit[] favoriteKits = await _kitDataStore.QueryFavoriteKits(player.Steam64.m_SteamID, _teamManager, KitIncludeFavoritesList, token).ConfigureAwait(false);
 
         await UniTask.SwitchToMainThread(token);
 
@@ -1054,51 +1063,38 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         }
     }
 
-    private Task<Kit[]> GetFavoriteKits(WarfarePlayer player, CancellationToken token)
-    {
-        ulong s64 = player.Steam64.m_SteamID;
-        IReadOnlyList<uint> factions = _teamManager.Factions;
-        return _kitDataStore.QueryKitsAsync(
-            KitInclude.Default | KitInclude.Items,
-            q => q
-                .Where(k => k.Favorites.Any(f => f.Steam64 == s64) && (k.Type != KitType.Public || (!k.Disabled && k.Faction != null && factions.Contains(k.Faction.Key) && k.Season >= WarfareModule.Season)))
-                .Take(_favoriteKits.Length),
-            token: token
-        );
-    }
-
     private void UpdateFavoriteList(WarfarePlayer player, KitSelectionUIData data, Kit[] kits, bool fromDefaults)
     {
         ITransportConnection c = player.Connection;
 
-        int i = 0;
-        int ct = Math.Min(kits.Length, _favoriteKits.Length);
-        if (ct == 0)
+        int uiIndex = 0;
+        for (int i = 0; i < kits.Length; ++i)
         {
-            if (!fromDefaults)
-                _favoritesLabel.Hide(player);
-        }
-        else
-        {
-            _favoritesLabel.Show(player);
-        }
+            Kit kit = kits[i];
+            if (!KitDataStoreExtensions.IsKitEligableForFavorite(kit, data.Team ?? Team.NoTeam, _teamManager))
+                continue;
 
-        for (; i < ct; ++i)
-        {
-            SendFavoriteKit(i, kits[i], player, data, fromDefaults);
+            if (uiIndex == 0)
+                _favoritesLabel.Show(player);
+            
+            SendFavoriteKit(uiIndex, kit, player, data, fromDefaults);
+            ++uiIndex;
         }
 
         if (fromDefaults)
             return;
 
-        for (; i < _favoriteKits.Length; ++i)
+        if (uiIndex == 0)
+            _favoritesLabel.Hide(player);
+
+        for (; uiIndex < _favoriteKits.Length; ++uiIndex)
         {
-            ref FavoriteKitCacheInformation fav = ref data.FavoriteKitsCache[i];
+            ref FavoriteKitCacheInformation fav = ref data.FavoriteKitsCache[uiIndex];
             if (fav.Kit == null)
                 continue;
 
             fav.Kit = null;
-            _favoriteKits[i].Root.Hide(c);
+            _favoriteKits[uiIndex].Root.Hide(c);
         }
     }
 

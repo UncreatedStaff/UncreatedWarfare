@@ -26,7 +26,7 @@ internal sealed class ServerPrefabUtilRemoveClientComponentsFix : IHarmonyPatch
         }
 
         logger.LogError("Failed to find method: {0}.",
-            new MethodDefinition("explode")
+            new MethodDefinition("RemoveClientComponents")
                 .DeclaredIn("ServerPrefabUtil", isStatic: true)
                 .WithParameter<GameObject>("gameObject")
                 .WithParameter<Asset>("context")

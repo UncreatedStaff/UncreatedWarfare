@@ -104,6 +104,25 @@ public class KitSignService :
     }
 
     /// <summary>
+    /// Update all favorite signs.
+    /// </summary>
+    /// <remarks>Thread Safe</remarks>
+    public void UpdateFavoriteSigns(WarfarePlayer player)
+    {
+        if (GameThread.IsCurrent)
+            UpdateFavoriteSignsIntl(player);
+        else
+        {
+            WarfarePlayer p2 = player;
+            UniTask.Create(async () =>
+            {
+                await UniTask.SwitchToMainThread();
+                UpdateFavoriteSignsIntl(p2);
+            });
+        }
+    }
+
+    /// <summary>
     /// Update all signs for a specific <paramref name="kit"/>.
     /// </summary>
     /// <remarks>Thread Safe</remarks>
@@ -211,6 +230,15 @@ public class KitSignService :
         {
             _signs.UpdateSigns<KitSignInstanceProvider>(player, (_, provider) => provider.LoadoutNumber >= 0);
         }
+    }
+
+    private void UpdateFavoriteSignsIntl(WarfarePlayer player)
+    {
+        if (!player.IsOnline)
+            return;
+
+        // expects game thread
+        _signs.UpdateSigns<KitSignInstanceProvider>(player, (_, provider) => provider.FavoriteIndex >= 0);
     }
 
     private void UpdateSignsIntl(Kit kit, WarfarePlayer? player)

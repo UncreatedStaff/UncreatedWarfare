@@ -3,13 +3,12 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Xml.Schema;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Kits.Loadouts;
 using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Util.List;
 
 namespace Uncreated.Warfare.Kits;
 
@@ -17,7 +16,7 @@ namespace Uncreated.Warfare.Kits;
 public class KitPlayerComponent : IPlayerComponent
 {
     private readonly HashSet<uint> _accessibleKits = new HashSet<uint>(16);
-    private readonly HashSet<uint> _favoritedKits = new HashSet<uint>(16);
+    private readonly TrackingList<uint> _favoritedKits = new TrackingList<uint>(16);
     private IDictionary<uint, BasicKitStats>? _cachedKitStats;
 
 #nullable disable
@@ -79,18 +78,12 @@ public class KitPlayerComponent : IPlayerComponent
     /// </summary>
     public IReadOnlyList<Kit> Loadouts { get; private set; } = Array.Empty<Kit>();
 
-    /// <summary>
-    /// Ordered list of all favorites including the <see cref="KitInclude.Cached"/> include level.
-    /// </summary>
-    public IReadOnlyList<Kit> Favorites { get; private set; } = Array.Empty<Kit>();
-
     void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
         _kitDataStore = serviceProvider.GetRequiredService<IKitDataStore>();
         _kitSignService = serviceProvider.GetRequiredService<KitSignService>();
         _loadoutService = serviceProvider.GetRequiredService<LoadoutService>();
         _kitStatService = serviceProvider.GetRequiredService<IKitStatisticService>();
-
         _teamManager = serviceProvider.GetRequiredService<ITeamManager<Team>>();
     }
 
@@ -194,23 +187,10 @@ public class KitPlayerComponent : IPlayerComponent
 
         List<uint> favorites = await favoritesTask.ConfigureAwait(false);
 
-        IReadOnlyList<uint> factions = _teamManager.Factions;
-        Task<Kit[]> favs = _kitDataStore.QueryKitsAsync(
-            KitInclude.Cached,
-            m => m.AsQueryable().Where(
-                k => k.Favorites.Any(f => f.Steam64 == s64)
-                     && (k.Type != KitType.Public
-                         || (!k.Disabled && k.Faction != null && factions.Contains(k.Faction.Key) && k.Season >= WarfareModule.Season))
-                ),
-            token: token
-        );
-
         List<uint> access = await dbContext.KitAccess
             .Where(x => x.Steam64 == s64)
             .Select(x => x.KitId)
             .ToListAsync(token).ConfigureAwait(false);
-
-        Kit[] favoriteKits = await favs;
 
         IDictionary<uint, BasicKitStats> cachedKitStats = await statsTask.ConfigureAwait(false);
 
@@ -219,7 +199,6 @@ public class KitPlayerComponent : IPlayerComponent
         _cachedKitStats = cachedKitStats;
 
         UpdateLoadouts(loadouts);
-        UpdateFavorites(favoriteKits);
 
         lock (_accessibleKits)
         {
@@ -274,11 +253,53 @@ public class KitPlayerComponent : IPlayerComponent
         _kitSignService?.UpdateLoadoutSigns(Player);
     }
 
-    private void UpdateFavorites(Kit[] kits)
+    internal Kit? GetFavoriteAtIndex(int index, Team? team = null)
     {
-        Favorites = new ReadOnlyCollection<Kit>(kits);
+        team ??= Player.Team;
+
+        if (index < 0)
+            throw new ArgumentOutOfRangeException(nameof(index));
+
+        using FavoritesEnumerator enumerator = EnumerateFavorites();
+        while (enumerator.MoveNext())
+        {
+            uint kitId = enumerator.Current;
+            if (!_kitDataStore.CachedKitsByKey.TryGetValue(kitId, out Kit cachedKit))
+            {
+                continue;
+            }
+
+            if (!KitDataStoreExtensions.IsKitEligableForFavorite(cachedKit, team, _teamManager))
+            {
+                continue;
+            }
+
+            if (index <= 0)
+                return cachedKit;
+
+            --index;
+        }
+
+        return null;
     }
 
+    [MustDisposeResource]
+    public FavoritesEnumerator EnumerateFavorites()
+    {
+        bool hasLock = false;
+        try
+        {
+            Monitor.Enter(_favoritedKits, ref hasLock);
+            return new FavoritesEnumerator(_favoritedKits);
+        }
+        catch
+        {
+            if (hasLock)
+                Monitor.Exit(_favoritedKits);
+            
+            throw;
+        }
+    }
 
     internal void UpdateLoadout(Kit loadout)
     {
@@ -380,7 +401,11 @@ public class KitPlayerComponent : IPlayerComponent
     {
         lock (_favoritedKits)
         {
-            return _favoritedKits.Add(kitPk);
+            if (_favoritedKits.Contains(kitPk))
+                return false;
+
+            _favoritedKits.Insert(0, kitPk);
+            return true;
         }
     }
 
@@ -389,6 +414,16 @@ public class KitPlayerComponent : IPlayerComponent
         lock (_favoritedKits)
         {
             return _favoritedKits.Remove(kitPk);
+        }
+    }
+
+    internal void LoadFavoriteKits(IEnumerable<uint> kits)
+    {
+        lock (_favoritedKits)
+        {
+            _favoritedKits.Clear();
+            foreach (uint k in kits)
+                _favoritedKits.Add(k);
         }
     }
 
@@ -437,5 +472,53 @@ public class KitPlayerComponent : IPlayerComponent
 
             return aParse.CompareTo(bParse);
         }
+    }
+
+    public struct FavoritesEnumerator : IEnumerator<uint>
+    {
+        private TrackingList<uint>? _list;
+        private List<uint>.Enumerator _enumerator;
+
+        public uint Current { get; private set; }
+
+        public FavoritesEnumerator(TrackingList<uint> list)
+        {
+            _list = list;
+            // ReSharper disable once GenericEnumeratorNotDisposed
+            _enumerator = list.GetEnumerator();
+        }
+
+        public bool MoveNext()
+        {
+            if (!_enumerator.MoveNext())
+            {
+                return false;
+            }
+
+            Current = _enumerator.Current;
+            return true;
+        }
+
+        public void Reset()
+        {
+            if (_list == null)
+                throw new ObjectDisposedException(nameof(FavoritesEnumerator));
+
+            _enumerator.Dispose();
+            _enumerator = _list.GetEnumerator();
+            Current = 0;
+        }
+
+        public void Dispose()
+        {
+            _enumerator.Dispose();
+            object? list = Interlocked.Exchange(ref _list, null);
+            if (list != null)
+            {
+                Monitor.Exit(list);
+            }
+        }
+
+        object IEnumerator.Current => Current;
     }
 }

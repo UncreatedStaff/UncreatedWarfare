@@ -42,7 +42,6 @@ public class PlayerService : IPlayerService
     private WarfarePlayer[] _threadsafeList;
     private readonly TrackingList<WarfarePlayer> _onlinePlayers;
     private readonly PlayerDictionary<WarfarePlayer> _onlinePlayersDictionary;
-    private readonly WarfareModule _warfare;
 
     // makes sure only one player is ever joining at once.
     internal readonly SemaphoreSlim PlayerJoinLock = new SemaphoreSlim(0, 1);
@@ -67,23 +66,21 @@ public class PlayerService : IPlayerService
 
     private readonly ILoggerFactory _loggerFactory; 
     private readonly IServiceProvider _serviceProvider;
-    private readonly ILifetimeScope _container;
+    private readonly WarfareModule _module;
     private IUserDataService? _userDataService;
     private readonly ReadOnlyTrackingList<WarfarePlayer> _readOnlyOnlinePlayers;
 
-    public PlayerService(ILoggerFactory loggerFactory, ILifetimeScope lifetimeScope)
+    public PlayerService(ILoggerFactory loggerFactory, WarfareModule module)
     {
-        _container = lifetimeScope;
-        _serviceProvider = lifetimeScope.Resolve<IServiceProvider>();
+        _module = module;
+        _serviceProvider = _module.ServiceProvider.Resolve<IServiceProvider>();
         _onlinePlayers = new TrackingList<WarfarePlayer>();
         _threadsafeList = Array.Empty<WarfarePlayer>();
         _onlinePlayersDictionary = new PlayerDictionary<WarfarePlayer>(64);
         _readOnlyOnlinePlayers = _onlinePlayers.AsReadOnly();
         _loggerFactory = loggerFactory;
 
-        _warfare = lifetimeScope.Resolve<WarfareModule>();
-
-        List<Type> allTypes = Accessor.GetTypesSafe(lifetimeScope.Resolve<WarfarePluginLoader>().AllAssemblies);
+        List<Type> allTypes = Accessor.GetTypesSafe(_module.ServiceProvider.Resolve<WarfarePluginLoader>().AllAssemblies);
 
         PlayerComponents = allTypes.Where(x => !x.IsIgnored() && !x.IsDefinedSafe<CompilerGeneratedAttribute>() && !x.IsAbstract && typeof(IPlayerComponent).IsAssignableFrom(x) && x.IsDefinedSafe<PlayerComponentAttribute>()).ToArray();
         PlayerTasks = allTypes.Where(x => !x.IsIgnored() && !x.IsDefinedSafe<CompilerGeneratedAttribute>() && !x.IsAbstract && typeof(IPlayerPendingTask).IsAssignableFrom(x) && x.IsDefinedSafe<PlayerTaskAttribute>()).ToArray();
@@ -95,7 +92,7 @@ public class PlayerService : IPlayerService
         if (GetOnlinePlayerOrNullThreadSafe(steam64.m_SteamID) is { } pl)
             return pl;
 
-        PlayerNames names = await (_userDataService ??= _container.Resolve<IUserDataService>())
+        PlayerNames names = await (_userDataService ??= _module.ServiceProvider.Resolve<IUserDataService>())
             .GetUsernamesAsync(steam64.m_SteamID, token)
             .ConfigureAwait(false);
 
@@ -127,7 +124,7 @@ public class PlayerService : IPlayerService
 
     internal void ReinitializeScopedPlayerComponentServices()
     {
-        IServiceProvider serviceProvider = _warfare.ScopedProvider.Resolve<IServiceProvider>();
+        IServiceProvider serviceProvider = _module.ScopedProvider.Resolve<IServiceProvider>();
         foreach (WarfarePlayer player in OnlinePlayers)
         {
             foreach (IPlayerComponent component in player.Components)
@@ -175,7 +172,7 @@ public class PlayerService : IPlayerService
 
     internal void FinishConnectingPlayer(WarfarePlayer player)
     {
-        IServiceProvider serviceProvider = _warfare.ScopedProvider.Resolve<IServiceProvider>();
+        IServiceProvider serviceProvider = _module.ScopedProvider.Resolve<IServiceProvider>();
 
         // copy so components dont mess with it
         PlayerEventSubscription[] subs = _eventSubscriptions.ToArray();
@@ -277,7 +274,10 @@ public class PlayerService : IPlayerService
 
     internal PlayerTaskData StartPendingPlayerTasks(PlayerPending args, CancellationTokenSource src, CancellationToken token)
     {
-        ILifetimeScope scope = _container.BeginLifetimeScope();
+        ILifetimeScope scope = _module.IsLayoutActive()
+            ? _module.ScopedProvider.BeginLifetimeScope()
+            : _module.ServiceProvider.BeginLifetimeScope();
+
         IServiceProvider sp = scope.Resolve<IServiceProvider>();
 
         IPlayerPendingTask[] playerTasks = new IPlayerPendingTask[PlayerTasks.Length];

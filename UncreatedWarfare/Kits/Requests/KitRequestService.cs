@@ -49,6 +49,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
     private readonly IKitsDbContext _kitDbContext;
     private readonly IKitItemResolver _kitItemResolver;
     private readonly IPlayerService _playerService;
+    private readonly KitCommandLookResolver _lookResolver;
     private readonly EventDispatcher _eventDispatcher;
     private readonly DroppedItemTracker _droppedItemTracker;
     private readonly AssetRedirectService _assetRedirectService;
@@ -79,6 +80,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         IKitsDbContext kitDbContext,
         IKitItemResolver kitItemResolver,
         IPlayerService playerService,
+        KitCommandLookResolver lookResolver,
         EventDispatcher eventDispatcher,
         DroppedItemTracker droppedItemTracker,
         AssetRedirectService assetRedirectService,
@@ -99,6 +101,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         _kitDbContext = kitDbContext;
         _kitItemResolver = kitItemResolver;
         _playerService = playerService;
+        _lookResolver = lookResolver;
         _kitDbContext.ChangeTracker.AutoDetectChangesEnabled = false;
         _eventDispatcher = eventDispatcher;
         _droppedItemTracker = droppedItemTracker;
@@ -233,14 +236,8 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
             return false;
         }
 
-        if (sign.LoadoutNumber < 0)
-        {
-            Kit? foundKit = await _kitDataStore.QueryKitAsync(sign.KitId, KitInclude.Verifiable | KitInclude.Giveable, token).ConfigureAwait(false);
-            return await RequestAsync(player, foundKit, resultHandler, token).ConfigureAwait(false);
-        }
-
-        Kit? loadout = await _loadoutService.GetLoadoutFromNumber(player.Steam64, sign.LoadoutNumber, KitInclude.Verifiable | KitInclude.Giveable, token).ConfigureAwait(false);
-        return await RequestAsync(player, loadout, resultHandler, token).ConfigureAwait(false);
+        Kit? foundKit = await _lookResolver.GetSignTarget(player, sign, KitInclude.Verifiable | KitInclude.Giveable, token);
+        return await RequestAsync(player, foundKit, resultHandler, token).ConfigureAwait(false);
     }
 
     private struct RequestState

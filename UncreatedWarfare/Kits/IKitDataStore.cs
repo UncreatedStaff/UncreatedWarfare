@@ -15,6 +15,8 @@ using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Kits;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Kits.Loadouts;
+using Uncreated.Warfare.Kits.Requests.Requirements;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Kits.Bundles;
@@ -1359,5 +1361,47 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
     UniTask IHostedService.StopAsync(CancellationToken token)
     {
         return UniTask.CompletedTask;
+    }
+}
+
+public static class KitDataStoreExtensions
+{
+    /// <summary>
+    /// Queries a player's favorite kits in order.
+    /// </summary>
+    public static Task<Kit[]> QueryFavoriteKits(this IKitDataStore kitDataStore, ulong steam64, ITeamManager<Team> teamManager, KitInclude include = KitInclude.Default, CancellationToken token = default)
+    {
+        IReadOnlyList<uint> factions = teamManager.Factions;
+        return kitDataStore.QueryKitsAsync(
+            include,
+            m => m
+                .AsQueryable()
+                .Where(
+                    k => k.Favorites.Any(f => f.Steam64 == steam64)
+                            && (k.Type != KitType.Public
+                                || (!k.Disabled
+                                    && k.Faction != null
+                                    && factions.Contains(k.Faction.Key)
+                                    && k.Season >= WarfareModule.Season)
+                            )
+                )
+                .OrderByDescending(x => x.Favorites.FirstOrDefault(f => f.Steam64 == steam64)!.DateFavorited),
+            token: token
+        );
+    }
+
+    internal static bool IsKitEligableForFavorite(Kit kit, Team team, ITeamManager<Team> teamManager)
+    {
+        if (kit.Type == KitType.Public)
+        {
+            // public kits only
+            return !kit.Faction.IsDefaultFaction && team.Faction.PrimaryKey == kit.Faction.PrimaryKey;
+        }
+
+        // paid/special kits
+        if (kit.IsLocked || kit.Season < WarfareModule.Season)
+            return false;
+
+        return FactionFilterRequirement.IsCurrentFactionAllowed(kit, team);
     }
 }

@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events.Models.Players;
@@ -16,10 +15,12 @@ internal class DownloadKitDataPlayerTask : IPlayerPendingTask
     private readonly LoadoutService _loadoutService;
 
     private List<uint>? _access;
-    private List<uint>? _favorites;
+    private List<uint>? _favoriteKitIds;
     private IReadOnlyList<Kit>? _loadouts;
 
-    public DownloadKitDataPlayerTask(IKitsDbContext dbContext, LoadoutService loadoutService)
+    public DownloadKitDataPlayerTask(
+        IKitsDbContext dbContext,
+        LoadoutService loadoutService)
     {
         _dbContext = dbContext;
         _loadoutService = loadoutService;
@@ -40,7 +41,8 @@ internal class DownloadKitDataPlayerTask : IPlayerPendingTask
     {
         ulong s64 = e.Steam64.m_SteamID;
 
-        _favorites = await _dbContext.KitFavorites
+        _favoriteKitIds = await _dbContext.KitFavorites
+            .OrderByDescending(x => x.DateFavorited)
             .Where(x => x.Steam64 == s64)
             .Select(x => x.KitId)
             .ToListAsync(token)
@@ -60,15 +62,13 @@ internal class DownloadKitDataPlayerTask : IPlayerPendingTask
 
     private async Task DownloadLoadouts(PlayerPending e, CancellationToken token)
     {
-        ulong s64 = e.Steam64.m_SteamID;
-
         _loadouts = await _loadoutService.GetLoadouts(e.Steam64, KitInclude.Cached, token)
                                          .ConfigureAwait(false);
     }
 
     public void Apply(WarfarePlayer player)
     {
-        if (_access == null || _favorites == null || _loadouts == null)
+        if (_access == null || _favoriteKitIds == null || _loadouts == null)
             return;
 
         KitPlayerComponent component = player.Component<KitPlayerComponent>();
@@ -77,11 +77,7 @@ internal class DownloadKitDataPlayerTask : IPlayerPendingTask
             component.AddAccessibleKit(kit);
         }
 
-        foreach (uint kit in _favorites)
-        {
-            component.AddFavoriteKit(kit);
-        }
-
+        component.LoadFavoriteKits(_favoriteKitIds);
         component.UpdateLoadouts(_loadouts);
     }
 

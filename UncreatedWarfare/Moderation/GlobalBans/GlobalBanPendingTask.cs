@@ -71,7 +71,7 @@ internal class GlobalBanPendingTask : IPlayerPendingTask
         if (whitelister != null)
         {
             DateTimeOffset? whitelistDate = await whitelister.GetWhitelistEffectiveDate(steam64, token).ConfigureAwait(false);
-            if (whitelistDate.HasValue && whitelistDate.Value < newestBanTime.DateTime)
+            if (whitelistDate.HasValue && whitelistDate.Value >= newestBanTime.DateTime)
             {
                 logger.LogInformation("Global ban whitelisted pending player {0} is banned on {1}.", e.Steam64, newestBanInfo.BanSystemName);
                 return true;

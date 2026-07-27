@@ -140,6 +140,10 @@ public interface IKitsDbContext : IDbContext
             .HasIndex(x => x.Id)
             .IsUnique(true);
 
+        modelBuilder.Entity<KitFavorite>()
+            .Property(x => x.DateFavorited)
+            .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
         modelBuilder.Entity<KitEliteBundle>()
             .HasKey(x => new { x.KitId, x.BundleId });
         modelBuilder.Entity<KitAccess>()
