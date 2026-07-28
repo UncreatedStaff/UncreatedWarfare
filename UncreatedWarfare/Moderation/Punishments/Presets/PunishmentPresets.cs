@@ -208,8 +208,6 @@ public static class PunishmentPresets
                 new PunishmentPreset(PresetType.Discrimination, 1, ModerationEntryType.Mute, "Discrimination | L1")
                 {
                     PrimaryDuration = TimeSpan.FromDays(14d),
-                    SecondaryModerationType = ModerationEntryType.Ban,
-                    SecondaryDuration = TimeSpan.FromDays(3d),
                     Reputation = -250
                 },
                 new PunishmentPreset(PresetType.Discrimination, 2, ModerationEntryType.Mute, "Discrimination | L2")
@@ -222,14 +220,7 @@ public static class PunishmentPresets
                 new PunishmentPreset(PresetType.Discrimination, 3, ModerationEntryType.Mute, "Discrimination | L3")
                 {
                     PrimaryDuration = Timeout.InfiniteTimeSpan,
-                    SecondaryModerationType = ModerationEntryType.Ban,
-                    SecondaryDuration = TimeSpan.FromDays(14d),
                     Reputation = -750
-                },
-                new PunishmentPreset(PresetType.Discrimination, 4, ModerationEntryType.Ban, "Discrimination | L4")
-                {
-                    PrimaryDuration = Timeout.InfiniteTimeSpan,
-                    Reputation = -1000
                 }
             }
         },

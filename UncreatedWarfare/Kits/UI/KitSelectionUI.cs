@@ -1899,6 +1899,8 @@ public sealed partial class KitSelectionUI : UnturnedUI,
                 AmmoStorage = null;
             }
             IsListOpen = false;
+            NameFilter = null;
+            ClassFilter = Class.None;
             IsBoosting = null;
         }
 

@@ -6,6 +6,7 @@ using System;
 using System.Reflection;
 using System.Reflection.Emit;
 using TMPro;
+using UnityEngine.UI;
 
 namespace Uncreated.Warfare.Patches;
 
@@ -117,7 +118,7 @@ internal sealed class ServerPrefabUtilRemoveClientComponentsFix : IHarmonyPatch
         for (int i = 0; i < components.Count; ++i)
         {
             Component comp = components[i];
-            if (comp is not (TextMeshPro or TextMesh or LODGroupAdditionalData or EnableDopplerEffect or MusicAudioSource))
+            if (comp is not (TextMeshPro or TextMesh or LODGroupAdditionalData or EnableDopplerEffect or MusicAudioSource or TextMeshProUGUI or Image or RawImage))
                 continue;
 
             Component swap = components[head];

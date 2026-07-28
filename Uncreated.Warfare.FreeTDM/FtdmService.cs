@@ -27,7 +27,7 @@ using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.FreeTeamDeathmatch;
 
-internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILayoutHostedService, IAsyncEventListener<PlayerRespawned>
+internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILayoutHostedService, IAsyncEventListener<PlayerRespawned>, IAsyncEventListener<PlayerTeamChanged>
 {
     private const float OutOfBoundsWarningTime = 7.5f;
 
@@ -259,9 +259,20 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
         }
     }
 
-    [EventListener(RequiresMainThread = true)]
+    [EventListener(RequiresMainThread = true, Priority = 10)]
     UniTask IAsyncEventListener<PlayerRespawned>.HandleEventAsync(PlayerRespawned e, IServiceProvider serviceProvider, CancellationToken token)
     {
+        return GiveRandomKit(e.Player);
+    }
+
+    [EventListener(RequiresMainThread = true, Priority = 10)]
+    UniTask IAsyncEventListener<PlayerTeamChanged>.HandleEventAsync(PlayerTeamChanged e, IServiceProvider serviceProvider, CancellationToken token = default)
+    {
+        if (!e.Team.IsValid || e.Player.Component<KitPlayerComponent>().IsArmed && e.Player.IsOnDuty)
+        {
+            return UniTask.CompletedTask;
+        }
+
         return GiveRandomKit(e.Player);
     }
 
