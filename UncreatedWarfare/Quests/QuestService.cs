@@ -23,6 +23,7 @@ public class QuestService : ILayoutHostedService, IEventListenerProvider, IDispo
     private IConfigurationRoot? _questConfiguration;
     private IDisposable? _reloadListener;
     private List<QuestTemplate>? _templates;
+    private bool _trackQuests;
 
     private readonly WarfareModule _module;
     private readonly ILogger<QuestService> _logger;
@@ -37,17 +38,19 @@ public class QuestService : ILayoutHostedService, IEventListenerProvider, IDispo
 
     public event Action<bool>? TrackQuestsUpdated;
 
+    public bool CountQuests { get; set; }
+
     public bool TrackQuests
     {
-        get;
+        get => _trackQuests;
         set
         {
             GameThread.AssertCurrent();
 
-            if (value == field)
+            if (value == _trackQuests)
                 return;
 
-            field = value;
+            _trackQuests = value;
             TrackQuestsUpdated?.Invoke(value);
         }
     }
@@ -62,6 +65,7 @@ public class QuestService : ILayoutHostedService, IEventListenerProvider, IDispo
         Templates = Array.Empty<QuestTemplate>();
 
         ActiveTrackers = new ReadOnlyCollection<QuestTracker>(_activeTrackers);
+        _trackQuests = true;
     }
 
     async UniTask ILayoutHostedService.StartAsync(CancellationToken token)
@@ -421,7 +425,7 @@ public class QuestService : ILayoutHostedService, IEventListenerProvider, IDispo
 
     void IEventListenerProvider.AppendListeners<TEventArgs>(TEventArgs args, List<object> listeners)
     {
-        if (!TrackQuests)
+        if (!CountQuests)
         {
             return;
         }

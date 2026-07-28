@@ -428,8 +428,7 @@ public class WhitelistService :
         {
             foreach (BarricadeInfo info in BarricadeUtility.EnumerateBarricades()
                          .Where(barricade => barricade.Drop.asset.GUID == e.Asset.GUID && barricade.Drop.GetServersideData().owner == e.OriginalPlacer.Steam64.m_SteamID)
-                         .OrderBy(barricade => barricade.Drop.model.TryGetComponent(out BuildableContainer comp) ? comp.CreateTime.Ticks : 0)
-                         .ToList())
+                         .OrderBy(barricade => barricade.Drop.model.TryGetComponent(out BuildableContainer comp) ? comp.CreateTime.Ticks : 0))
             {
                 --amountNeededToDestroy;
                 DestroyerComponent.AddOrUpdate(info.Drop.model.gameObject, 0ul, false, EDamageOrigin.VehicleDecay);
@@ -445,8 +444,7 @@ public class WhitelistService :
         {
             foreach (StructureInfo info in StructureUtility.EnumerateStructures()
                          .Where(structure => structure.Drop.asset.GUID == e.Asset.GUID && structure.Drop.GetServersideData().owner == e.OriginalPlacer.Steam64.m_SteamID)
-                         .OrderBy(structure => structure.Drop.model.TryGetComponent(out BuildableContainer comp) ? comp.CreateTime.Ticks : 0)
-                         .ToList())
+                         .OrderBy(structure => structure.Drop.model.TryGetComponent(out BuildableContainer comp) ? comp.CreateTime.Ticks : 0))
             {
                 --amountNeededToDestroy;
                 DestroyerComponent.AddOrUpdate(info.Drop.model.gameObject, 0ul, false, EDamageOrigin.VehicleDecay);

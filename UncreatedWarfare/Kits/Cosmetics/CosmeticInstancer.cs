@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Configuration;
+using System;
 using System.ComponentModel;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
@@ -19,6 +20,7 @@ public class CosmeticInstancer : IAsyncEventListener<PlayerDutyStatusChanged>, I
 {
     private readonly ICosmeticItemProvider _itemProvider;
     private readonly IPlayerService _playerService;
+    private readonly IConfiguration _systemConfig;
     private readonly ILogger<CosmeticInstancer> _logger;
 
     private WarfarePlayer[] _remainingPlayersBuffer = new WarfarePlayer[64];
@@ -42,17 +44,22 @@ public class CosmeticInstancer : IAsyncEventListener<PlayerDutyStatusChanged>, I
 
     private bool _isEnabledIntl;
 
-    public CosmeticInstancer(ICosmeticItemProvider itemProvider, IPlayerService playerService, ILogger<CosmeticInstancer> logger)
+    public CosmeticInstancer(
+        ICosmeticItemProvider itemProvider,
+        IPlayerService playerService,
+        IConfiguration systemConfig,
+        ILogger<CosmeticInstancer> logger)
     {
         _itemProvider = itemProvider;
         _playerService = playerService;
+        _systemConfig = systemConfig;
         _logger = logger;
         _isEnabledIntl = false;
     }
 
     UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
-        _isEnabledIntl = true;
+        _isEnabledIntl = _systemConfig.GetValue("tests:cosmetics_instancing", true);
         return UniTask.CompletedTask;
     }
 
@@ -411,8 +418,9 @@ public class CosmeticInstancer : IAsyncEventListener<PlayerDutyStatusChanged>, I
 
             if (_itemProvider.PlayerAgnostic)
             {
-                foreach (WarfarePlayer pl in _remainingPlayersBuffer)
+                for (int i = 0; i < otherPlayerCount; ++i)
                 {
+                    WarfarePlayer pl = _remainingPlayersBuffer[i];
                     clientPool.Add(pl.Connection);
                 }
 

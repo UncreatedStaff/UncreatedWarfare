@@ -9,7 +9,7 @@ internal class PlayerOptionCosmeticItemProvider : ICosmeticItemProvider
     private readonly AssetRedirectService _redirectService;
 
     bool ICosmeticItemProvider.IsEnabled => true;
-    bool ICosmeticItemProvider.PlayerAgnostic => false; // TODO set to true after testing
+    bool ICosmeticItemProvider.PlayerAgnostic => true;
 
     public PlayerOptionCosmeticItemProvider(AssetRedirectService redirectService)
     {

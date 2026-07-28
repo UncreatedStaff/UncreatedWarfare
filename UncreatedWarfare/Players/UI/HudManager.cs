@@ -6,6 +6,7 @@ using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.List;
 
 namespace Uncreated.Warfare.Players.UI;
 
@@ -174,6 +175,74 @@ public sealed class HudManager : IEventListener<PlayerLeft>, IDisposable
         return new DisableCompassHandle(this, player);
     }
 
+    /// <summary>
+    /// Sets the player's preference on whether or not the HUD is visible.
+    /// </summary>
+    public void SetHudVisibilityPreference(WarfarePlayer player, bool isHudVisible)
+    {
+        if (!player.IsOnline)
+            return;
+
+        HudPlayerComponent hudComp = player.Component<HudPlayerComponent>();
+        if (!isHudVisible)
+        {
+            if (hudComp.HideHudPreference != null)
+                return;
+
+            IDisposable? old = Interlocked.CompareExchange(ref hudComp.HideHudPreference, HideHud(player), null);
+            old?.Dispose();
+        }
+        else
+        {
+            if (hudComp.HideHudPreference == null)
+                return;
+
+            Interlocked.Exchange(ref hudComp.HideHudPreference, null)?.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Gets the player's preference on whether or not the HUD is visible.
+    /// </summary>
+    public bool GetHudVisibilityPreference(WarfarePlayer player)
+    {
+        return player.Component<HudPlayerComponent>().HideHudPreference == null;
+    }
+
+    /// <summary>
+    /// Sets the player's preference on whether or not the chat is blocked.
+    /// </summary>
+    public void SetBlockChatPreference(WarfarePlayer player, bool isBlockingChat)
+    {
+        if (!player.IsOnline)
+            return;
+
+        HudPlayerComponent hudComp = player.Component<HudPlayerComponent>();
+        if (isBlockingChat)
+        {
+            if (hudComp.BlockChatPreference != null)
+                return;
+
+            IDisposable? old = Interlocked.CompareExchange(ref hudComp.BlockChatPreference, BlockChat(player), null);
+            old?.Dispose();
+        }
+        else
+        {
+            if (hudComp.BlockChatPreference == null)
+                return;
+
+            Interlocked.Exchange(ref hudComp.BlockChatPreference, null)?.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Gets the player's preference on whether or not the chat is blocked.
+    /// </summary>
+    public bool GetBlockChatPreference(WarfarePlayer player)
+    {
+        return player.Component<HudPlayerComponent>().BlockChatPreference != null;
+    }
+
     void IEventListener<PlayerLeft>.HandleEvent(PlayerLeft e, IServiceProvider serviceProvider)
     {
         _hideHudCounter.NotifyPlayerLeft(e.Player);
@@ -290,7 +359,7 @@ public sealed class HudManager : IEventListener<PlayerLeft>, IDisposable
         }
 
         _logger.LogConditional($"Blocking chat for {player.Player}.");
-        player.BlockedChatMessages = [];
+        player.BlockedChatMessages = new RingBuffer<BlockedChatMessage>(16);
     }
 
     private void DoUnblockChat(HudPlayerComponent? player)
@@ -306,7 +375,7 @@ public sealed class HudManager : IEventListener<PlayerLeft>, IDisposable
             return;
         }
 
-        List<BlockedChatMessage>? chatMessages = player.BlockedChatMessages;
+        RingBuffer<BlockedChatMessage>? chatMessages = player.BlockedChatMessages;
         if (chatMessages == null)
             return;
 
@@ -421,7 +490,10 @@ public sealed class HudManager : IEventListener<PlayerLeft>, IDisposable
         public int DisableCompassHandleCount;
         public IDisposable? PlayerDisableCompassHandle;
 
-        public List<BlockedChatMessage>? BlockedChatMessages;
+        public RingBuffer<BlockedChatMessage>? BlockedChatMessages;
+        
+        internal IDisposable? HideHudPreference;
+        internal IDisposable? BlockChatPreference;
 
         /// <inheritdoc />
         public required WarfarePlayer Player { get; init; }

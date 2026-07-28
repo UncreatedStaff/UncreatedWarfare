@@ -56,6 +56,7 @@ using Uncreated.Warfare.Kits.Tweaks;
 using Uncreated.Warfare.Kits.UI;
 using Uncreated.Warfare.Kits.Whitelists;
 using Uncreated.Warfare.Layouts;
+using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Layouts.Seeding;
 using Uncreated.Warfare.Layouts.UI;
 using Uncreated.Warfare.Lobby;
@@ -680,8 +681,11 @@ public sealed class WarfareModule
 
         bldr.RegisterType<PopupUI>().SingleInstance();
         bldr.RegisterType<CopyPopupUI>().SingleInstance();
-        bldr.RegisterType<StagingUI>().SingleInstance();
         bldr.RegisterType<WinToastUI>().SingleInstance();
+
+        bldr.RegisterType<StagingUI>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
 
         bldr.RegisterType<PointsUI>()
             .AsSelf().AsImplementedInterfaces()

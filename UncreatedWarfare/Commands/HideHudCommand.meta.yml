@@ -1,0 +1,8 @@
+# HideHudCommand
+Description: "Allows hiding and restoring the HUD and chat for cinematic effects."
+Aliases: [ hud ]
+Flags:
+  - Name: s
+    Description: "Don't send the message stating that the HUD has been hidden."
+  - Name: silent
+    Description: "Don't send the message stating that the HUD has been hidden."

@@ -7,6 +7,7 @@ using Uncreated.Framework.UI.Presets;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Layouts.Flags;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Layouts.Tickets;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Teams;
@@ -117,7 +118,13 @@ public class FlagListUI : UnturnedUI
                 data.TicketsFlag = null;
                 data.ResetCache();
                 GamemodeTitle.SetText(player, layoutName);
+                data.GamemodeTeam = player.Team;
                 ticketsOnlyForThisPlayer = false;
+            }
+            else if (data.GamemodeTeam == null || !data.GamemodeTeam.IsFriendly(player.Team))
+            {
+                GamemodeTitle.SetText(player, layoutName);
+                data.GamemodeTeam = player.Team;
             }
 
             // update ticket text
@@ -244,6 +251,7 @@ public class FlagListUI : UnturnedUI
         internal bool HasUI;
         internal string? CustomTicket;
         internal FactionInfo? TicketsFlag;
+        internal Team? GamemodeTeam;
 
         public CSteamID Player { get; }
         public UnturnedUI Owner { get; }

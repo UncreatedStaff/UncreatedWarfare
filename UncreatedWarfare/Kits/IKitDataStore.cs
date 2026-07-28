@@ -17,6 +17,7 @@ using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Kits.Loadouts;
 using Uncreated.Warfare.Kits.Requests.Requirements;
 using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Kits.Bundles;
@@ -1399,7 +1400,7 @@ public static class KitDataStoreExtensions
         }
 
         // paid/special kits
-        if (kit.IsLocked || kit.Season < WarfareModule.Season)
+        if (kit.IsLocked || (kit.Type == KitType.Loadout && kit.Season < WarfareModule.Season))
             return false;
 
         return FactionFilterRequirement.IsCurrentFactionAllowed(kit, team);

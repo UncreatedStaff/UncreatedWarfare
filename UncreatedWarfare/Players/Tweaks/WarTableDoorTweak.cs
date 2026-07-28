@@ -7,7 +7,6 @@ using Uncreated.Warfare.Events.Models.Objects;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Models.Zones;
 using Uncreated.Warfare.FOBs.Deployment;
-using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Zones;
 
@@ -31,7 +30,7 @@ public class WarTableDoorTweak :
     private static class Flags
     {
         public const short AlreadyDeployed = -3;
-        public const short NoKit = -2;
+        // not used anymore public const short NoKit = -2;
         public const short Deploying = -1;
         public const short Open = 0;
     }
@@ -48,12 +47,6 @@ public class WarTableDoorTweak :
     {
         if (!_teleportDoors.ContainsAsset(e.Object.asset))
             return;
-
-        if (!e.Player.Component<KitPlayerComponent>().IsArmed)
-        {
-            UpdateFlag(e.Player);
-            return;
-        }
 
         if (!_zoneStore.IsInsideZone(e.Player.Position, ZoneType.WarRoom, e.Player.Team.Faction))
         {
@@ -115,16 +108,10 @@ public class WarTableDoorTweak :
 
     private void UpdateFlag(WarfarePlayer player)
     {
-        KitPlayerComponent kpc = player.Component<KitPlayerComponent>();
         if (player.Component<DeploymentComponent>().CurrentDeployment is Zone { Type: ZoneType.MainBase })
         {
             // already deploying
             player.SetFlag(_flagId, Flags.Deploying);
-        }
-        else if (!kpc.IsArmed)
-        {
-            // invalid kit
-            player.SetFlag(_flagId, Flags.NoKit);
         }
         else if (!_zoneStore.IsInsideZone(player.Position, ZoneType.WarRoom, player.Team.Faction))
         {

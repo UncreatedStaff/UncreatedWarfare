@@ -232,22 +232,25 @@ internal class SeedingPlayerCountMonitor :
 
     private void UpdateGlobals(bool isSeeding)
     {
+        QuestService? questService = _layoutHost.IsLayoutActive() ? _layoutHost.ScopedProvider.ResolveOptional<QuestService>() : null;
         if (isSeeding)
         {
             _pointsRewards.TrackPoints = Rules.TrackPoints;
             _databaseStats.TrackStats = Rules.TrackStats;
-            if (_layoutHost.IsLayoutActive())
+            if (questService != null)
             {
-                _layoutHost.ScopedProvider.Resolve<QuestService>().TrackQuests = Rules.TrackQuests;
+                questService.TrackQuests = true;// todo: this doesn't work Rules.TrackQuests;
+                questService.CountQuests = Rules.TrackQuests;
             }
         }
         else
         {
             _pointsRewards.TrackPoints = true;
             _databaseStats.TrackStats = true;
-            if (_layoutHost.IsLayoutActive())
+            if (questService != null)
             {
-                _layoutHost.ScopedProvider.Resolve<QuestService>().TrackQuests = true;
+                questService.TrackQuests = true;
+                questService.CountQuests = true;
             }
         }
     }

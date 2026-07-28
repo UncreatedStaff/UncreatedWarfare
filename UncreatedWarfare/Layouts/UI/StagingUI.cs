@@ -1,19 +1,21 @@
-using SDG.NetTransport;
 using System;
+using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Data;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Layouts.UI;
 
 [UnturnedUI(BasePath = "Canvas")]
-public class StagingUI : UnturnedUI
+public class StagingUI : UnturnedUI, IHudUIListener
 {
     private readonly Func<CSteamID, StagingUIData> _getStagingUIData;
+    private bool _isHiddenGlobally;
 
     public readonly UnturnedLabel Top = new UnturnedLabel("Top");
     public readonly UnturnedLabel Bottom = new UnturnedLabel("Bottom");
@@ -44,13 +46,20 @@ public class StagingUI : UnturnedUI
     /// </summary>
     public void SendToPlayer(WarfarePlayer player, TranslationList name, TimeSpan timeLeft)
     {
+        if (_isHiddenGlobally)
+            return;
+
         if (timeLeft < TimeSpan.Zero)
-            timeLeft = default;
+            timeLeft = TimeSpan.Zero;
+
+        StagingUIData data = GetOrAddUIData(player.Steam64);
+        if (data.IsHidden)
+            return;
 
         string msg = FormattingUtility.ToCountdownString(timeLeft, withHours: false);
         string translatedName = name.Translate(player.Locale.LanguageInfo, string.Empty);
+        data.HasUI = true;
         SendToPlayer(player.Connection, translatedName, msg);
-        GetOrAddUIData(player.Steam64).HasUI = true;
     }
 
     /// <summary>
@@ -58,9 +67,16 @@ public class StagingUI : UnturnedUI
     /// </summary>
     public void SendToPlayer(WarfarePlayer player, TranslationList name)
     {
+        if (_isHiddenGlobally)
+            return;
+
+        StagingUIData data = GetOrAddUIData(player.Steam64);
+        if (data.IsHidden)
+            return;
+
         string translatedName = name.Translate(player.Locale.LanguageInfo, string.Empty);
+        data.HasUI = true;
         SendToPlayer(player.Connection, translatedName, string.Empty);
-        GetOrAddUIData(player.Steam64).HasUI = true;
     }
 
     /// <summary>
@@ -68,10 +84,16 @@ public class StagingUI : UnturnedUI
     /// </summary>
     public void UpdateForPlayer(WarfarePlayer player, TranslationList name, TimeSpan timeLeft)
     {
+        if (_isHiddenGlobally)
+            return;
+
         if (timeLeft < TimeSpan.Zero)
-            timeLeft = default;
+            timeLeft = TimeSpan.Zero;
 
         StagingUIData data = GetOrAddUIData(player.Steam64);
+        if (data.IsHidden)
+            return;
+
         string msg = FormattingUtility.ToCountdownString(timeLeft, withHours: false);
         if (data.HasUI)
         {
@@ -89,8 +111,11 @@ public class StagingUI : UnturnedUI
     /// </summary>
     public void SendToAll(LanguageSetEnumerator playerSets, TranslationList name, TimeSpan timeLeft)
     {
+        if (_isHiddenGlobally)
+            return;
+
         if (timeLeft < TimeSpan.Zero)
-            timeLeft = default;
+            timeLeft = TimeSpan.Zero;
 
         foreach (LanguageSet set in playerSets)
         {
@@ -98,7 +123,11 @@ public class StagingUI : UnturnedUI
             string translatedName = name.Translate(set.Language, string.Empty);
             while (set.MoveNext())
             {
-                GetOrAddUIData(set.Next.Steam64).HasUI = true;
+                StagingUIData data = GetOrAddUIData(set.Next.Steam64);
+                if (data.IsHidden)
+                    continue;
+
+                data.HasUI = true;
                 SendToPlayer(set.Next.Connection, translatedName, msg);
             }
         }
@@ -109,12 +138,19 @@ public class StagingUI : UnturnedUI
     /// </summary>
     public void SendToAll(LanguageSetEnumerator playerSets, TranslationList name)
     {
+        if (_isHiddenGlobally)
+            return;
+
         foreach (LanguageSet set in playerSets)
         {
             string translatedName = name.Translate(set.Language, string.Empty);
             while (set.MoveNext())
             {
-                GetOrAddUIData(set.Next.Steam64).HasUI = true;
+                StagingUIData data = GetOrAddUIData(set.Next.Steam64);
+                if (data.IsHidden)
+                    continue;
+
+                data.HasUI = true;
                 SendToPlayer(set.Next.Connection, translatedName, string.Empty);
             }
         }
@@ -126,7 +162,7 @@ public class StagingUI : UnturnedUI
     public void UpdateForAll(LanguageSetEnumerator playerSets, TranslationList name, TimeSpan timeLeft)
     {
         if (timeLeft < TimeSpan.Zero)
-            timeLeft = default;
+            timeLeft = TimeSpan.Zero;
 
         string msg = FormattingUtility.ToCountdownString(timeLeft, withHours: false);
 
@@ -149,6 +185,9 @@ public class StagingUI : UnturnedUI
                 while (set.MoveNext())
                 {
                     StagingUIData data = GetOrAddUIData(set.Next.Steam64);
+                    if (_isHiddenGlobally || data.IsHidden)
+                        continue;
+
                     if (data.HasUI)
                     {
                         Bottom.SetText(set.Next, msg);
@@ -163,11 +202,48 @@ public class StagingUI : UnturnedUI
         }
     }
 
+    void IHudUIListener.Hide(WarfarePlayer? player)
+    {
+        if (player == null)
+        {
+            _isHiddenGlobally = true;
+            ClearFromAllPlayers();
+            foreach (StagingUIData data in UnturnedUIDataSource.EnumerateData(this).OfType<StagingUIData>())
+            {
+                data.HasUI = false;
+            }
+
+            return;
+        }
+
+        StagingUIData d = GetOrAddUIData(player.Steam64);
+        if (d.HasUI)
+        {
+            ClearFromPlayer(player.SteamPlayer);
+            d.HasUI = false;
+        }
+
+        d.IsHidden = true;
+    }
+
+    void IHudUIListener.Restore(WarfarePlayer? player)
+    {
+        // just un-hide, ticker will send it soon if its active
+        if (player == null)
+        {
+            _isHiddenGlobally = false;
+            return;
+        }
+
+        GetData<StagingUIData>(player.Steam64)?.IsHidden = false;
+    }
+
     private class StagingUIData : IUnturnedUIData
     {
         public CSteamID Player { get; }
         public UnturnedUI Owner { get; }
-        public bool HasUI { get; set; }
+        public bool HasUI;
+        public bool IsHidden;
         UnturnedUIElement? IUnturnedUIData.Element => null;
 
         public StagingUIData(CSteamID player, UnturnedUI owner)

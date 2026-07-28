@@ -439,8 +439,6 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
             List<uint> kits = await _kitDataStore.QueryListAsync(kits => kits
                 .OrderByDescending(x => x.Class == Class.Rifleman)
                 .Where(x => x.Type == KitType.Public
-                            && x.PremiumCost == 0
-                            && !x.RequiresNitro
                             && x.Delays.Count == 0
                             && !x.RequiresSquad
                             && x.MinRequiredSquadMembers == null
@@ -694,17 +692,21 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         ulong steam64 = player.Steam64.m_SteamID;
         uint kitId = kitBestowData.Kit.Key;
 
-        List<KitLayoutTransformation> layouts = await _kitDbContext.KitLayoutTransformations
-            .Where(x => x.Steam64 == steam64 && x.KitId == kitId)
-            .AsNoTracking()
-            .ToListAsync(token)
-            .ConfigureAwait(false);
+        List<KitLayoutTransformation> layouts = kitBestowData.Kit.Class <= Class.Unarmed
+            ? new List<KitLayoutTransformation>(0)
+            : await _kitDbContext.KitLayoutTransformations
+                .Where(x => x.Steam64 == steam64 && x.KitId == kitId)
+                .AsNoTracking()
+                .ToListAsync(token)
+                .ConfigureAwait(false);
 
-        List<KitHotkey> hotkeys = await _kitDbContext.KitHotkeys
-            .Where(x => x.Steam64 == steam64 && x.KitId == kitId)
-            .AsNoTracking()
-            .ToListAsync(token)
-            .ConfigureAwait(false);
+        List<KitHotkey> hotkeys = kitBestowData.Kit.Class <= Class.Unarmed
+            ? new List<KitHotkey>(0)
+            : await _kitDbContext.KitHotkeys
+                .Where(x => x.Steam64 == steam64 && x.KitId == kitId)
+                .AsNoTracking()
+                .ToListAsync(token)
+                .ConfigureAwait(false);
 
         await UniTask.SwitchToMainThread(token);
         await GiveKitWithInfoIntl(player, kitBestowData, isRequest, layouts, hotkeys);
@@ -894,14 +896,17 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         {
             ctx.State.Handler.MissingRequirement(ctx.Player, ctx.Kit, (isUnpaid ? _this._kitReqTranslations.Unpaid : _this._kitReqTranslations.NeedsSetup).Translate(ctx.Player));
 
-            if (!isUnpaid)
-                return;
+            // todo im too lazy to do this rn, link them to their loadout
+            //if (!isUnpaid)
+            //    return;
 
-            UniTask.Create(async () =>
-            {
-                await UniTask.SwitchToMainThread();
-
-            });
+            //WarfarePlayer player = ctx.Player;
+            //string link = "https:/"
+            //UniTask.Create(async () =>
+            //{
+            //    await UniTask.SwitchToMainThread();
+            //    ctx.Player.UnturnedPlayer.sendBrowserRequest(_this._droppedItemTracker);
+            //});
         }
 
         public void AcceptLoadoutOutOfDateNotMet(in KitRequirementResolutionContext<RequestState> ctx, int season)

@@ -22,6 +22,12 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
 
     private ModalHandle _modal;
 
+#nullable disable
+
+    private HudManager _hudManager;
+
+#nullable restore
+
     /// <summary>
     /// List of data for each <see cref="ToastMessageStyle"/> in use.
     /// </summary>
@@ -50,14 +56,15 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
             InitToastData(serviceProvider);
         }
 
-        if (isOnJoin)
-        {
-            Channels = new ToastMessageChannel[_channelCount];
-            for (int i = 0; i < Channels.Length; ++i)
-                Channels[i] = new ToastMessageChannel(this, i);
+        if (!isOnJoin)
+            return;
 
-            TimeUtility.updated += Update;
-        }
+        Channels = new ToastMessageChannel[_channelCount];
+        for (int i = 0; i < Channels.Length; ++i)
+            Channels[i] = new ToastMessageChannel(this, i);
+
+        TimeUtility.updated += Update;
+        _hudManager = serviceProvider.GetRequiredService<HudManager>();
     }
 
     void IDisposable.Dispose()
@@ -247,7 +254,7 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
 
     private void Update()
     {
-        if (!HasToasts || Hold)
+        if (!HasToasts || Hold || _hudManager.IsHidden(Player))
             return;
         float time = Time.realtimeSinceStartup;
         bool updateAny = false;
