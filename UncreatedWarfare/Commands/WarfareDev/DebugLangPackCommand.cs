@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Translations;

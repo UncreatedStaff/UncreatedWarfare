@@ -614,7 +614,7 @@ public class DeathMessageResolver
         if (!_translationList.TryGetValue(language.Code, out CauseGroup[] causes) && (language.IsDefault || !_translationList.TryGetValue(defaultLang, out causes)))
             causes = _defaultTranslations;
         List<CauseGroup> causesFull = new List<CauseGroup>(causes);
-        if (causes != _defaultTranslations && writeMissing)
+        if (writeMissing || causes != _defaultTranslations)
         {
             for (int i = 0; i < _defaultTranslations.Length; ++i)
             {
@@ -728,7 +728,7 @@ public class DeathMessageResolver
                     causes.Add(info2);
                 }
 
-                _translationList.Add(lang, causes.ToArray());
+                _translationList[lang] = causes.ToArray();
                 causes.Clear();
                 break;
             }

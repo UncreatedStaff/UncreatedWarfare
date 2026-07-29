@@ -322,7 +322,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
                 if (playerData is not { HasUI: true })
                     continue;
 
-                await UpdateKitAsync(kit, player, token);
+                await UpdateKitAsync(kit, pl, token);
             }
 
             return;
@@ -1502,7 +1502,9 @@ public sealed partial class KitSelectionUI : UnturnedUI,
     {
         int panelIndex = GetClassPanelIndex(@class);
         if (panelIndex < 0)
+        {
             return _listResults[index];
+        }
 
         return _panels[panelIndex].Kits[index];
     }
@@ -1659,7 +1661,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
 
     internal static int GetClassPanelIndex(Class @class)
     {
-        return @class - Class.Squadleader;
+        return @class < Class.Squadleader ? -1 : @class - Class.Squadleader;
     }
 
     internal static Class GetPanelClass(int panelIndex)

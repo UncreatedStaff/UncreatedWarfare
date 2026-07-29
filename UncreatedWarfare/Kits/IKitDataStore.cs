@@ -405,7 +405,7 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
         try
         {
             string likeExpr = e.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture) + "_%";
-            await foreach (KitModel model in ApplyIncludes(KitInclude.Default, _dbContext.Kits, false)
+            await foreach (KitModel model in ApplyIncludes(KitInclude.Cached, _dbContext.Kits, false)
                                .Where(x => x.Type == KitType.Loadout && EF.Functions.Like(x.Id, likeExpr))
                                .AsAsyncEnumerable()
                                .WithCancellation(token))

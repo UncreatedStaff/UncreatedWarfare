@@ -176,7 +176,17 @@ internal sealed class SendBarricadeRegionPatch : IHarmonyPatch
         else
         {
             Encoding encoding = Encoding.UTF8;
-            string signText = signInstancer.GetSignText(drop, player);
+            string signText;
+            try
+            {
+                signText = signInstancer.GetSignText(drop, player);
+            }
+            catch (Exception ex)
+            {
+                WarfareModule.Singleton.GlobalLogger.LogError(ex, $"Error translating sign {sign.text}.");
+                signText = sign.text;
+            }
+
             int byteCt = encoding.GetByteCount(signText);
             if (byteCt > byte.MaxValue - 17)
             {

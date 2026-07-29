@@ -344,23 +344,24 @@ public class OptionsUI : UnturnedUI
 
         player.Locale.LocaleUpdated += HandleLocaleUpdated;
 
-        UpdateText(player);
+        WarfarePlayerLocale locale = player.Locale;
+
+        data.SelectedLanguage = locale.LanguageInfo;
+        data.SelectedCulture = locale.CultureInfo;
+        data.SelectedTimeZone = locale.TimeZone;
+
+        UpdateText(player, locale.LanguageInfo);
 
         _enemyCosmeticsOption.Set(player.UnturnedPlayer, player.Save.ViewEnemyCosmetics);
         _friendlyCosmeticsOption.Set(player.UnturnedPlayer, player.Save.ViewFriendlyCosmetics);
         _imguiOption.Set(player.UnturnedPlayer, player.Save.IMGUI);
         _trackQuestsOption.Set(player.UnturnedPlayer, player.Save.TrackQuests);
         _useCultureForCommandInput.Set(player.UnturnedPlayer, player.Locale.Preferences.UseCultureForCommandInput);
-
-        WarfarePlayerLocale locale = player.Locale;
         
-        _searchLanguageBox.SetText(c, data.LanguageSearch = locale.LanguageInfo.Code);
+        data.LanguageSearch = null;
+        _searchLanguageBox.SetText(c, string.Empty);
         _searchCultureBox.SetText(c, data.CultureSearch = string.IsNullOrEmpty(locale.CultureInfo.Name) ? "invariant" : locale.CultureInfo.Name);
         _searchTimeZoneBox.SetText(c, data.TimeZoneSearch = locale.TimeZone.Id);
-
-        data.SelectedLanguage = locale.LanguageInfo;
-        data.SelectedCulture = locale.CultureInfo;
-        data.SelectedTimeZone = locale.TimeZone;
 
         data.LanguageResults = null;
         data.CultureResults = null;
@@ -377,73 +378,73 @@ public class OptionsUI : UnturnedUI
         if (!data.HasUI || data.IsSaving /* no need to update everything if we're about to close */)
             return;
 
-        UpdateText(locale.Player);
+        UpdateText(locale.Player, data.SelectedLanguage ?? locale.LanguageInfo);
     }
 
-    public void UpdateText(WarfarePlayer player)
+    public void UpdateText(WarfarePlayer player, LanguageInfo language)
     {
         ITransportConnection c = player.Connection;
 
-        bool isDefaultLang = player.Locale.IsDefaultLanguage;
+        bool isDefaultLang = language.IsDefault;
 
         if (!isDefaultLang || !_translations.Title.HasDefaultValue)
-            _optionsTitle.SetText(c, _translations.Title.Translate(player));
+            _optionsTitle.SetText(c, _translations.Title.Translate(language));
 
         if (!isDefaultLang || !_translations.EnemyCosmeticsOptionLabel.HasDefaultValue)
-            _enemyCosmeticsOption.SetText(c, _translations.EnemyCosmeticsOptionLabel.Translate(player));
+            _enemyCosmeticsOption.SetText(c, _translations.EnemyCosmeticsOptionLabel.Translate(language));
         if (!isDefaultLang || !_translations.FriendlyCosmeticsOptionLabel.HasDefaultValue)
-            _friendlyCosmeticsOption.SetText(c, _translations.FriendlyCosmeticsOptionLabel.Translate(player));
+            _friendlyCosmeticsOption.SetText(c, _translations.FriendlyCosmeticsOptionLabel.Translate(language));
         if (!isDefaultLang || !_translations.CosmeticsDescription.HasDefaultValue)
-            _cosmeticsDescription.SetText(c, _translations.CosmeticsDescription.Translate(player));
+            _cosmeticsDescription.SetText(c, _translations.CosmeticsDescription.Translate(language));
 
         if (!isDefaultLang || !_translations.IMGUIOptionLabel.HasDefaultValue)
-            _imguiOption.SetText(c, _translations.IMGUIOptionLabel.Translate(player));
+            _imguiOption.SetText(c, _translations.IMGUIOptionLabel.Translate(language));
         if (!isDefaultLang || !_translations.IMGUIDescription.HasDefaultValue)
-            _imguiDescription.SetText(c, _translations.IMGUIDescription.Translate(player));
+            _imguiDescription.SetText(c, _translations.IMGUIDescription.Translate(language));
 
         if (!isDefaultLang || !_translations.TrackQuestsOptionLabel.HasDefaultValue)
-            _trackQuestsOption.SetText(c, _translations.TrackQuestsOptionLabel.Translate(player));
+            _trackQuestsOption.SetText(c, _translations.TrackQuestsOptionLabel.Translate(language));
         if (!isDefaultLang || !_translations.TrackQuestsDescription.HasDefaultValue)
-            _trackQuestsDescription.SetText(c, _translations.TrackQuestsDescription.Translate(player));
+            _trackQuestsDescription.SetText(c, _translations.TrackQuestsDescription.Translate(language));
 
         if (!isDefaultLang || !_translations.InternationalizationTitle.HasDefaultValue)
-            _internationalizationTitle.SetText(c, _translations.InternationalizationTitle.Translate(player));
+            _internationalizationTitle.SetText(c, _translations.InternationalizationTitle.Translate(language));
 
         if (!isDefaultLang || !_translations.PlaceholderLanguageName.HasDefaultValue)
-            _searchLanguageBox.SetPlaceholder(c, _translations.PlaceholderLanguageName.Translate(player));
+            _searchLanguageBox.SetPlaceholder(c, _translations.PlaceholderLanguageName.Translate(language));
         if (!isDefaultLang || !_translations.PlaceholderCulture.HasDefaultValue)
-            _searchCultureBox.SetPlaceholder(c, _translations.PlaceholderCulture.Translate(player));
+            _searchCultureBox.SetPlaceholder(c, _translations.PlaceholderCulture.Translate(language));
         if (!isDefaultLang || !_translations.PlaceholderTimeZone.HasDefaultValue)
-            _searchTimeZoneBox.SetPlaceholder(c, _translations.PlaceholderTimeZone.Translate(player));
+            _searchTimeZoneBox.SetPlaceholder(c, _translations.PlaceholderTimeZone.Translate(language));
 
         if (!isDefaultLang || !_translations.ButtonSearch.HasDefaultValue)
         {
-            string search = _translations.ButtonSearch.Translate(player);
+            string search = _translations.ButtonSearch.Translate(language);
             _searchLanguageButton.SetText(c, search);
             _searchCultureButton.SetText(c, search);
             _searchTimeZoneButton.SetText(c, search);
         }
 
         if (!isDefaultLang || !_translations.CultureDescription.HasDefaultValue)
-            _useCultureForCommandInputDescription.SetText(c, _translations.CultureDescription.Translate(player));
+            _useCultureForCommandInputDescription.SetText(c, _translations.CultureDescription.Translate(language));
 
         if (!isDefaultLang || !_translations.NoResultsLanguage.HasDefaultValue)
-            _noLanguagesFound.SetText(c, _translations.NoResultsLanguage.Translate(player));
+            _noLanguagesFound.SetText(c, _translations.NoResultsLanguage.Translate(language));
         if (!isDefaultLang || !_translations.NoResultsCulture.HasDefaultValue)
-            _noCulturesFound.SetText(c, _translations.NoResultsCulture.Translate(player));
+            _noCulturesFound.SetText(c, _translations.NoResultsCulture.Translate(language));
         if (!isDefaultLang || !_translations.NoResultsTimeZone.HasDefaultValue)
-            _noTimeZonesFound.SetText(c, _translations.NoResultsTimeZone.Translate(player));
+            _noTimeZonesFound.SetText(c, _translations.NoResultsTimeZone.Translate(language));
 
         if (!isDefaultLang || !_translations.ButtonSave.HasDefaultValue)
-            _buttonSave.SetText(c, _translations.ButtonSave.Translate(player));
+            _buttonSave.SetText(c, _translations.ButtonSave.Translate(language));
         if (!isDefaultLang || !_translations.ButtonCancel.HasDefaultValue)
-            _buttonCancel.SetText(c, _translations.ButtonCancel.Translate(player));
+            _buttonCancel.SetText(c, _translations.ButtonCancel.Translate(language));
 
         if (isDefaultLang && _translations.ButtonApply.HasDefaultValue && _translations.LanguageContributorsTitle.HasDefaultValue)
             return;
 
-        string applyButton = _translations.ButtonApply.Translate(player);
-        string contributorsTitle = _translations.LanguageContributorsTitle.Translate(player);
+        string applyButton = _translations.ButtonApply.Translate(language);
+        string contributorsTitle = _translations.LanguageContributorsTitle.Translate(language);
 
         for (int i = 0; i < _languageResults.Length; ++i)
         {
@@ -474,6 +475,8 @@ public class OptionsUI : UnturnedUI
         data.CultureSearch = null;
         _searchCultureBox.SetText(player, string.Empty);
         SendCultureList(player);
+
+        UpdateText(player, language);
     }
 
     private void OnCultureSelected(OptionsUIData data, WarfarePlayer player, int buttonIndex)

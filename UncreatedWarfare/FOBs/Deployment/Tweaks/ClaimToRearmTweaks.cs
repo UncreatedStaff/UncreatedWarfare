@@ -17,6 +17,7 @@ using Uncreated.Warfare.Kits.Requests;
 using Uncreated.Warfare.Kits.UI;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Containers;
 using Uncreated.Warfare.Zones;
 
@@ -86,6 +87,9 @@ public class ClaimToRearmTweaks :
 
     private IAmmoStorage? TryGetRearmBarricade(WarfarePlayer player, IBuildable buildable)
     {
+        if (!buildable.IsAlive)
+            return null;
+
         IAmmoStorage? ammoStorage = ContainerHelper.FindComponent<IAmmoStorage>(buildable.Model);
         if (ammoStorage == null)
         {

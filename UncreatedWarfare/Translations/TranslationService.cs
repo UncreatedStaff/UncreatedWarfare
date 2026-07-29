@@ -14,6 +14,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Plugins;
@@ -288,6 +289,16 @@ public class TranslationService : ITranslationService, IDisposable, IHostedServi
             catch (DirectoryNotFoundException) { }
 
             Directory.CreateDirectory(baseFolder);
+
+            DeathMessageResolver? deaths = _serviceProvider.GetService<DeathMessageResolver>();
+            if (deaths == null)
+            {
+                WarfareModule.Singleton.GlobalLogger.LogWarning("DeathMessageResolver not found.");
+            }
+            else
+            {
+                deaths.Write(Path.Combine(baseFolder, language.Code, "Deaths.json"), language, writeMissing: true);
+            }
 
             foreach (TranslationCollection collection in _collections.Values)
             {
