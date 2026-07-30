@@ -105,7 +105,7 @@ public class KitBestowService
     /// <summary>
     /// Restock the player's current kit without removing any items.
     /// </summary>
-    public void RestockKit(WarfarePlayer player, bool resupplyAmmoBags)
+    public void RestockKit(WarfarePlayer player, bool resupplyAmmoBags, Func<ItemAsset, bool>? equipmentFilter = null)
     {
         GameThread.AssertCurrent();
 
@@ -121,7 +121,8 @@ public class KitBestowService
         KitBestowData data = new KitBestowData(kit, itemTracker?.KitLayoutTransformations, "RestockKit")
         {
             RestockOnly = true,
-            ResupplyAmmoBags = resupplyAmmoBags
+            ResupplyAmmoBags = resupplyAmmoBags,
+            EquipmentFilter = equipmentFilter
         };
 
         data.Start();
@@ -192,6 +193,8 @@ public class KitBestowService
 
         public bool Silent { get; }
         public bool ResupplyAmmoBags { get; }
+        
+        public Func<ItemAsset, bool>? EquipmentFilter { get; }
 
         public BestowKitGiveItemsState(in KitBestowData data, WarfarePlayer requester)
         {
@@ -206,6 +209,7 @@ public class KitBestowService
                 _options |= BestowKitOptions.NoAmmo;
 
             ResupplyAmmoBags = data.ResupplyAmmoBags;
+            EquipmentFilter = data.EquipmentFilter;
             _layoutTransformations = data.Layouts ?? Array.Empty<KitLayoutTransformation>();
             _itemCountsTable = (_options & BestowKitOptions.LowAmmo) != 0 ? new List<KeyValuePair<Guid, int>>(16) : null;
 
@@ -224,6 +228,9 @@ public class KitBestowService
 
         public bool ShouldGrantItem(IPageItem item, ref KitItemResolutionResult resolvedItem, ref byte x, ref byte y, ref Page page, ref byte rotation)
         {
+            if (EquipmentFilter != null && resolvedItem.Asset is { } itemAsset && !EquipmentFilter(itemAsset))
+                return false;
+            
             if (!ResupplyAmmoBags && item is IRedirectedItem {Item: RedirectType.AmmoBag})
                 return false;
             
@@ -394,12 +401,10 @@ public readonly struct KitBestowData
     public bool Silent { get; init; }
     public bool ResupplyAmmoBags { get; init; } = true;
     internal bool RestockOnly { get; init; }
+    public Func<ItemAsset, bool>? EquipmentFilter { get; init; }
     public KitBestowData(Kit kit, string profilingContext) : this(kit, null, profilingContext) { }
     internal KitBestowData(Kit kit, IReadOnlyList<KitLayoutTransformation>? layouts, string? profilingContext)
     {
-#if KIT_PROFILING
-        Profiling = new KitProfilingState { Context = profilingContext, Kit = kit };
-#endif
         Kit = kit;
         Layouts = layouts;
     }

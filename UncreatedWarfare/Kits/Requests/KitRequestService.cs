@@ -591,6 +591,33 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
             _semaphore.Release();
         }
     }
+    
+    public async Task RestockMatchingEquipmentAsync(WarfarePlayer player, Func<ItemAsset, bool> equipmentFilter, bool resupplyAmmoBags = false, CancellationToken token = default)
+    {
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            KitPlayerComponent kitComp = player.Component<KitPlayerComponent>();
+            if (!kitComp.HasKit)
+            {
+                // we don't try to give change the player's kit when using this method
+                return;
+            }
+
+            Kit? kit = await kitComp.GetActiveKitAsync(KitInclude.Giveable, token);
+            await UniTask.SwitchToMainThread(token);
+            if (kit != null)
+                kitComp.ActiveKit?.UpdateCachedKit(kit);
+
+            _kitBestowService.RestockKit(player, resupplyAmmoBags, equipmentFilter);
+
+            ApplyHotkeys(player);
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
 
     private bool NeedsToFullRestock(WarfarePlayer player, Kit kit)
     {

@@ -5,7 +5,8 @@ using System.Collections.ObjectModel;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.SupplyCrates;
-using Uncreated.Warfare.FOBs.SupplyCrates.Throwable.AmmoBags;
+using Uncreated.Warfare.FOBs.SupplyCrates.Throwable.Bags.AmmoBags;
+using Uncreated.Warfare.FOBs.SupplyCrates.Throwable.Bags.MedicBags;
 using Uncreated.Warfare.FOBs.SupplyCrates.Throwable.Vehicle;
 
 namespace Uncreated.Warfare.Fobs;
@@ -17,6 +18,7 @@ public sealed class FobConfiguration : BaseAlternateConfigurationFile
 {
     public IReadOnlyList<SupplyCrateInfo> SupplyCrates { get; private set; }
     public IReadOnlyList<ThrownAmmoBagInfo> ThrowableAmmoBags { get; private set; }
+    public IReadOnlyList<ThrownMedicBagInfo> ThrowableMedicBags { get; private set; }
     public IReadOnlyList<ThrownVehicleCrateInfo> ThrowableVehicleSupplyCrates { get; private set; }
     public IReadOnlyList<ShovelableInfo> Shovelables { get; private set; }
     public float RepairStationGroundVehicleRepairRadius { get; private set; }
@@ -66,6 +68,15 @@ public sealed class FobConfiguration : BaseAlternateConfigurationFile
             crate.AmmoBagBarricadeAsset ??= AssetLink.Empty<ItemBarricadeAsset>();
         });
         ThrowableAmmoBags = new ReadOnlyCollection<ThrownAmmoBagInfo>((IList<ThrownAmmoBagInfo>?)ammoBags ?? Array.Empty<ThrownAmmoBagInfo>());
+        
+        List<ThrownMedicBagInfo>? medicBags = UnderlyingConfiguration.GetSection("ThrowableMedicBags").Get<List<ThrownMedicBagInfo>>();
+        medicBags?.ForEach(crate =>
+        {
+            crate.ThrowableItemAsset ??= AssetLink.Empty<ItemAsset>();
+            crate.MedicBagBarricadeAsset ??= AssetLink.Empty<ItemBarricadeAsset>();
+        });
+        ThrowableMedicBags = new ReadOnlyCollection<ThrownMedicBagInfo>((IList<ThrownMedicBagInfo>?)medicBags ?? Array.Empty<ThrownMedicBagInfo>());
+
         
         List<ShovelableInfo>? shovelables = UnderlyingConfiguration.GetSection("Shovelables").Get<List<ShovelableInfo>>(); // todo: List serialization is flaky. List items get silently skipped if they have fields that can't be serialized
         shovelables?.ForEach(info =>

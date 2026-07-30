@@ -1,6 +1,6 @@
 ﻿using Uncreated.Warfare.Configuration;
 
-namespace Uncreated.Warfare.FOBs.SupplyCrates.Throwable.AmmoBags;
+namespace Uncreated.Warfare.FOBs.SupplyCrates.Throwable.Bags.AmmoBags;
 
 public class ThrownAmmoBagInfo
 {

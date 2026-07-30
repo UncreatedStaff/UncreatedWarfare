@@ -10,7 +10,8 @@ using Uncreated.Warfare.Events.Models.Zones;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.Fobs.SupplyCrates;
 using Uncreated.Warfare.FOBs.SupplyCrates;
-using Uncreated.Warfare.FOBs.SupplyCrates.Throwable.AmmoBags;
+using Uncreated.Warfare.FOBs.SupplyCrates.Throwable.Bags.AmmoBags;
+using Uncreated.Warfare.FOBs.SupplyCrates.Throwable.Bags.MedicBags;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
@@ -53,22 +54,24 @@ public class ClaimToRearmTweaks :
     {
         if (!e.Buildable.IsAlive)
             return;
-
-        IAmmoStorage? ammoStorage = ContainerHelper.FindComponent<IAmmoStorage>(e.Buildable.Model);
-        if (ammoStorage == null)
+        
+        // ammo bags, medic bags and supply crates
+        ICombatSupply? supplyBuildable = ContainerHelper.FindComponent<ICombatSupply>(e.Buildable.Model);
+        if (supplyBuildable == null)
         {
+            // if buildable does not directly have a direct ammo bag/medic bag component, it could still be a supply crate
             SupplyCrate? ammoCrate = _fobManager.Entities.OfType<SupplyCrate>().FirstOrDefault(s =>
                 s.Type == SupplyType.Ammo &&
                 s.Buildable.Alive &&
                 s.Buildable.Equals(e.Buildable)
             );
 
-            ammoStorage = ammoCrate != null
+            supplyBuildable = ammoCrate != null
                 ? AmmoSupplyCrate.FromSupplyCrate(ammoCrate, _fobManager)
                 : null;
         }
         
-        if (ammoStorage == null)
+        if (supplyBuildable == null)
             return;
 
         // just in case they somehow got a preview kit out of main
@@ -94,59 +97,64 @@ public class ClaimToRearmTweaks :
             e.Cancel();
             return;
         }
-
-        float rearmCost = GetRearmCost(e.Player.UnturnedPlayer.inventory, kit);
-        if (rearmCost == 0)
+        
+        if (supplyBuildable is IAmmoStorage ammoStorage)
         {
-            _chatService.Send(e.Player, _translations.AmmoAlreadyFull);
+            float rearmCost = GetRearmCostFullKit(e.Player.UnturnedPlayer.inventory, kit);
+            if (rearmCost == 0)
+            {
+                _chatService.Send(e.Player, _translations.AmmoAlreadyFull);
+                e.Cancel();
+                return;
+            }
+
+            Task task = _kitRequestService.RestockKitAsync(e.Player, resupplyAmmoBags: supplyBuildable is not PlacedAmmoBagComponent, token);
+
+            ammoStorage.SubtractAmmo(rearmCost);
+
+            e.Player.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastLoseAmmo.Translate(rearmCost, e.Player)));
+
+            float ammoLeft = ammoStorage.AmmoCount;
+            if (float.IsFinite(ammoLeft))
+            {
+                _chatService.Send(e.Player, _translations.AmmoResuppliedKit, rearmCost, ammoStorage.AmmoCount);
+            }
+            else
+            {
+                _chatService.Send(e.Player, _translations.AmmoResuppliedKitInfinite);
+            }
+
+            _ = WarfareModule.EventDispatcher.DispatchEventAsync(new PlayerRearmedKit
+            {
+                Player = e.Player,
+                AmmoConsumed = rearmCost,
+                AmmoStorage = ammoStorage,
+                Kit = kit
+            }, CancellationToken.None);
+        
+            EffectUtility.TriggerEffect(
+                _assetConfiguration.GetAssetLink<EffectAsset>("Effects:Resupply").GetAssetOrFail(),
+                EffectManager.SMALL,
+                e.Player.Position,
+                true
+            );
+        
             e.Cancel();
-            return;
+
+            await task.ConfigureAwait(false);
         }
-
-        // if (rearmCost > ammoStorage.AmmoCount)
-        // {
-        //     _chatService.Send(e.Player, _translations.AmmoInsufficient, ammoStorage.AmmoCount, rearmCost);
-        //     e.Cancel();
-        //     return;
-        // }
-
-        Task task = _kitRequestService.RestockKitAsync(e.Player, resupplyAmmoBags: ammoStorage is not PlacedAmmoBagComponent, token);
-
-        ammoStorage.SubtractAmmo(rearmCost);
-
-        e.Player.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastLoseAmmo.Translate(rearmCost, e.Player)));
-
-        float ammoLeft = ammoStorage.AmmoCount;
-        if (float.IsFinite(ammoLeft))
+        else if (supplyBuildable is PlacedMedicBagComponent medicBagComponent)
         {
-            _chatService.Send(e.Player, _translations.AmmoResuppliedKit, rearmCost, ammoStorage.AmmoCount);
-        }
-        else
-        {
-            _chatService.Send(e.Player, _translations.AmmoResuppliedKitInfinite);
-        }
-
-        _ = WarfareModule.EventDispatcher.DispatchEventAsync(new PlayerRearmedKit
-        {
-            Player = e.Player,
-            AmmoConsumed = rearmCost,
-            AmmoStorage = ammoStorage,
-            Kit = kit
-        }, CancellationToken.None);
+            Func<ItemAsset, bool> medicalItemFilter = itemAsset => itemAsset is ItemMedicalAsset;
+            float rearmCost = GetRearmCostEquipmentOnly(e.Player.UnturnedPlayer.inventory, kit, medicalItemFilter);
         
-        EffectUtility.TriggerEffect(
-            _assetConfiguration.GetAssetLink<EffectAsset>("Effects:Resupply").GetAssetOrFail(),
-            EffectManager.SMALL,
-            e.Player.Position,
-            true
-        );
-        
-        e.Cancel();
-
-        await task.ConfigureAwait(false);
+            // todo: start coroutine on medic bag component
+            
+            e.Cancel();
+        }
     }
 
-    private float GetRearmCost(PlayerInventory inventory, Kit kit)
+    private float GetRearmCostFullKit(PlayerInventory inventory, Kit kit)
     {
         float totalRearmCost = 0;
 
@@ -189,6 +197,31 @@ public class ClaimToRearmTweaks :
 
         return totalRearmCost;
     }
+    
+    private float GetRearmCostEquipmentOnly(PlayerInventory inventory, Kit kit, Func<ItemAsset, bool>? itemFilter = null)
+    {
+        float totalRearmCost = 0;
+
+        foreach (KeyValuePair<ItemAsset, int> count in GetEquipmentCountsInKit(kit, itemFilter))
+        {
+            ItemAsset equipmentAsset = count.Key;
+            
+            int requiredCount = count.Value;
+
+            int countInInventory = CountItemsInInventory(inventory, equipmentAsset);
+
+            if (countInInventory >= requiredCount)
+            {
+                continue;
+            }
+            int numberToResupply = requiredCount - countInInventory;
+            float equipmentResupplyCost = GetEquipmentCost(equipmentAsset) * numberToResupply;
+
+            totalRearmCost += equipmentResupplyCost;
+        }
+
+        return totalRearmCost;
+    }
 
     private List<ItemGunAsset> GetUniqueGunsInKit(Kit kit)
     {
@@ -213,7 +246,7 @@ public class ClaimToRearmTweaks :
         return guns;
     }
 
-    private static Dictionary<ItemAsset, int> GetEquipmentCountsInKit(Kit kit)
+    private static Dictionary<ItemAsset, int> GetEquipmentCountsInKit(Kit kit, Func<ItemAsset, bool>? filter = null)
     {
         Dictionary<ItemAsset, int> equipment = new Dictionary<ItemAsset, int>();
         foreach (IKitItem item in kit.Items)
@@ -222,6 +255,9 @@ public class ClaimToRearmTweaks :
                 continue;
 
             if (!concrete.Item.TryGetAsset(out ItemAsset? asset))
+                continue;
+            
+            if (filter != null && !filter(asset))
                 continue;
 
             if (GetEquipmentCost(asset) == 0)
