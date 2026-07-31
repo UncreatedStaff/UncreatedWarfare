@@ -741,7 +741,7 @@ public class OptionsUI : UnturnedUI
                 _languageSearch.Add(lang);
             }
 
-            _languageSearch.Sort(startIndex, _languageSearch.Count - 1, LanguageDefaultUISortComparer.Instance);
+            _languageSearch.Sort(startIndex, _languageSearch.Count - startIndex, LanguageDefaultUISortComparer.Instance);
             
             if (_languageSearch.Count > _languageResults.Length)
                 _languageSearch.RemoveRange(_languageResults.Length, _languageSearch.Count - _languageResults.Length);

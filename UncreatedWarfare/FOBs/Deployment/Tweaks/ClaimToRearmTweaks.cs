@@ -63,6 +63,12 @@ public class ClaimToRearmTweaks :
         {
             return UniTask.CompletedTask;
         }
+        
+        if (!e.Player.Team.IsFriendly(ammoStorage.Team))
+        {
+            _chatService.Send(e.Player, _translations.AmmoWrongTeam);
+            return UniTask.CompletedTask;
+        }
 
         return RearmKitFromSupplyCrate(e.Player, ammoStorage, e.Player.DisconnectToken);
     }
@@ -72,15 +78,18 @@ public class ClaimToRearmTweaks :
     {
         IAmmoStorage? ammoStorage = TryGetRearmBarricade(e.Player, e.Buildable);
         if (ammoStorage == null)
-        {
             return UniTask.CompletedTask;
-        }
 
         e.Cancel();
-        if (!ammoStorage.CanChangeKit || _kitUi == null)
+
+        if (!e.Player.Team.IsFriendly(ammoStorage.Team))
         {
-            return RearmKitFromSupplyCrate(e.Player, ammoStorage, e.Player.DisconnectToken);
+            _chatService.Send(e.Player, _translations.AmmoWrongTeam);
+            return UniTask.CompletedTask;
         }
+        
+        if (!ammoStorage.CanChangeKit || _kitUi == null)
+            return RearmKitFromSupplyCrate(e.Player, ammoStorage, e.Player.DisconnectToken);
 
         return OpenKitUIFromSupplyCrate(e.Player, ammoStorage, e.Player.DisconnectToken);
     }
@@ -102,7 +111,7 @@ public class ClaimToRearmTweaks :
             s.Buildable.Equals(buildable)
         );
         
-        return null;
+        return ammoCrate;
     }
 
     private async UniTask RearmKitFromSupplyCrate(WarfarePlayer player, IAmmoStorage ammoStorage, CancellationToken token)

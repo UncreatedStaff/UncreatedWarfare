@@ -457,7 +457,11 @@ partial class ModerationUI
             ModerationActionInputBox2.SetText(c, rep == 0 ? string.Empty : rep.ToString(player.Locale.ParseFormat));
             ModerationActionInputBox2.SetPlaceholder(c, "Reputation");
         }
-        else ModerationActionInputBox2.Hide(c);
+        else
+        {
+            ModerationActionInputBox2.SetText(c, string.Empty);
+            ModerationActionInputBox2.Hide(c);
+        }
 
         if (hasAssetBan)
         {

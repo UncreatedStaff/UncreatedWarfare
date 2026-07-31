@@ -102,11 +102,6 @@ public class PlayerService : IPlayerService
     /// <inheritdoc />
     public IReadOnlyList<WarfarePlayer> GetThreadsafePlayerList()
     {
-        if (GameThread.IsCurrent)
-        {
-            return OnlinePlayers;
-        }
-
         return _threadsafeList;
     }
 
