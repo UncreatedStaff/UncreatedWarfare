@@ -63,6 +63,12 @@ public class ClaimToRearmTweaks :
         {
             return UniTask.CompletedTask;
         }
+        
+        if (!e.Player.Team.IsFriendly(ammoStorage.Team))
+        {
+            _chatService.Send(e.Player, _translations.AmmoWrongTeam);
+            return UniTask.CompletedTask;
+        }
 
         return RearmKitFromSupplyCrate(e.Player, ammoStorage, e.Player.DisconnectToken);
     }
@@ -72,15 +78,18 @@ public class ClaimToRearmTweaks :
     {
         IAmmoStorage? ammoStorage = TryGetRearmBarricade(e.Player, e.Buildable);
         if (ammoStorage == null)
-        {
             return UniTask.CompletedTask;
-        }
 
         e.Cancel();
-        if (!ammoStorage.CanChangeKit || _kitUi == null)
+
+        if (!e.Player.Team.IsFriendly(ammoStorage.Team))
         {
-            return RearmKitFromSupplyCrate(e.Player, ammoStorage, e.Player.DisconnectToken);
+            _chatService.Send(e.Player, _translations.AmmoWrongTeam);
+            return UniTask.CompletedTask;
         }
+        
+        if (!ammoStorage.CanChangeKit || _kitUi == null)
+            return RearmKitFromSupplyCrate(e.Player, ammoStorage, e.Player.DisconnectToken);
 
         return OpenKitUIFromSupplyCrate(e.Player, ammoStorage, e.Player.DisconnectToken);
     }
@@ -91,28 +100,20 @@ public class ClaimToRearmTweaks :
             return null;
 
         IAmmoStorage? ammoStorage = ContainerHelper.FindComponent<IAmmoStorage>(buildable.Model);
-        if (ammoStorage == null)
-        {
-            SupplyCrate? ammoCrate = _fobManager.Entities.OfType<SupplyCrate>().FirstOrDefault(s =>
-                s.Type == SupplyType.Ammo &&
-                s.Buildable.Alive &&
-                s.Buildable.Equals(buildable)
-            );
-
-            ammoStorage = ammoCrate != null
-                ? AmmoSupplyCrate.FromSupplyCrate(ammoCrate, _fobManager)
-                : null;
-
-            if (ammoStorage == null)
-                return null;
-        }
-
-        if (player.Team.GroupId == buildable.Group)
+        if (ammoStorage != null)
             return ammoStorage;
-        
-        _chatService.Send(player, _translations.AmmoWrongTeam);
-        return null;
 
+        SupplyCrate? ammoCrate = _fobManager.Entities.OfType<SupplyCrate>().FirstOrDefault(s =>
+            s.Type == SupplyType.Ammo &&
+            s.Buildable.Alive &&
+            s.Buildable.Equals(buildable)
+        );
+
+        ammoStorage = ammoCrate != null
+            ? AmmoSupplyCrate.FromSupplyCrate(ammoCrate, _fobManager)
+            : null;
+
+        return ammoStorage;
     }
 
     private async UniTask RearmKitFromSupplyCrate(WarfarePlayer player, IAmmoStorage ammoStorage, CancellationToken token)
