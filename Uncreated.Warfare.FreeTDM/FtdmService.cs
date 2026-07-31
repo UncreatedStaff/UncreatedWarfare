@@ -148,7 +148,7 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
                         if (!AllowReenterSpawn)
                         {
                             // this shouldn't really happen
-                            player.UnturnedPlayer.life.askDamage(101, Vector3.up, EDeathCause.ARENA, ELimb.SPINE, CSteamID.Nil, out _);
+                            player.UnturnedPlayer.life.askDamage(101, Vector3.up, EDeathCause.ARENA, ELimb.SPINE, CSteamID.Nil, out _, bypassSafezone: true);
                         }
                     }
                     else if (time - comp.LastInFriendlySpawn > 0.25f)
@@ -178,7 +178,7 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
             {
                 if (timeLeft > OutOfBoundsWarningTime)
                 {
-                    player.UnturnedPlayer.life.askDamage(101, Vector3.up, EDeathCause.ARENA, ELimb.SPINE, CSteamID.Nil, out _);
+                    player.UnturnedPlayer.life.askDamage(101, Vector3.up, EDeathCause.ARENA, ELimb.SPINE, CSteamID.Nil, out _, bypassSafezone: true);
                     comp.LastInPlayArea = float.NaN;
                     player.Component<ToastManager>().SkipExpiration(ToastMessageStyle.FlashingWarning);
                 }

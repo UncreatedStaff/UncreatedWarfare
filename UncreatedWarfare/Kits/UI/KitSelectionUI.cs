@@ -1238,7 +1238,15 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         int? searchMaxSize = data.SearchMaxSize;
         if (!searchMaxSize.HasValue)
         {
-            searchMaxSize = await QueryFactory(_kitsDbContext.Kits).CountAsync(token);
+            await _dbSemaphore.WaitAsync(token);
+            try
+            {
+                searchMaxSize = await QueryFactory(_kitsDbContext.Kits).CountAsync(token);
+            }
+            finally
+            {
+                _dbSemaphore.Release();
+            }
             data.SearchMaxSize = searchMaxSize;
         }
 
