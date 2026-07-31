@@ -11,6 +11,7 @@ using Uncreated.Warfare.Events.Models.Fobs;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.Entities;
+using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.FOBs.SupplyCrates.Throwable.Vehicle;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits.Whitelists;
@@ -237,6 +238,14 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
         return _entities.OfType<EmplacementEntity>().FirstOrDefault(f =>
             f.Vehicle.Vehicle.instanceID == emplacementVehicle.instanceID
         );
+    }
+    
+    public TrackingList<SupplyCrate> FindNearbyFobCreationCrates(Vector3 vector3, Team team)
+    {
+        return Entities
+            .OfType<SupplyCrate>()
+            .Where(e => e.Type == CrateType.FobCreation && e.Team == team && e.IsWithinRadius(vector3))
+            .ToTrackingList();
     }
 
     /// <inheritdoc />

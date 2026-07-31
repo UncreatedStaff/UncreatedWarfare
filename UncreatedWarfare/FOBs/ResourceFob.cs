@@ -167,9 +167,9 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
             UpdateVehicleCounts(null);
         };
 
-        NearbySupplyCrates supplyCrates = NearbySupplyCrates.FindNearbyCrates(Position, Team.GroupId, FobManager);
-        ChangeSupplies(SupplyType.Build, supplyCrates.BuildCount, SupplyChangeReason.InitialSupplyFob);
-        ChangeSupplies(SupplyType.Ammo, supplyCrates.AmmoCount, SupplyChangeReason.InitialSupplyFob);
+        // set to < 0 so that the FOB UI doesn't display build/ammo until it's successfully built (i.e. supply crates have been consumed)
+        BuildCount = -1;
+        AmmoCount = -1;
 
         UpdateIcon();
     }
@@ -262,7 +262,7 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
 
         if (FobManager.Entities
             .OfType<SupplyCrate>()
-            .Any(x => x.Type == SupplyType.Ammo && x.IsWithinRadius(Buildable.Position)))
+            .Any(x => x.Type == CrateType.Ammo && x.IsWithinRadius(Buildable.Position)))
         {
             _tipService.TryGiveTip(player, 0, _tipService.Translations.KitGiveLowAmmo);
         }
@@ -290,26 +290,26 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
         return 0.15f * EffectiveRadius / distanceFromFob;
     }
     public bool IsWithinRadius(Vector3 point) => MathUtility.WithinRange(Position, point, EffectiveRadius);
-    public void ChangeSupplies(SupplyType supplyType, float amount, SupplyChangeReason reason, WarfarePlayer? instigator = null)
-    {
-        if (supplyType == SupplyType.Ammo)
-        {
-            amount = Math.Max(-AmmoCount, amount);
-            AmmoCount += amount;
-        }
-        else if (supplyType == SupplyType.Build)
-        {
-            amount = Math.Max(-BuildCount, amount);
-            BuildCount += amount;
-        }
 
-        NotifySuppliesChanged(supplyType, amount);
+    public void ChangeBuild(float amount, SupplyChangeReason reason, WarfarePlayer? instigator = null) => ChangeSupplies(amount, 0, reason, instigator);
+    public void ChangeAmmo(float amount, SupplyChangeReason reason, WarfarePlayer? instigator = null) => ChangeSupplies(0, amount, reason, instigator);
+    public void ChangeSupplies(float buildAmount, float ammoAmount, SupplyChangeReason reason, WarfarePlayer? instigator = null)
+    {
+        ammoAmount = Math.Max(-AmmoCount, ammoAmount);
+        AmmoCount += ammoAmount;
+        ammoAmount = Math.Max(-BuildCount, ammoAmount);
+        BuildCount += ammoAmount;
+
+        if (buildAmount > 0)
+            NotifySuppliesChanged(SupplyType.Build, ammoAmount);
+        if (ammoAmount > 0)
+            NotifySuppliesChanged(SupplyType.Ammo, ammoAmount);
 
         FobSuppliesChanged args = new FobSuppliesChanged
         {
             Fob = this,
-            AmountDelta = amount,
-            SupplyType = supplyType,
+            BuildAmountDelta =  buildAmount,
+            AmmoAmountDelta = ammoAmount,
             ChangeReason = reason,
             Instigator = instigator
         };
@@ -484,13 +484,11 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
         MapTackAttributes attributes = 0;
         if (IsProxied)
             attributes |= MapTackAttributes.Proxied;
-
-        NearbySupplyCrates.HasNearbySupplyCrates(Position, Team.GroupId, FobManager, out bool hasAmmo, out bool hasBuild);
-
-        if (!hasAmmo || AmmoCount < 5)
+        
+        if (AmmoCount < 7)
             attributes |= MapTackAttributes.LowAmmo;
 
-        if (!hasBuild || BuildCount < 7)
+        if (BuildCount < 7)
             attributes |= MapTackAttributes.LowBuild;
 
         return attributes;

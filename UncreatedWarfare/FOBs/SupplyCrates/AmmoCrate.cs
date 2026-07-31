@@ -5,15 +5,14 @@ using Uncreated.Warfare.Layouts.Teams;
 
 namespace Uncreated.Warfare.FOBs.SupplyCrates;
 
-public class AmmoSupplyCrate : ITemporaryAmmoStorage
+public class AmmoCrate : ITemporaryAmmoStorage
 {
     private int _hasAmmoCountSub;
     private event Action? AmmoCountUpdatedIntl;
-
-    private readonly NearbySupplyCrates _nearbySupplyCrates;
+    
     private readonly SupplyCrate _supplyCrate;
     public bool CanChangeKit => _supplyCrate.Info is { CanChangeKit: true };
-    public float AmmoCount => _nearbySupplyCrates.AmmoCount;
+    public float AmmoCount { get; private set; }
     public CSteamID Owner { get; }
     public Team Team => _supplyCrate.Team;
 
@@ -30,7 +29,7 @@ public class AmmoSupplyCrate : ITemporaryAmmoStorage
                 //   1: already subscribed
                 
                 case 2:
-                    throw new ObjectDisposedException(nameof(AmmoSupplyCrate));
+                    throw new ObjectDisposedException(nameof(AmmoCrate));
             }
 
             AmmoCountUpdatedIntl += value;
@@ -38,9 +37,9 @@ public class AmmoSupplyCrate : ITemporaryAmmoStorage
         remove => AmmoCountUpdatedIntl -= value;
     }
 
-    private AmmoSupplyCrate(SupplyCrate supplyCrate, FobManager fobManager)
+    private AmmoCrate(SupplyCrate supplyCrate, FobManager fobManager)
     {
-        _nearbySupplyCrates = NearbySupplyCrates.FromSingleCrate(supplyCrate, fobManager);
+        AmmoCount = supplyCrate.MaxSupplyCount;
         Owner = supplyCrate.Buildable.Owner;
         _supplyCrate = supplyCrate;
     }
@@ -50,13 +49,13 @@ public class AmmoSupplyCrate : ITemporaryAmmoStorage
         AmmoCountUpdatedIntl?.Invoke();
     }
 
-    public static AmmoSupplyCrate FromSupplyCrate(SupplyCrate supplyCrate, FobManager fobManager)
+    public static AmmoCrate FromSupplyCrate(SupplyCrate supplyCrate, FobManager fobManager)
     {
-        return new AmmoSupplyCrate(supplyCrate, fobManager);
+        return new AmmoCrate(supplyCrate, fobManager);
     }
     public void SubtractAmmo(float ammoCount)
     {
-        _nearbySupplyCrates.SubtractSupplies(ammoCount, SupplyType.Ammo, SupplyChangeReason.ConsumeGeneral);
+        AmmoCount -= ammoCount;
     }
 
     public override string ToString()

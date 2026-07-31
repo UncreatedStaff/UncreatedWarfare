@@ -22,6 +22,7 @@ using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.List;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 using Uncreated.Warfare.Zones;
 
@@ -129,6 +130,15 @@ public partial class FobManager :
                 {
                     if (unbuiltFob == null)
                         return;
+                    
+                    TrackingList<SupplyCrate> findNearbyPlacedSupplyCrates = FindNearbyFobCreationCrates(shovelable.Position, shovelable.Team);
+                    float totalBuildFromSupplyCrates = findNearbyPlacedSupplyCrates.Sum(s => s.SupplyCount);
+                    // don't need to check if there are nearby crates here
+                    unbuiltFob.ChangeSupplies(totalBuildFromSupplyCrates, totalBuildFromSupplyCrates, SupplyChangeReason.InitialSupplyFob);
+                    foreach (SupplyCrate supplyCrate in findNearbyPlacedSupplyCrates)
+                    {
+                        supplyCrate.Buildable.Destroy();
+                    }
 
                     unbuiltFob.MarkBuilt(completedBuildable!);
                     _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FobBuilt { Fob = unbuiltFob, Shovelable = shovelable }, CancellationToken.None);
@@ -197,8 +207,7 @@ public partial class FobManager :
 
         if (nearestFriendlyFob != null && shouldConsumeSupplies)
         {
-            NearbySupplyCrates supplyCrates = NearbySupplyCrates.FindNearbyCrates(nearestFriendlyFob.Position, nearestFriendlyFob.Team.GroupId, this);
-            supplyCrates.SubtractSupplies(shovelableInfo.SupplyCost, SupplyType.Build, SupplyChangeReason.ConsumeShovelablePlaced);
+            nearestFriendlyFob.ChangeBuild(-shovelableInfo.SupplyCost, SupplyChangeReason.ConsumeShovelablePlaced);
             
             placer?.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastLoseBuild.Translate(shovelableInfo.SupplyCost, placer)));
         }
@@ -248,20 +257,14 @@ public partial class FobManager :
 
             if (nearestFriendlyFob != null)
             {
-                NearbySupplyCrates supplyCrates = NearbySupplyCrates.FindNearbyCrates(nearestFriendlyFob.Position, nearestFriendlyFob.Team.GroupId, this);
-                supplyCrates.RefundSupplies(shovelable.Info.SupplyCost, SupplyType.Build);
+                // refund supplies back to nearby FOB
+                nearestFriendlyFob.ChangeBuild(shovelable.Info.SupplyCost, SupplyChangeReason.ResupplyShoveableSalvaged);
+                e.Instigator?.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastGainBuild.Translate(shovelable.Info.SupplyCost, e.Instigator)));
             }
-            else
-            {
-                NearbySupplyCrates supplyCrates = NearbySupplyCrates.FindNearbyCrates(shovelable.Buildable.Position, shovelable.Buildable.Group, this);
-                supplyCrates.RefundSupplies(shovelable.Info.SupplyCost, SupplyType.Build);
-            }
-            e.Instigator?.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastGainBuild.Translate(shovelable.Info.SupplyCost, e.Instigator)));
-        }
-       
-        if (entity is SupplyCrate supplyCrate)
-            NearbySupplyCrates.FromSingleCrate(supplyCrate, this).NotifyChanged(supplyCrate.Type, -supplyCrate.SupplyCount, SupplyChangeReason.ConsumeSuppliesDestroyed);
             
+            // otherwise, there's no FOB nearby so we don't need to do anything
+        }
+        
         DeregisterFobEntity(entity);
     }
 
@@ -309,7 +312,7 @@ public partial class FobManager :
         if (!team.IsValid)
             return;
 
-        _ = new FallingSupplyCrate(
+        _ = new FallingCrate(
             e.Player,
             e.DroppedItem,
             e.LandingPoint,
@@ -317,20 +320,21 @@ public partial class FobManager :
             supplyCrateInfo,
             e.Player.Yaw,
             serviceProvider,
-            supplyCrate =>
+            shouldConvertToBuildable: _ =>
             {
-                RegisterFobEntity(supplyCrate);
-
-                NearbySupplyCrates
-                    .FromSingleCrate(supplyCrate, this)
-                    .NotifyChanged(supplyCrate.Type, supplyCrate.SupplyCount, SupplyChangeReason.ResupplyFob, e.Player);
-                    
-                string tipMsg = supplyCrate.Type == SupplyType.Ammo
-                    ? serviceProvider.GetRequiredService<TranslationInjection<AmmoTranslations>>().Value.ToastGainAmmo.Translate(supplyCrate.SupplyCount, e.Player)
-                    : _translations.ToastGainBuild.Translate(supplyCrate.SupplyCount, e.Player);
-
-                e.Player.SendToast(new ToastMessage(ToastMessageStyle.Tip, tipMsg));
-            }
+                if (supplyCrateInfo.Type == CrateType.FobCreation)
+                {
+                    BunkerFob? nearestFob = FindNearestBunkerFob(team, e.LandingPoint, includeUnbuilt: false);
+                    if (nearestFob != null)
+                    {
+                        nearestFob.ChangeSupplies(supplyCrateInfo.StartingSupplies, supplyCrateInfo.StartingSupplies, SupplyChangeReason.ResupplyFob);
+                        return false;
+                    }
+                }
+                
+                return true;
+            },
+            onConvertedToBuildable: RegisterFobEntity
         );
     }
 

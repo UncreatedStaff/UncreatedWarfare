@@ -1,16 +1,21 @@
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Fobs.Entities;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.Timing;
 
 namespace Uncreated.Warfare.FOBs.SupplyCrates;
 
 public class SupplyCrate : RestockableBuildableFobEntity<SupplyCrateInfo>
 {
-    public SupplyType Type { get; }
+    private ILoopTicker? _despawnTicker;
+    
+    public CrateType Type { get; }
 
     public float SupplyCount
     {
@@ -28,7 +33,7 @@ public class SupplyCrate : RestockableBuildableFobEntity<SupplyCrateInfo>
     public float MaxSupplyCount { get; }
     public float SupplyRadius { get; set; }
     
-    public SupplyCrateStack Stack { get; set; }
+    public SupplyCrateStack Stack { get; set; } // techdebt: since we removed long-lasting depletable supply crates, we probably don't need to worry about stacking anymore
     public StackedSupplyCrate StackInfo { get; set; }
 
     public event Action? OnSupplyCountUpdated;
@@ -40,12 +45,32 @@ public class SupplyCrate : RestockableBuildableFobEntity<SupplyCrateInfo>
         SupplyCount = info.StartingSupplies;
         MaxSupplyCount = info.StartingSupplies;
         SupplyRadius = info.SupplyRadius;
+        if (info.DespawnAfter.HasValue)
+        {
+            _despawnTicker = serviceProvider.GetRequiredService<ILoopTickerFactory>()
+                .CreateTicker(
+                    info.DespawnAfter.Value,
+                    TimeSpan.FromSeconds(20),
+                    queueOnGameThread: true,
+                    onTick: (_, _, _) => TryDespawnIfNoPlayersAround(serviceProvider)
+                );
+        }
 
         Stack = stack ?? new SupplyCrateStack(this);
         StackedSupplyCrate? crate = Stack.Crates.FirstOrDefault(x => ReferenceEquals(x.Crate, this));
         crate ??= Stack.AddCrate(this, level, index);
 
         StackInfo = crate;
+    }
+
+    private void TryDespawnIfNoPlayersAround(IServiceProvider serviceProvider)
+    {
+        PlayerService? playerService = serviceProvider.GetService<PlayerService>();
+        if (playerService == null || !playerService
+                .OnlinePlayersOnTeam(Team).Any(p => IsWithinRadius(p.Position)))
+        {
+            Buildable.Destroy();
+        }
     }
 
     public bool IsWithinRadius(Vector3 point) => MathUtility.WithinRange(Buildable.Position, point, SupplyRadius);
@@ -63,6 +88,8 @@ public class SupplyCrate : RestockableBuildableFobEntity<SupplyCrateInfo>
     /// <inheritdoc />
     public override void Dispose()
     {
+        _despawnTicker?.Dispose();
+        
         if (!StackInfo.IsRemoved)
             Stack.RemoveCrate(StackInfo);
 

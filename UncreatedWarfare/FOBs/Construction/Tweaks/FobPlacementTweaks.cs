@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SDG.Framework.Water;
 using System;
 using System.Linq;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
@@ -11,10 +12,12 @@ using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits.Whitelists;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.List;
 using Uncreated.Warfare.Zones;
 using RallyPoint = Uncreated.Warfare.FOBs.Rallypoints.RallyPoint;
 
@@ -77,25 +80,16 @@ public class FobPlacementTweaks :
             e.Cancel();
             return;
         }
-        
-        NearbySupplyCrates supplyCrates = NearbySupplyCrates.FindNearbyCrates(e.Position, e.OriginalPlacer.Team.GroupId, _fobManager);
 
-        if (supplyCrates.BuildCount == 0)
+        TrackingList<SupplyCrate> nearbySupplyCrates = _fobManager.FindNearbyFobCreationCrates(e.Position, e.OriginalPlacer.Team);
+        
+        if (nearbySupplyCrates.Count == 0)
         {
             if (!await _userPermissionStore.HasPermissionAsync(e.OriginalPlacer, WhitelistService.PermissionPlaceBuildable, token))
             {
                 chatService.Send(e.OriginalPlacer, _translations.BuildFOBNoSupplyCrate);
                 e.Cancel();
             }
-            return;
-        }
-        
-        ShovelableInfo? shovelableInfo = _fobManager.Configuration.Shovelables
-            .FirstOrDefault(s => s.Foundation != null && s.Foundation.Guid == e.Asset.GUID);
-        if (shovelableInfo != null && supplyCrates.BuildCount < shovelableInfo.SupplyCost)
-        {
-            chatService.Send(e.OriginalPlacer, _translations.BuildMissingSupplies, supplyCrates.BuildCount, shovelableInfo.SupplyCost);
-            e.Cancel();
             return;
         }
 

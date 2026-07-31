@@ -60,37 +60,12 @@ internal sealed class DebugMakeFobCommand : IExecutableCommand
         }
 
         // drop supplies
-        if (Context.MatchFlag('a', "--ammo"))
-        {
-            SupplyCrateInfo? ammoSupply = _fobManager.Configuration.SupplyCrates
-                .OrderByDescending(x => x.StartingSupplies)
-                .FirstOrDefault(x => x.Type == SupplyType.Ammo);
-
-            if (ammoSupply == null)
-            {
-                Context.ReplyString("No ammo supplies configured.");
-            }
-            else
-            {
-                Context.Logger.LogInformation("Dropping ammo supplies.");
-                Item item = new Item(ammoSupply.SupplyItemAsset.GetAssetOrFail(), EItemOrigin.ADMIN);
-                float startingSupplies = fob.AmmoCount;
-                _itemTracker.SimulateDroppingItem(Context.Player, item, Context.Player.Position);
-                for (int i = 0; i < 50; ++i)
-                {
-                    // wait for ammo supplies to apply up to 5 sec
-                    await UniTask.Delay(100, cancellationToken: token);
-                    if (!Mathf.Approximately(fob.AmmoCount, startingSupplies))
-                        break;
-                }
-            }
-        }
 
         if (Context.MatchFlag('b', "--build"))
         {
             SupplyCrateInfo? buildSupply = _fobManager.Configuration.SupplyCrates
                 .OrderByDescending(x => x.StartingSupplies)
-                .FirstOrDefault(x => x.Type == SupplyType.Build);
+                .FirstOrDefault(x => x.Type == CrateType.FobCreation);
 
             if (buildSupply == null)
             {

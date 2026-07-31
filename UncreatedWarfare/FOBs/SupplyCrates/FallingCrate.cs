@@ -7,7 +7,7 @@ using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.FOBs.SupplyCrates;
 
-public class FallingSupplyCrate : FallingBuildable
+public class FallingCrate : FallingBuildable
 {
     private readonly SupplyCrateInfo _supplyCrateInfo;
     private readonly IServiceProvider _serviceProvider;
@@ -20,7 +20,7 @@ public class FallingSupplyCrate : FallingBuildable
     private int _level = -1, _index = -1;
 
     /// <inheritdoc />
-    public FallingSupplyCrate(
+    public FallingCrate(
         WarfarePlayer player,
         ItemData itemData,
         Vector3 landingPoint,
@@ -28,6 +28,7 @@ public class FallingSupplyCrate : FallingBuildable
         SupplyCrateInfo supplyCrateInfo,
         float placementYaw,
         IServiceProvider serviceProvider,
+        Func<FallingCrate, bool>? shouldConvertToBuildable = null,
         Action<SupplyCrate>? onConvertedToBuildable = null
     )
         : base(player,
@@ -37,7 +38,8 @@ public class FallingSupplyCrate : FallingBuildable
             supplyCrateInfo.SupplyItemAsset.GetAssetOrFail(),
             supplyCrateInfo.PlacementEffect.GetAsset(),
             placementYaw,
-            static (thisObj, buildable) => ((FallingSupplyCrate)thisObj).HandlePlaced(buildable)
+             thisObj => shouldConvertToBuildable == null || shouldConvertToBuildable((FallingCrate)thisObj),
+            static (thisObj, buildable) => ((FallingCrate)thisObj).HandlePlaced(buildable)
         )
     {
         _supplyCrateInfo = supplyCrateInfo;

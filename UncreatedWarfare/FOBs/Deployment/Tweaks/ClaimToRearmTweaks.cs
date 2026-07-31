@@ -94,13 +94,13 @@ public class ClaimToRearmTweaks :
         if (ammoStorage == null)
         {
             SupplyCrate? ammoCrate = _fobManager.Entities.OfType<SupplyCrate>().FirstOrDefault(s =>
-                s.Type == SupplyType.Ammo &&
+                s.Type == CrateType.Ammo &&
                 s.Buildable.Alive &&
                 s.Buildable.Equals(buildable)
             );
 
             ammoStorage = ammoCrate != null
-                ? AmmoSupplyCrate.FromSupplyCrate(ammoCrate, _fobManager)
+                ? AmmoCrate.FromSupplyCrate(ammoCrate, _fobManager)
                 : null;
 
             if (ammoStorage == null)
@@ -112,7 +112,6 @@ public class ClaimToRearmTweaks :
         
         _chatService.Send(player, _translations.AmmoWrongTeam);
         return null;
-
     }
 
     private async UniTask RearmKitFromSupplyCrate(WarfarePlayer player, IAmmoStorage ammoStorage, CancellationToken token)

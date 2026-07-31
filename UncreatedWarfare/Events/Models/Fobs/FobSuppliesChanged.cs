@@ -21,11 +21,11 @@ public class FobSuppliesChanged : IActionLoggableEvent, IFobNeedsUIUpdateEvent
     /// <summary>
     /// The number of supplies that were added (positive) or removed (negative).
     /// </summary>
-    public required float AmountDelta { get; init; }
+    public required float BuildAmountDelta { get; init; }
     /// <summary>
-    /// The type of supplies that were added or removed.
+    /// The number of supplies that were added (positive) or removed (negative).
     /// </summary>
-    public required SupplyType SupplyType { get; init; }
+    public required float AmmoAmountDelta { get; init; }
     /// <summary>
     /// The reason the supplies were added or removed.
     /// </summary>
@@ -40,8 +40,8 @@ public class FobSuppliesChanged : IActionLoggableEvent, IFobNeedsUIUpdateEvent
     {
         return new ActionLogEntry(ActionLogTypes.FobUpdated,
             $"FOB \"{Fob.Name}\" for team {Fob.Team}, " +
-            $"{EnumUtility.GetNameSafe(SupplyType)} supply updated because {EnumUtility.GetNameSafe(ChangeReason)} by " +
-            $"{AmountDelta:0.##} to {(SupplyType == SupplyType.Ammo ? Fob.AmmoCount : Fob.BuildCount):0.##} supplies. ",
+            $"supplies updated because {EnumUtility.GetNameSafe(ChangeReason)}. " +
+            $"Build: {Fob.BuildCount:0.##} ({BuildAmountDelta:+0.00;-0.00;0.00}) Ammo: {Fob.AmmoCount:+0.00;-0.00;0.00} ({AmmoAmountDelta:0.##}) ",
             Instigator
         );
     }

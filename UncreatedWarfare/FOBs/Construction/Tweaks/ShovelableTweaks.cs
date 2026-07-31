@@ -7,11 +7,13 @@ using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.Entities;
+using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.List;
 
 namespace Uncreated.Warfare.FOBs.Construction.Tweaks;
 
@@ -146,6 +148,13 @@ internal class ShovelableTweaks :
             return;
         }
         
+        // prevent shoveling FOBs if there are no supply crates nearby (perhaps they were destroyed after placing)
+        if (shovelable.Info.ConstuctionType == ShovelableType.Fob && _fobManager.FindNearbyFobCreationCrates(shovelable.Position, shovelable.Team).Count == 0)
+        {
+            _chatService.Send(e.Player, _translations.BuildFOBNoSupplyCrate);
+            return;
+        }
+
         shovelable.Shovel(e.Player, e.InputInfo.point);
     }
 }

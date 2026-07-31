@@ -12,6 +12,6 @@ public interface IResourceFob : IFob
 {
     float BuildCount { get; }
     float AmmoCount { get; }
-    void ChangeSupplies(SupplyType supplyType, float amount, SupplyChangeReason reason, WarfarePlayer? instigator = null);
+    void ChangeSupplies(float buildAmount, float ammoAmount, SupplyChangeReason reason, WarfarePlayer? instigator = null);
     bool IDeployable.AllowUnarmedDeploy => true;
 }
