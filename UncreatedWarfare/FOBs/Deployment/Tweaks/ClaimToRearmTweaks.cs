@@ -90,27 +90,18 @@ public class ClaimToRearmTweaks :
         if (!buildable.IsAlive)
             return null;
 
+        // could be a thrown ammo bag
         IAmmoStorage? ammoStorage = ContainerHelper.FindComponent<IAmmoStorage>(buildable.Model);
-        if (ammoStorage == null)
-        {
-            SupplyCrate? ammoCrate = _fobManager.Entities.OfType<SupplyCrate>().FirstOrDefault(s =>
-                s.Type == CrateType.Ammo &&
-                s.Buildable.Alive &&
-                s.Buildable.Equals(buildable)
-            );
-
-            ammoStorage = ammoCrate != null
-                ? AmmoCrate.FromSupplyCrate(ammoCrate, _fobManager)
-                : null;
-
-            if (ammoStorage == null)
-                return null;
-        }
-
-        if (player.Team.GroupId == buildable.Group)
+        if (ammoStorage != null)
             return ammoStorage;
         
-        _chatService.Send(player, _translations.AmmoWrongTeam);
+        // could be an ammo supply crate, or built ammo crate
+        SupplyCrate? ammoCrate = _fobManager.Entities.OfType<SupplyCrate>().FirstOrDefault(s =>
+            s.Type == CrateType.Ammo &&
+            s.Buildable.Alive &&
+            s.Buildable.Equals(buildable)
+        );
+        
         return null;
     }
 

@@ -174,10 +174,14 @@ public partial class FobManager :
         if (completedFortification == null)
             return;
 
-        if (completedFortification.ConstuctionType == ShovelableType.RepairStation)
+        if (completedFortification.ConstuctionType == ShovelableType.FobAmmoVendor)
+        {
+            FobAmmoVendor fobAmmoVendor = new FobAmmoVendor(completedFortification, team, buildable, this, serviceProvider);
+            RegisterFobEntity(fobAmmoVendor);
+        }
+        else if (completedFortification.ConstuctionType == ShovelableType.RepairStation)
         {
             RepairStation repairStation = new RepairStation(completedFortification, team, buildable, this, serviceProvider);
-            
             RegisterFobEntity(repairStation);
         }
         else if (completedFortification.ConstuctionType == ShovelableType.Fortification)

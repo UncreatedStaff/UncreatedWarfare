@@ -31,7 +31,7 @@ public class SupplyCrate : RestockableBuildableFobEntity<SupplyCrateInfo>
     }
 
     public float MaxSupplyCount { get; }
-    public float SupplyRadius { get; set; }
+    public float Radius { get; set; }
     
     public SupplyCrateStack Stack { get; set; } // techdebt: since we removed long-lasting depletable supply crates, we probably don't need to worry about stacking anymore
     public StackedSupplyCrate StackInfo { get; set; }
@@ -44,7 +44,7 @@ public class SupplyCrate : RestockableBuildableFobEntity<SupplyCrateInfo>
         Type = info.Type;
         SupplyCount = info.StartingSupplies;
         MaxSupplyCount = info.StartingSupplies;
-        SupplyRadius = info.SupplyRadius;
+        Radius = info.SupplyRadius;
         if (info.DespawnAfter.HasValue)
         {
             _despawnTicker = serviceProvider.GetRequiredService<ILoopTickerFactory>()
@@ -73,7 +73,7 @@ public class SupplyCrate : RestockableBuildableFobEntity<SupplyCrateInfo>
         }
     }
 
-    public bool IsWithinRadius(Vector3 point) => MathUtility.WithinRange(Buildable.Position, point, SupplyRadius);
+    public bool IsWithinRadius(Vector3 point) => MathUtility.WithinRange(Buildable.Position, point, Radius);
 
     public override bool Equals(object? obj)
     {
