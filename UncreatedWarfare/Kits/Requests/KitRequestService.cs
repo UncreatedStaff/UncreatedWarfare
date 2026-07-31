@@ -512,6 +512,9 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
     private async Task<Kit?> TryGetDefaultKit(Team team, KitInclude include, CancellationToken token = default)
     {
         Kit? kit;
+        if (!team.IsValid)
+            return _cachedDefaultKit;
+
         if ((include & KitInclude.Giveable) == KitInclude.Giveable)
         {
             if (_unarmedKitCache.TryGetValue(team, out kit))

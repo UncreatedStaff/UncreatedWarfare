@@ -35,12 +35,10 @@ public class ClaimToRearmTweaks :
     private readonly ChatService _chatService;
     private readonly AmmoTranslations _translations;
     private readonly ZoneStore? _zoneStore;
-    private readonly AssetConfiguration _assetConfiguration;
     private readonly KitSelectionUI? _kitUi;
 
     public ClaimToRearmTweaks(IServiceProvider serviceProvider)
     {
-        _assetConfiguration = serviceProvider.GetRequiredService<AssetConfiguration>();
         _fobManager = serviceProvider.GetRequiredService<FobManager>();
         _kitRequestService = serviceProvider.GetRequiredService<KitRequestService>();
         _rearmService = serviceProvider.GetRequiredService<KitRearmService>();
@@ -58,7 +56,7 @@ public class ClaimToRearmTweaks :
             return UniTask.CompletedTask;
         }
 
-        IAmmoStorage? ammoStorage = TryGetRearmBarricade(e.Player, buildable);
+        IAmmoStorage? ammoStorage = TryGetRearmBarricade(buildable);
         if (ammoStorage == null)
         {
             return UniTask.CompletedTask;
@@ -76,7 +74,7 @@ public class ClaimToRearmTweaks :
     [EventListener(RequireActiveLayout = true, RequiresMainThread = true)]
     UniTask IAsyncEventListener<ClaimBedRequested>.HandleEventAsync(ClaimBedRequested e, IServiceProvider serviceProvider, CancellationToken token)
     {
-        IAmmoStorage? ammoStorage = TryGetRearmBarricade(e.Player, e.Buildable);
+        IAmmoStorage? ammoStorage = TryGetRearmBarricade(e.Buildable);
         if (ammoStorage == null)
             return UniTask.CompletedTask;
 
@@ -94,7 +92,7 @@ public class ClaimToRearmTweaks :
         return OpenKitUIFromSupplyCrate(e.Player, ammoStorage, e.Player.DisconnectToken);
     }
 
-    private IAmmoStorage? TryGetRearmBarricade(WarfarePlayer player, IBuildable buildable)
+    private IAmmoStorage? TryGetRearmBarricade(IBuildable buildable)
     {
         if (!buildable.IsAlive)
             return null;
@@ -110,8 +108,10 @@ public class ClaimToRearmTweaks :
             s.Buildable.Alive &&
             s.Buildable.Equals(buildable)
         );
-        
-        return ammoCrate;
+
+        return ammoCrate == null
+            ? null
+            : AmmoCrate.FromSupplyCrate(ammoCrate, _fobManager);
     }
 
     private async UniTask RearmKitFromSupplyCrate(WarfarePlayer player, IAmmoStorage ammoStorage, CancellationToken token)

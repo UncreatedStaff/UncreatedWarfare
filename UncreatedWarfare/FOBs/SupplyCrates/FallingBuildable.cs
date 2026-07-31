@@ -25,11 +25,6 @@ public class FallingBuildable : FallingItem
         _onConvertedToBuildable = onConvertedToBuildable;
     }
 
-    public bool ShouldConvertToBuildable()
-    {
-        return true;
-    }
-
     protected virtual void GetHitTransform(out Vector3 position, out Quaternion rotation)
     {
         float placementYaw = PlacementYaw;

@@ -51,7 +51,6 @@ public class RepairStation : RestockableBuildableFobEntity<ShovelableInfo>
 
     private void RepairTick(ILoopTicker ticker, TimeSpan timeSinceStart, TimeSpan deltaTime)
     {
-        
         float maxRadius = Math.Max(
             _fobManager.Configuration.RepairStationAircraftRepairRadius,
             _fobManager.Configuration.RepairStationGroundVehicleRepairRadius
