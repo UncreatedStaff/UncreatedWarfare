@@ -88,8 +88,6 @@ public class ClaimToRearmTweaks :
             return UniTask.CompletedTask;
         }
         
-        _chatService.Send(e.Player, _translations.AmmoWrongTeam);
-        
         if (!ammoStorage.CanChangeKit || _kitUi == null)
             return RearmKitFromSupplyCrate(e.Player, ammoStorage, e.Player.DisconnectToken);
 
