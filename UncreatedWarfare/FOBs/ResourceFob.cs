@@ -166,10 +166,9 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
 
             UpdateVehicleCounts(null);
         };
-
-        // set to < 0 so that the FOB UI doesn't display build/ammo until it's successfully built (i.e. supply crates have been consumed)
-        BuildCount = -1;
-        AmmoCount = -1;
+        
+        BuildCount = 0;
+        AmmoCount = 0;
 
         UpdateIcon();
     }
@@ -295,14 +294,14 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
     public void ChangeAmmo(float amount, SupplyChangeReason reason, WarfarePlayer? instigator = null) => ChangeSupplies(0, amount, reason, instigator);
     public void ChangeSupplies(float buildAmount, float ammoAmount, SupplyChangeReason reason, WarfarePlayer? instigator = null)
     {
+        buildAmount = Math.Max(-BuildCount, buildAmount);
+        BuildCount += buildAmount;
         ammoAmount = Math.Max(-AmmoCount, ammoAmount);
         AmmoCount += ammoAmount;
-        ammoAmount = Math.Max(-BuildCount, ammoAmount);
-        BuildCount += ammoAmount;
 
-        if (buildAmount > 0)
-            NotifySuppliesChanged(SupplyType.Build, ammoAmount);
-        if (ammoAmount > 0)
+        if (buildAmount != 0)
+            NotifySuppliesChanged(SupplyType.Build, buildAmount);
+        if (ammoAmount != 0)
             NotifySuppliesChanged(SupplyType.Ammo, ammoAmount);
 
         FobSuppliesChanged args = new FobSuppliesChanged
@@ -466,12 +465,12 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
     public virtual int? GetSupplyCount(SupplyType type)
     {
         if (type == SupplyType.Build)
-            return (int)Math.Round(BuildCount);
+            return BuildCount >= 0 ? (int)Math.Ceiling(BuildCount) : null;
     
         if (type == SupplyType.Ammo)
-            return (int)Math.Round(AmmoCount);
+            return AmmoCount >= 0 ? (int)Math.Ceiling(AmmoCount) : null;
 
-        return null;
+        return null;    
     }
 
     public virtual double? GetHealth()
@@ -485,7 +484,7 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
         if (IsProxied)
             attributes |= MapTackAttributes.Proxied;
         
-        if (AmmoCount < 7)
+        if (AmmoCount < 5)
             attributes |= MapTackAttributes.LowAmmo;
 
         if (BuildCount < 7)

@@ -170,7 +170,7 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
             return;
         }
         _entities.Add(entity);
-        _logger.LogDebug($"Registered new FOB Entity: {entity}");
+        _logger.LogDebug($"Registered new FOB Entity: {entity} ({entity.GetType()})");
 
     }
     public bool DeregisterFobEntity(IFobEntity entity)
@@ -187,11 +187,11 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, $"Error disposing FOB Entity: {entity}.");
+                _logger.LogWarning(ex, $"Error disposing FOB Entity: {entity} ({entity.GetType()}).");
             }
         }
 
-        _logger.LogDebug($"Deregistered FOB Entity: {entity}");
+        _logger.LogDebug($"Deregistered FOB Entity: {entity} ({entity.GetType().Name})");
         return true;
     }
     public TBuildableFobType? FindBuildableFob<TBuildableFobType>(IBuildable matchingBuildable) where TBuildableFobType : IBuildableFob

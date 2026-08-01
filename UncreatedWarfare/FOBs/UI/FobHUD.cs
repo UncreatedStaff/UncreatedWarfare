@@ -181,15 +181,21 @@ public class FobHUD :
             newInfo.Color = fob.GetColor(player.Team);
             newInfo.Location = fob.GetClosestLocation(shortName: true) ?? string.Empty;
             newInfo.Visible = true;
-            if (fob is IResourceFob resourceFob)
+            
+            newInfo.Build = -1;
+            newInfo.Ammo = -1;
+            if (fob is BunkerFob bunkerFob)
+            {
+                if (bunkerFob.HasBeenRebuilt)
+                {
+                    newInfo.Build = Mathf.CeilToInt(bunkerFob.BuildCount);
+                    newInfo.Ammo = Mathf.CeilToInt(bunkerFob.AmmoCount);
+                }
+            }
+            else if (fob is IResourceFob resourceFob)
             {
                 newInfo.Build = Mathf.CeilToInt(resourceFob.BuildCount);
                 newInfo.Ammo = Mathf.CeilToInt(resourceFob.AmmoCount);
-            }
-            else
-            {
-                newInfo.Build = -1;
-                newInfo.Ammo = -1;
             }
 
             info.UpdateDifferences(in newInfo, element, player);

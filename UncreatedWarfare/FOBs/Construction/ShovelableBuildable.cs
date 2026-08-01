@@ -8,7 +8,7 @@ using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players;    
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Containers;
@@ -104,7 +104,7 @@ public class ShovelableBuildable : BuildableFobEntity<ShovelableInfo>
                 }
             }
             catch (Exception ex)
-            {
+            { 
                 _serviceProvider.GetRequiredService<ILogger<ShovelableBuildable>>().LogError(ex, "Error spawning vehicle.");
             }
         });

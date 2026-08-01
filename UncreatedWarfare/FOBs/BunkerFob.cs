@@ -5,6 +5,7 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.Deployment;
+using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
@@ -207,6 +208,14 @@ public class BunkerFob : ResourceFob, IFobStrategyMapTackHandler, IDamageableFob
             attributes |= MapTackAttributes.Destroyed;
 
         return attributes;
+    }
+    
+    public override int? GetSupplyCount(SupplyType type)
+    {
+        if (!HasBeenRebuilt)
+            return null;
+        
+        return base.GetSupplyCount(type);  
     }
 
     #endregion

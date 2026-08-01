@@ -147,12 +147,18 @@ internal class ShovelableTweaks :
             _chatService.Send(e.Player, _translations.ShovelableNotFriendly);
             return;
         }
+
         
         // prevent shoveling FOBs if there are no supply crates nearby (perhaps they were destroyed after placing)
-        if (shovelable.Info.ConstuctionType == ShovelableType.Fob && _fobManager.FindNearbyFobCreationCrates(shovelable.Position, shovelable.Team).Count == 0)
+        if (shovelable.Info.ConstuctionType == ShovelableType.Fob)
         {
-            _chatService.Send(e.Player, _translations.BuildFOBNoSupplyCrate);
-            return;
+            BunkerFob? correspondingFob = _fobManager.FindBuildableFob<BunkerFob>(shovelable.Buildable);
+            if (correspondingFob is {HasBeenRebuilt: false} &&
+                _fobManager.FindNearbyFobCreationCrates(shovelable.Position, shovelable.Team).Count == 0)
+            {
+                _chatService.Send(e.Player, _translations.BuildFOBNoSupplyCrate);
+                return;
+            }
         }
 
         shovelable.Shovel(e.Player, e.InputInfo.point);

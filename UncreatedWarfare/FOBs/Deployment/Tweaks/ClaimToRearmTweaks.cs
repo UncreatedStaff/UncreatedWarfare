@@ -9,6 +9,7 @@ using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Models.Zones;
 using Uncreated.Warfare.Fobs;
+using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.Fobs.SupplyCrates;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Interaction;
@@ -102,16 +103,25 @@ public class ClaimToRearmTweaks :
         if (ammoStorage != null)
             return ammoStorage;
         
-        // could be an ammo supply crate, or built ammo crate
+        // could be an ammo supply crate
         SupplyCrate? ammoCrate = _fobManager.Entities.OfType<SupplyCrate>().FirstOrDefault(s =>
             s.Type == CrateType.Ammo &&
             s.Buildable.Alive &&
             s.Buildable.Equals(buildable)
         );
+        if (ammoCrate != null)
+            return AmmoCrate.FromSupplyCrate(ammoCrate, _fobManager);
+        
+        // could be a built FOB ammo crate
+        FobAmmoVendor? fobAmmoVendor = _fobManager.Entities.OfType<FobAmmoVendor>().FirstOrDefault(s =>
+            s.Buildable.Alive &&
+            s.Buildable.Equals(buildable)
+        );
 
-        return ammoCrate == null
-            ? null
-            : AmmoCrate.FromSupplyCrate(ammoCrate, _fobManager);
+        if (fobAmmoVendor != null)
+            return fobAmmoVendor;
+
+        return null;
     }
 
     private async UniTask RearmKitFromSupplyCrate(WarfarePlayer player, IAmmoStorage ammoStorage, CancellationToken token)

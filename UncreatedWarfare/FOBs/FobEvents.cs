@@ -123,7 +123,7 @@ public partial class FobManager :
             }
 
             // fobs need their own special shoveable with a completed event
-            if (TryCreateShoveable(e.Buildable, team, e.Owner, out shovelable, shouldConsumeSupplies: !unbuiltFob.HasBeenRebuilt))
+            if (TryCreatShovelable(e.Buildable, team, out shovelable))
             {
                 shovelable.IsIconVisible = !unbuiltFob.HasBeenRebuilt;
                 shovelable.OnComplete += completedBuildable =>
@@ -157,7 +157,7 @@ public partial class FobManager :
 
         // other entities and shovelables get registered here
         TryRegisterEntity(e.Buildable, team, serviceProvider);
-        TryCreateShoveable(e.Buildable, team, e.Owner, out shovelable);
+        TryCreateShoveableForFobEntity(e.Buildable, team, e.Owner, out shovelable);
     }
 
     private void TryRegisterEntity(IBuildable buildable, Team team, IServiceProvider serviceProvider)
@@ -190,7 +190,23 @@ public partial class FobManager :
         }
     }
 
-    private bool TryCreateShoveable(IBuildable buildable, Team team, WarfarePlayer? placer, [NotNullWhen(true)] out ShovelableBuildable? shovelable, bool shouldConsumeSupplies = true)
+    private bool TryCreateShoveableForFobEntity(IBuildable buildable, Team team, WarfarePlayer? placer, [NotNullWhen(true)] out ShovelableBuildable? newShovelable)
+    {
+        if (!TryCreatShovelable(buildable, team, out newShovelable))
+            return false;
+
+        BunkerFob? nearestFriendlyFob = FindNearestBunkerFob(newShovelable.Buildable.Group, buildable.Position);
+        if (nearestFriendlyFob != null)
+        {
+            nearestFriendlyFob.ChangeBuild(-newShovelable.Info.SupplyCost, SupplyChangeReason.ConsumeShovelablePlaced);
+            
+            placer?.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastLoseBuild.Translate(newShovelable.Info.SupplyCost, placer)));
+        }
+
+        return true;
+    }
+
+    private bool TryCreatShovelable(IBuildable buildable, Team team, [NotNullWhen(true)] out ShovelableBuildable? shovelable)
     {
         shovelable = null;
 
@@ -198,7 +214,6 @@ public partial class FobManager :
             return false;
 
         ShovelableInfo? shovelableInfo = Configuration.Shovelables.FirstOrDefault(s => s.Foundation.MatchAsset(buildable.Asset));
-
         if (shovelableInfo == null)
             return false;
 
@@ -206,16 +221,6 @@ public partial class FobManager :
         shovelable = newShovelable;
 
         RegisterFobEntity(newShovelable);
-
-        BunkerFob? nearestFriendlyFob = FindNearestBunkerFob(newShovelable.Buildable.Group, buildable.Position);
-
-        if (nearestFriendlyFob != null && shouldConsumeSupplies)
-        {
-            nearestFriendlyFob.ChangeBuild(-shovelableInfo.SupplyCost, SupplyChangeReason.ConsumeShovelablePlaced);
-            
-            placer?.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastLoseBuild.Translate(shovelableInfo.SupplyCost, placer)));
-        }
-
         return true;
     }
 
@@ -324,14 +329,15 @@ public partial class FobManager :
             supplyCrateInfo,
             e.Player.Yaw,
             serviceProvider,
-            shouldConvertToBuildable: _ =>
+            shouldConvertToBuildable: fallingCrate =>
             {
                 if (supplyCrateInfo.Type == CrateType.FobCreation)
                 {
                     BunkerFob? nearestFob = FindNearestBunkerFob(team, e.LandingPoint, includeUnbuilt: false);
                     if (nearestFob != null)
                     {
-                        nearestFob.ChangeSupplies(supplyCrateInfo.StartingSupplies, supplyCrateInfo.StartingSupplies, SupplyChangeReason.ResupplyFob);
+                        nearestFob.ChangeSupplies(supplyCrateInfo.StartingSupplies, supplyCrateInfo.StartingSupplies, SupplyChangeReason.ResupplyFob, e.Player);
+                        fallingCrate.PlayPlacementEffect();
                         return false;
                     }
                 }

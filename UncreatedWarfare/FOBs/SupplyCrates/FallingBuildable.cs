@@ -73,8 +73,12 @@ public class FallingBuildable : FallingItem
             group: Team.GroupId
         );
 
+        PlayPlacementEffect();
         _onConvertedToBuildable?.Invoke(this, buildable);
+    }
 
+    public void PlayPlacementEffect()
+    {
         if (_placementEffect == null)
             return;
 
