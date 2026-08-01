@@ -377,6 +377,11 @@
         <Publicize Include="Assembly-CSharp:SDG.Unturned.ClientAssetIntegrity.serverKnownMissingGuids" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.Rocket.secondLastPos" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.SteamPlayer.clientPlatform" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.CargoBuilder" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.CargoBuilder.declarations" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.CargoDeclaration" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.CargoDeclaration.lines" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.Asset.BuildCargoData" />
 
     </ItemGroup>
 

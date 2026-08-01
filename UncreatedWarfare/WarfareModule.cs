@@ -23,6 +23,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Uncreated.Warfare.AssetReplication;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
@@ -56,7 +57,6 @@ using Uncreated.Warfare.Kits.Tweaks;
 using Uncreated.Warfare.Kits.UI;
 using Uncreated.Warfare.Kits.Whitelists;
 using Uncreated.Warfare.Layouts;
-using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Layouts.Seeding;
 using Uncreated.Warfare.Layouts.UI;
 using Uncreated.Warfare.Lobby;
@@ -585,6 +585,10 @@ public sealed class WarfareModule
             .SingleInstance();
 
         bldr.RegisterRpcType<RemotePlayerListService>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
+        bldr.RegisterRpcType<AssetReplicationManager>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
