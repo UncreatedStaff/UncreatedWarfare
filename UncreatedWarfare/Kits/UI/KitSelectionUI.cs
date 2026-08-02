@@ -2425,7 +2425,7 @@ public sealed class KitSelectionUITranslations : TranslationCollection
     public readonly Translation StatusEquippedLowAmmo = new Translation("<#827d6d>Equipped</color> - <#999>Low Ammo</color>\n<#bbb>Restock at FOB or Main Base</color>", TranslationOptions.TMProUI);
     
     [TranslationData("Label for when the ammo storage being interacted with doesn't have any ammo.")]
-    public readonly Translation StatusNoAmmo = new Translation("<#e25d5d>NO AMMO</color>", TranslationOptions.TMProUI);
+    public readonly Translation StatusNoAmmo = new Translation("<#e25d5d>INSUFFCIENT AMMO</color>", TranslationOptions.TMProUI);
     
     [TranslationData("Label for when the ammo storage being interacted with doesn't support changing kits.")]
     public readonly Translation StatusNoChangingKits = new Translation("<#e25d5d>Unable to change kit here</color>", TranslationOptions.TMProUI);
@@ -2542,7 +2542,7 @@ public sealed class KitSelectionUITranslations : TranslationCollection
     public readonly Translation<float, float> RestockShortcutButton = new Translation<float, float>("Restock Current Kit\n<#e26a5d>{0} AMMO</color>   <#aaa>{1} LEFT</color>", TranslationOptions.TMProUI);
 
     [TranslationData("Label for the restock shortcut button with an ammo storage that doesn't have enough supplies to restock the player's kit.")]
-    public readonly Translation RestockShortcutButtonNoAmmo = new Translation("Restock Current Kit\n<#e26a5d>NO AMMO</color>", TranslationOptions.TMProUI);
+    public readonly Translation RestockShortcutButtonNoAmmo = new Translation("Restock Current Kit\n<#e26a5d>INSUFFCIENT AMMO</color>", TranslationOptions.TMProUI);
 
     [TranslationData("Label for the restock shortcut button with an infinite ammo storage, like a cache.")]
     public readonly Translation RestockShortcutButtonInfiniteAmmo = new Translation("Restock Current Kit", TranslationOptions.TMProUI);
