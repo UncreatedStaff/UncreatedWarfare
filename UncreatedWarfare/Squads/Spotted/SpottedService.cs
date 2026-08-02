@@ -1,7 +1,6 @@
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
@@ -10,7 +9,7 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Squads;
 using Uncreated.Warfare.Events.Models.Vehicles;
-using Uncreated.Warfare.Fobs;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Layouts.Teams;

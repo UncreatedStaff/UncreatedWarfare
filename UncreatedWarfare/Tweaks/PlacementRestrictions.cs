@@ -4,7 +4,7 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Structures;
-using Uncreated.Warfare.Fobs;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Zones;
 

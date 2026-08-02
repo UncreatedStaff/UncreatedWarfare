@@ -11,12 +11,14 @@ namespace Uncreated.Warfare.FOBs.SupplyCrates.Throwable.AmmoBags;
 
 public class PlacedAmmoBagComponent : MonoBehaviour, IAmmoStorage, IManualOnDestroy
 {
+    private SemaphoreSlim? _intxSemaphore;
+
     private IBuildable _buildable = null!;
     public CSteamID Owner { get; private set; }
     public float AmmoCount { get; private set; }
     public WorldIconInfo? Icon { get; private set; }
     public Team Team { get; private set; } = null!;
-    public event Action? AmmoCountUpdated;
+    public event Action<float>? AmmoCountUpdated;
     public void Init(WarfarePlayer warfarePlayer, IBuildable buildable, float startingAmmo, Team team, IServiceProvider serviceProvider)
     {
         AmmoCount = startingAmmo;
@@ -32,6 +34,8 @@ public class PlacedAmmoBagComponent : MonoBehaviour, IAmmoStorage, IManualOnDest
             Icon.Dispose();
             Icon = null;
         }
+
+        _intxSemaphore ??= new SemaphoreSlim(1, 1);
 
         if (worldIconManager == null || assetConfig == null)
             return;
@@ -64,7 +68,7 @@ public class PlacedAmmoBagComponent : MonoBehaviour, IAmmoStorage, IManualOnDest
             });
         }
 
-        AmmoCountUpdated?.Invoke();
+        AmmoCountUpdated?.Invoke(AmmoCount);
     }
 
     /// <inheritdoc />
@@ -83,9 +87,13 @@ public class PlacedAmmoBagComponent : MonoBehaviour, IAmmoStorage, IManualOnDest
     {
         Icon?.Dispose();
         Icon = null;
+
+        _intxSemaphore?.Dispose();
     }
 
     bool IAmmoStorage.CanChangeKit => false;
+    bool IAmmoStorage.AllowDiscountedRearm => true;
     Vector3 IAmmoStorage.Point => _buildable.Position;
     float IAmmoStorage.InteractRange => 6.5f;
+    SemaphoreSlim? IAmmoStorage.InteractSemaphore => _intxSemaphore;
 }

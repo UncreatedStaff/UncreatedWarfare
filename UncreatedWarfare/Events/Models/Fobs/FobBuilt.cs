@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using Uncreated.Warfare.Events.Logging;
-using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Construction;
 

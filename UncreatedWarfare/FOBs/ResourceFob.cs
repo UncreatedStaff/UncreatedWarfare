@@ -4,7 +4,6 @@ using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models.Fobs;
-using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.FOBs.Entities;
@@ -27,12 +26,12 @@ using Uncreated.Warfare.Zones;
 using HealthUpdated = Uncreated.Warfare.StrategyMaps.MapTacks.HealthUpdated;
 using VehicleUpdated = Uncreated.Warfare.StrategyMaps.MapTacks.VehicleUpdated;
 
-namespace Uncreated.Warfare.Fobs;
+namespace Uncreated.Warfare.FOBs;
 
 /// <summary>
 /// Base class for standard FOBs, caches, and any other FOBs that support items.
 /// </summary>
-public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIHandler
+public class ResourceFob : BaseFob, IBuildableFob, IResourceFob, IMapTackUIHandler
 {
     // ReSharper disable PrivateFieldCanBeConvertedToLocalVariable
     private readonly IPlayerService _playerService;
@@ -46,7 +45,6 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
     private readonly Func<WarfarePlayer, float> _getProxyScore;
     private string? _closestShortName, _closestLongName;
     private bool _hasClosestShortName, _hasClosestLongName;
-
 
     // ReSharper restore PrivateFieldCanBeConvertedToLocalVariable
 
@@ -111,6 +109,7 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
         _zoneStore = serviceProvider.GetService<ZoneStore>();
         _vehicleInfoStore = serviceProvider.GetRequiredService<VehicleInfoStore>();
 
+        // ReSharper disable once VirtualMemberCallInConstructor
         FriendlyProximity = new SphereProximity(Position, EffectiveRadius);
 
         _loopTicker = serviceProvider.GetRequiredService<ILoopTickerFactory>().CreateTicker(TimeSpan.FromSeconds(0.25f), true, true);
@@ -390,8 +389,9 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
         return formatter.Colorize(Name, GetColor(parameters.Team ?? Team.NoTeam), parameters.Options);
     }
 
-    protected virtual void Dispose(bool isDisposing)
+    protected override void Dispose(bool disposing)
     {
+        base.Dispose(disposing);
         NearbyFriendlies.RemoveAllCurrentItems();
         NearbyEnemies.RemoveAllCurrentItems();
         NearbyFriendlies.Dispose();
@@ -400,11 +400,6 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
         _loopTicker.Dispose();
         Icon?.Dispose();
         Icon = null;
-    }
-
-    public void Dispose()
-    {
-        Dispose(true);
     }
 
     bool IDeployable.IsSafeZone => false;

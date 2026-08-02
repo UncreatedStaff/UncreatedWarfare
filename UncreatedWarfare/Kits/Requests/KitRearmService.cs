@@ -3,7 +3,6 @@ using System;
 using System.Linq;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models.Fobs.Ammo;
-using Uncreated.Warfare.Fobs.SupplyCrates;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.FOBs.SupplyCrates.Throwable.AmmoBags;
 using Uncreated.Warfare.Interaction;
@@ -117,25 +116,37 @@ public class KitRearmService : BaseAlternateConfigurationFile // WARNING: not re
         if (player.TryGetFromContainer(out KitPlayerComponent? kitComponent) && kitComponent.HasKit)
         {
             kit = await kitComponent.GetActiveKitAsync(KitInclude.Giveable, token).ConfigureAwait(false);
-            await UniTask.SwitchToMainThread(token);
         }
 
-        if (kit == null)
+        await UniTask.SwitchToMainThread(token);
+
+        float storageStartingCount = ammoStorage.AmmoCount;
+
+        if (kit == null || kit.Class <= Class.Unarmed)
         {
             _chatService.Send(player, _translations.AmmoNoKit);
-            return new RearmResult(RearmResultType.NoKit, 0f, ammoStorage.AmmoCount);
+            return new RearmResult(RearmResultType.NoKit, 0f, storageStartingCount);
         }
 
         float rearmCost = GetRearmCost(player, kit);
         if (rearmCost == 0)
         {
             _chatService.Send(player, _translations.AmmoAlreadyFull);
-            return new RearmResult(RearmResultType.AlreadyFull, 0f, ammoStorage.AmmoCount);
+            return new RearmResult(RearmResultType.AlreadyFull, 0f, storageStartingCount);
         }
+
+        if (!ammoStorage.AllowDiscountedRearm && float.IsFinite(storageStartingCount) && storageStartingCount < rearmCost)
+        {
+            _chatService.Send(player, _translations.AmmoInsufficient, rearmCost, storageStartingCount);
+            return new RearmResult(RearmResultType.MissingAmmo, 0f, storageStartingCount);
+        }
+
+        ammoStorage.SubtractAmmo(rearmCost);
 
         Task task = _kitRequestService.RestockKitAsync(player, resupplyAmmoBags: ammoStorage is not PlacedAmmoBagComponent, token);
 
         ApplyRearm(player, rearmCost, ammoStorage, kit, token);
+        float newCount = ammoStorage.AmmoCount;
 
         await task.ConfigureAwait(false);
 
@@ -147,12 +158,12 @@ public class KitRearmService : BaseAlternateConfigurationFile // WARNING: not re
             Kit = kit
         }, CancellationToken.None);
 
-        return new RearmResult(RearmResultType.Rearmed, rearmCost, ammoStorage.AmmoCount);
+        return new RearmResult(RearmResultType.Rearmed, rearmCost, newCount);
     }
 
     public void ApplyRearm(WarfarePlayer player, float rearmCost, IAmmoStorage ammoStorage, Kit kit, CancellationToken token = default)
     {
-        ammoStorage.SubtractAmmo(rearmCost);
+        GameThread.AssertCurrent();
 
         float ammoLeft = ammoStorage.AmmoCount;
         if (float.IsFinite(ammoLeft))
@@ -192,7 +203,8 @@ public class KitRearmService : BaseAlternateConfigurationFile // WARNING: not re
     {
         Rearmed,
         AlreadyFull,
-        NoKit
+        NoKit,
+        MissingAmmo
     }
 
     /// <summary>
@@ -222,22 +234,38 @@ public class KitRearmService : BaseAlternateConfigurationFile // WARNING: not re
     }
 
     /// <summary>
-    /// Gets the full cost to rearm the given player.
+    /// Calculates the full cost to rearm the given player.
     /// </summary>
-    public virtual float GetRearmCost(WarfarePlayer player, Kit kit)
+    public float GetRearmCost(WarfarePlayer player, Kit kit)
+    {
+        GameThread.AssertCurrent();
+
+        return GetRearmCost(player, player.Team, kit);
+    }
+
+    /// <summary>
+    /// Calculates the full cost to fully arm any player on a given team.
+    /// </summary>
+    public float GetArmCost(Team team, Kit kit)
+    {
+        GameThread.AssertCurrent();
+
+        return GetRearmCost(null, team, kit);
+    }
+
+    protected virtual float GetRearmCost(WarfarePlayer? player, Team team, Kit kit)
     {
         GameThread.AssertCurrent();
 
         float totalRearmCost = 0;
 
-
-        PlayerInventory inventory = player.UnturnedPlayer.inventory;
+        PlayerInventory? inventory = player?.UnturnedPlayer.inventory;
 
         HashSet<Item> magazinesAlreadyCounted = new HashSet<Item>();
         GatherUniqueGunsInKit(kit);
         foreach (ItemGunAsset gun in _gunBuffer)
         {
-            int fullmags = CountFullMags(inventory, gun, magazinesAlreadyCounted);
+            int fullmags = inventory is null ? 0 : CountFullMags(inventory, gun, magazinesAlreadyCounted);
             int requiredMags = CountMagsInKit(kit, gun);
 
             FirearmClass firearmClass = ItemUtility.GetFirearmClass(gun);
@@ -256,12 +284,12 @@ public class KitRearmService : BaseAlternateConfigurationFile // WARNING: not re
 
         _gunBuffer.Clear();
 
-        foreach (KeyValuePair<ItemAsset, int> count in GetEquipmentCountsInKit(kit, player.Team))
+        foreach (KeyValuePair<ItemAsset, int> count in GetEquipmentCountsInKit(kit, team))
         {
             ItemAsset equipmentAsset = count.Key;
             int requiredCount = count.Value;
 
-            int countInInventory = CountItemsInInventory(inventory, equipmentAsset);
+            int countInInventory = inventory is null ? 0 : CountItemsInInventory(inventory, equipmentAsset);
 
             if (countInInventory >= requiredCount)
             {

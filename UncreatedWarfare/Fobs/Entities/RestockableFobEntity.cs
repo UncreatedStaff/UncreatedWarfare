@@ -3,18 +3,17 @@ using System;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.FOBs.Construction;
-using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.FOBs.StateStorage;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
 
-namespace Uncreated.Warfare.Fobs.Entities;
+namespace Uncreated.Warfare.FOBs.Entities;
 
 /// <summary>
 /// Buildable fob entity that periodically refills it's inventory from a <see cref="BarricadeStateSave"/>.
 /// </summary>
-public abstract class RestockableBuildableFobEntity<TInfo> : BuildableFobEntity<TInfo> where TInfo : IBuildableFobEntityInfo
+public class RestockableBuildableFobEntity<TInfo> : BuildableFobEntity<TInfo> where TInfo : IBuildableFobEntityInfo
 {
     private readonly byte[]? _refillState;
 
@@ -27,7 +26,7 @@ public abstract class RestockableBuildableFobEntity<TInfo> : BuildableFobEntity<
 
     public override bool PreventItemDrops => true;
 
-    protected RestockableBuildableFobEntity(
+    public RestockableBuildableFobEntity(
         IBuildable buildable,
         IServiceProvider serviceProvider,
         bool enableAutoRestock,
@@ -36,7 +35,7 @@ public abstract class RestockableBuildableFobEntity<TInfo> : BuildableFobEntity<
         TimeSpan refillInterval = default)
         : base(info, buildable, team, serviceProvider)
     {
-        if (buildable.IsStructure || !enableAutoRestock)
+        if (buildable.IsStructure || !enableAutoRestock || buildable.Asset is not ItemStorageAsset)
             return;
 
         TimeSpan interval = refillInterval == default ? TimeSpan.FromSeconds(60d) : refillInterval;

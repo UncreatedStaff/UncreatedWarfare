@@ -1,7 +1,7 @@
 using System;
 using Uncreated.Warfare.Events.Logging;
 using Uncreated.Warfare.Events.Models.Buildables;
-using Uncreated.Warfare.Fobs;
+using Uncreated.Warfare.FOBs;
 
 namespace Uncreated.Warfare.Events.Models.Fobs;
 

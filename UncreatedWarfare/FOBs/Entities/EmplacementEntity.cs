@@ -1,7 +1,6 @@
 using System;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;

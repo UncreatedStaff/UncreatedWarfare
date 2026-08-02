@@ -4,7 +4,6 @@ using System.Globalization;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Layouts.Teams;
@@ -20,7 +19,7 @@ using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.FOBs.Rallypoints;
 
-public class RallyPoint : IBuildableFob, IDisposable, IFobStrategyMapTackHandler
+public class RallyPoint : BaseFob, IBuildableFob, IDisposable, IFobStrategyMapTackHandler
 {
     private const int BurnRadius = 20;
     private const int DeployTimer = 20;
@@ -152,10 +151,10 @@ public class RallyPoint : IBuildableFob, IDisposable, IFobStrategyMapTackHandler
 
     bool IDeployable.IsSafeZone => false;
 
-    /// <inheritdoc />
-    public void Dispose()
+    protected override void Dispose(bool disposing)
     {
         _loopTicker.Dispose();
+        base.Dispose(disposing);
     }
 
     /// <inheritdoc />

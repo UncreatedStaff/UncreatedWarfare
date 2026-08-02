@@ -1,8 +1,5 @@
 using System;
-using System.Collections.Generic;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Fobs;
-using Uncreated.Warfare.Fobs.SupplyCrates;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Util;

@@ -2,8 +2,8 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.Fobs.Entities;
 using Uncreated.Warfare.FOBs.Construction;
+using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
@@ -13,7 +13,24 @@ namespace Uncreated.Warfare.FOBs.SupplyCrates;
 
 public class SupplyCrate : RestockableBuildableFobEntity<SupplyCrateInfo>
 {
-    private ILoopTicker? _despawnTicker;
+    private readonly ILoopTicker? _despawnTicker;
+    private SemaphoreSlim? _supplyAccessSync;
+
+    internal SemaphoreSlim SupplyAccessSync
+    {
+        get
+        {
+            if (_supplyAccessSync != null)
+                return _supplyAccessSync;
+
+            SemaphoreSlim @new = new SemaphoreSlim(1, 1);
+            SemaphoreSlim? old = Interlocked.CompareExchange(ref _supplyAccessSync, @new, null);
+            if (old != null)
+                @new.Dispose();
+
+            return _supplyAccessSync;
+        }
+    }
     
     public CrateType Type { get; }
 
@@ -89,7 +106,9 @@ public class SupplyCrate : RestockableBuildableFobEntity<SupplyCrateInfo>
     public override void Dispose()
     {
         _despawnTicker?.Dispose();
-        
+
+        _supplyAccessSync?.Dispose();
+
         if (!StackInfo.IsRemoved)
             Stack.RemoveCrate(StackInfo);
 

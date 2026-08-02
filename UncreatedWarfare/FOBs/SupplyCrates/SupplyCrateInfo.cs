@@ -19,6 +19,7 @@ public class SupplyCrateInfo : IBuildableFobEntityInfo
     public int MaxStackHeight { get; set; } = 3;
     public int MaxStackWidth { get; set; } = 7;
     public bool CanChangeKit { get; set; }
+    public bool AllowDiscountedRearm { get; set; } = true;
     public TimeSpan? DespawnAfter { get; set; }
 
     IAssetLink<ItemPlaceableAsset> IBuildableFobEntityInfo.IdentifyingAsset => SupplyItemAsset;

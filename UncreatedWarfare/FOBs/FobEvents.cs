@@ -10,8 +10,6 @@ using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Events.Models.Fobs;
 using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Events.Models.Vehicles;
-using Uncreated.Warfare.Fobs.SupplyCrates;
-using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.FOBs.Rallypoints;
@@ -20,13 +18,12 @@ using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.UI;
-using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 using Uncreated.Warfare.Zones;
 
-namespace Uncreated.Warfare.Fobs;
+namespace Uncreated.Warfare.FOBs;
 
 public partial class FobManager :
     IEventListener<IBuildablePlacedEvent>,

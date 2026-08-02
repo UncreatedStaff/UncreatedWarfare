@@ -1,5 +1,6 @@
 ﻿using System;
 using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.FOBs.SupplyCrates;
 
@@ -14,8 +15,14 @@ public interface IAmmoStorage
     bool CanChangeKit { get; }
 
     /// <summary>
-    /// Amount of ammo currently in storage.
+    /// If <see langword="true"/>, allows rearming or switching kits when this ammo storage has less than the required amount, so long as its greater than 0.
     /// </summary>
+    bool AllowDiscountedRearm { get; }
+
+    /// <summary>
+    /// Amount of ammo currently in storage. May be <see cref="float.PositiveInfinity"/> for infinite ammo caches.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
     float AmmoCount { get; }
     
     /// <summary>
@@ -42,11 +49,18 @@ public interface IAmmoStorage
     /// <summary>
     /// Invoked when the ammo count on this storage is updated.
     /// </summary>
-    event Action? AmmoCountUpdated;
+    event Action<float>? AmmoCountUpdated;
+
+    /// <summary>
+    /// Allows synchronizing requests so you can't have two people requesting kits at the same time to avoid ammo limits.
+    /// </summary>
+    /// <value>The semaphore to use, or <see langword="null"/> to not synchronize access.</value>
+    SemaphoreSlim? InteractSemaphore { get; }
 
     /// <summary>
     /// Remove <paramref name="ammoCount"/> ammo supplies from the storage, possibly destroying it.
     /// </summary>
+    /// <exception cref="GameThreadException"/>
     void SubtractAmmo(float ammoCount);
 }
 

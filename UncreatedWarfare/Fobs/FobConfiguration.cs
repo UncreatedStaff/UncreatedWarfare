@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Configuration;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.FOBs.Construction;
@@ -8,7 +7,7 @@ using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.FOBs.SupplyCrates.Throwable.AmmoBags;
 using Uncreated.Warfare.FOBs.SupplyCrates.Throwable.Vehicle;
 
-namespace Uncreated.Warfare.Fobs;
+namespace Uncreated.Warfare.FOBs;
 
 /// <summary>
 /// Home for storing FOB and buildable data.

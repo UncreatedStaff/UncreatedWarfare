@@ -4,7 +4,6 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Items;
-using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits.Items;

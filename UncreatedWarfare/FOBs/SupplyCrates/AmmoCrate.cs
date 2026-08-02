@@ -1,6 +1,5 @@
 using System;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Util;
 
@@ -9,27 +8,21 @@ namespace Uncreated.Warfare.FOBs.SupplyCrates;
 public class AmmoCrate : ITemporaryAmmoStorage
 {
     private int _hasAmmoCountSub;
-    private event Action? AmmoCountUpdatedIntl;
+    private event Action<float>? AmmoCountUpdatedIntl;
     
     private readonly SupplyCrate _supplyCrate;
     public bool CanChangeKit => _supplyCrate.Info is { CanChangeKit: true };
 
     public float AmmoCount
     {
-        get
-        {
-            return _supplyCrate.SupplyCount;
-        }
-        private set
-        {
-            _supplyCrate.SupplyCount = value;
-        }
+        get => _supplyCrate.SupplyCount;
+        private set => _supplyCrate.SupplyCount = value;
     }
 
     public CSteamID Owner { get; }
     public Team Team => _supplyCrate.Team;
 
-    public event Action? AmmoCountUpdated
+    public event Action<float>? AmmoCountUpdated
     {
         add
         {
@@ -50,7 +43,7 @@ public class AmmoCrate : ITemporaryAmmoStorage
         remove => AmmoCountUpdatedIntl -= value;
     }
 
-    private AmmoCrate(SupplyCrate supplyCrate, FobManager fobManager)
+    private AmmoCrate(SupplyCrate supplyCrate)
     {
         _supplyCrate = supplyCrate;
         Owner = supplyCrate.Buildable.Owner;
@@ -58,15 +51,18 @@ public class AmmoCrate : ITemporaryAmmoStorage
 
     private void HandleSupplyCountUpdated()
     {
-        AmmoCountUpdatedIntl?.Invoke();
+        AmmoCountUpdatedIntl?.Invoke(AmmoCount);
     }
 
-    public static AmmoCrate FromSupplyCrate(SupplyCrate supplyCrate, FobManager fobManager)
+    public static AmmoCrate FromSupplyCrate(SupplyCrate supplyCrate)
     {
-        return new AmmoCrate(supplyCrate, fobManager);
+        return new AmmoCrate(supplyCrate);
     }
+
     public void SubtractAmmo(float ammoCount)
     {
+        GameThread.AssertCurrent();
+
         AmmoCount = Mathf.Max(AmmoCount - ammoCount, 0);
         if (AmmoCount == 0)
         {
@@ -86,5 +82,7 @@ public class AmmoCrate : ITemporaryAmmoStorage
     }
 
     Vector3 IAmmoStorage.Point => _supplyCrate.Position;
+    bool IAmmoStorage.AllowDiscountedRearm => _supplyCrate.Info is { AllowDiscountedRearm: true };
     float IAmmoStorage.InteractRange => 8;
+    SemaphoreSlim IAmmoStorage.InteractSemaphore => _supplyCrate.SupplyAccessSync;
 }

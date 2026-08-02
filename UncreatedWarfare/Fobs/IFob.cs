@@ -2,7 +2,7 @@ using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 
-namespace Uncreated.Warfare.Fobs;
+namespace Uncreated.Warfare.FOBs;
 
 /// <summary>
 /// A FOB that can show up on the FOB list.
@@ -13,6 +13,16 @@ public interface IFob : IDeployable
     /// The display name of the FOB on the FOB list.
     /// </summary>
     string Name { get; }
+
+    /// <summary>
+    /// Whether or not this FOB is registered with the <see cref="FobManager"/>.
+    /// </summary>
+    bool IsRegistered { get; }
+
+    /// <summary>
+    /// Invoked when this FOB is deregistered.
+    /// </summary>
+    event Action? Deregistered;
 
     /// <summary>
     /// The team that owns the FOB.

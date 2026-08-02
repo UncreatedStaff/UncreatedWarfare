@@ -1,6 +1,5 @@
 using System;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Util;
 

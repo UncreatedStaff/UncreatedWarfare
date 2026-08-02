@@ -1,6 +1,5 @@
 using System;
 using Uncreated.Warfare.Events.Logging;
-using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Players;

@@ -2,15 +2,12 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Models.Zones;
-using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.Entities;
-using Uncreated.Warfare.Fobs.SupplyCrates;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
@@ -110,7 +107,7 @@ public class ClaimToRearmTweaks :
             s.Buildable.Equals(buildable)
         );
         if (ammoCrate != null)
-            return AmmoCrate.FromSupplyCrate(ammoCrate, _fobManager);
+            return AmmoCrate.FromSupplyCrate(ammoCrate);
         
         // could be a built FOB ammo crate
         FobAmmoVendor? fobAmmoVendor = _fobManager.Entities.OfType<FobAmmoVendor>().FirstOrDefault(s =>

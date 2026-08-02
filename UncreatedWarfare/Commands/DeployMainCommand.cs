@@ -1,5 +1,4 @@
 using System;
-using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Interaction.Commands;

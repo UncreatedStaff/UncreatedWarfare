@@ -1,6 +1,6 @@
 ﻿using System.Linq;
 using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.Fobs;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.Interaction.Commands;
 

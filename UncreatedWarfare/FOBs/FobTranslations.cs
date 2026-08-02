@@ -1,4 +1,3 @@
-using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Locations;
