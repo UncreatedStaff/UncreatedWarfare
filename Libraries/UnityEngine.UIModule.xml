@@ -150,6 +150,16 @@
         <para>For Overlay mode, display index on which the UI canvas will appear.</para>
       </summary>
     </member>
+    <member name="P:UnityEngine.Canvas.updateRectTransformForStandalone">
+      <summary>
+        <para>Should the Canvas size be updated based on the render target when a manual Camera.Render call is performed.</para>
+      </summary>
+    </member>
+    <member name="P:UnityEngine.Canvas.vertexColorAlwaysGammaSpace">
+      <summary>
+        <para>Should the Canvas vertex color always be in gamma space before passing to the UI shaders in linear color space work flow.</para>
+      </summary>
+    </member>
     <member name="?:UnityEngine.Canvas.willRenderCanvases(UnityEngine.Canvas/WillRenderCanvases)">
       <summary>
         <para>Event that is called just before Canvas rendering happens.</para>
@@ -254,7 +264,7 @@
     <member name="P:UnityEngine.CanvasRenderer.hasRectClipping">
       <summary>
         <para>True if rect clipping has been enabled on this renderer.
-See Also: CanvasRenderer.EnableRectClipping, CanvasRenderer.DisableRectClipping.</para>
+Additional resources: CanvasRenderer.EnableRectClipping, CanvasRenderer.DisableRectClipping.</para>
       </summary>
     </member>
     <member name="P:UnityEngine.CanvasRenderer.isMask">
@@ -352,6 +362,14 @@ See Also: CanvasRenderer.EnableRectClipping, CanvasRenderer.DisableRectClipping.
         <para>Result.</para>
       </returns>
     </member>
+    <member name="M:UnityEngine.CanvasRenderer.GetMesh">
+      <summary>
+        <para>Returns the current mesh used to render the canvas content into.</para>
+      </summary>
+      <returns>
+        <para>The current mesh for the canvas.</para>
+      </returns>
+    </member>
     <member name="M:UnityEngine.CanvasRenderer.GetPopMaterial(System.Int32)">
       <summary>
         <para>Gets the current Material assigned to the CanvasRenderer. Used internally for masking.</para>
@@ -379,7 +397,7 @@ See Also: CanvasRenderer.EnableRectClipping, CanvasRenderer.DisableRectClipping.
     <member name="M:UnityEngine.CanvasRenderer.SetMaterial(UnityEngine.Material,System.Int32)">
       <summary>
         <para>Set the material for the canvas renderer. If a texture is specified then it will be used as the 'MainTex' instead of the material's 'MainTex'.
-See Also: CanvasRenderer.SetMaterialCount, CanvasRenderer.SetTexture.</para>
+Additional resources: CanvasRenderer.materialCount, CanvasRenderer.SetTexture.</para>
       </summary>
       <param name="material">Material for rendering.</param>
       <param name="texture">Material texture overide.</param>
@@ -388,7 +406,7 @@ See Also: CanvasRenderer.SetMaterialCount, CanvasRenderer.SetTexture.</para>
     <member name="M:UnityEngine.CanvasRenderer.SetMaterial(UnityEngine.Material,UnityEngine.Texture)">
       <summary>
         <para>Set the material for the canvas renderer. If a texture is specified then it will be used as the 'MainTex' instead of the material's 'MainTex'.
-See Also: CanvasRenderer.SetMaterialCount, CanvasRenderer.SetTexture.</para>
+Additional resources: CanvasRenderer.materialCount, CanvasRenderer.SetTexture.</para>
       </summary>
       <param name="material">Material for rendering.</param>
       <param name="texture">Material texture overide.</param>
@@ -451,6 +469,28 @@ See Also: CanvasRenderer.SetMaterialCount, CanvasRenderer.SetTexture.</para>
       <summary>
         <para>Utility class containing helper methods for working with  RectTransform.</para>
       </summary>
+    </member>
+    <member name="M:UnityEngine.RectTransformUtility.CalculateRelativeRectTransformBounds(UnityEngine.Transform,UnityEngine.Transform)">
+      <summary>
+        <para>Creates a Bounds object that encapsulates all the child RectTransform objects found in the `child` parameter, and converts the resulting bounds into local space relative to the `root` transform.</para>
+      </summary>
+      <param name="root">The Transform to use when converting from world to local space.</param>
+      <param name="child">The parent Transform object whose RectTransform children will be encapsulated.</param>
+      <param name="trans">The Transform to both search for RectTransform children and convert into world to local space.</param>
+      <returns>
+        <para>A Bounds object representing the encapsulated bounds in local space relative to the root Transform.</para>
+      </returns>
+    </member>
+    <member name="M:UnityEngine.RectTransformUtility.CalculateRelativeRectTransformBounds(UnityEngine.Transform)">
+      <summary>
+        <para>Creates a Bounds object that encapsulates all the child RectTransform objects found in the `child` parameter, and converts the resulting bounds into local space relative to the `root` transform.</para>
+      </summary>
+      <param name="root">The Transform to use when converting from world to local space.</param>
+      <param name="child">The parent Transform object whose RectTransform children will be encapsulated.</param>
+      <param name="trans">The Transform to both search for RectTransform children and convert into world to local space.</param>
+      <returns>
+        <para>A Bounds object representing the encapsulated bounds in local space relative to the root Transform.</para>
+      </returns>
     </member>
     <member name="M:UnityEngine.RectTransformUtility.FlipLayoutAxes(UnityEngine.RectTransform,System.Boolean,System.Boolean)">
       <summary>
@@ -543,6 +583,21 @@ See Also: CanvasRenderer.SetMaterialCount, CanvasRenderer.SetTexture.</para>
     <member name="F:UnityEngine.RenderMode.WorldSpace">
       <summary>
         <para>Render using any Camera in the Scene that can render the layer.</para>
+      </summary>
+    </member>
+    <member name="T:UnityEngine.StandaloneRenderResize">
+      <summary>
+        <para>Enum used to determine if a Canvas should be resized when a manual Camera.Render call is performed.</para>
+      </summary>
+    </member>
+    <member name="F:UnityEngine.StandaloneRenderResize.Disabled">
+      <summary>
+        <para>Do not resize the Canvas when a manual Camera.Render call is performed.</para>
+      </summary>
+    </member>
+    <member name="F:UnityEngine.StandaloneRenderResize.Enabled">
+      <summary>
+        <para>Resize the Canvas when a manual Camera.Render call is performed.</para>
       </summary>
     </member>
     <member name="A:UnityEngine.UIModule">

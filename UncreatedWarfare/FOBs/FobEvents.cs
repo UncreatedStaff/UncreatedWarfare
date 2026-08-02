@@ -1,3 +1,4 @@
+using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Linq;
@@ -14,6 +15,7 @@ using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.FOBs.Rallypoints;
 using Uncreated.Warfare.FOBs.SupplyCrates;
+using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Extensions;
@@ -274,37 +276,87 @@ public partial class FobManager :
         DeregisterFobEntity(entity);
     }
 
-    [EventListener(MustRunLast = true)]
+    [EventListener]
     void IEventListener<DropItemRequested>.HandleEvent(DropItemRequested e, IServiceProvider serviceProvider)
     {
         InteractableVehicle vehicle = e.Player.UnturnedPlayer.movement.getVehicle();
+        if (vehicle == null)
+            return;
+
+        if (vehicle.isDead || vehicle.isExploded)
+        {
+            e.Cancel();
+            return;
+        }
 
         SupplyCrateInfo? supplyCrateInfo = Configuration.SupplyCrates.FirstOrDefault(s => s.SupplyItemAsset.MatchAsset(e.Asset));
         if (supplyCrateInfo == null)
             return;
 
-        if (vehicle != null)
-        {
-            Vector3 dropPos = FindDropPositionForSupplyCrate(vehicle, e.Player.Position);
+        Team team = e.Player.Team;
 
-            e.Position = dropPos;
-        }
-        else
+        FallingBuildableArgs args = new FallingBuildableArgs
         {
-            e.Position = e.Player.Position + Vector3.up;
+            Buildable = (ItemPlaceableAsset)e.Asset,
+            GroupId = team.GroupId,
+            ShouldConvert = effect =>
+            {
+                if (supplyCrateInfo.Type != CrateType.FobCreation)
+                    return true;
+
+                BunkerFob? nearestFob = FindNearestBunkerFob(team, effect.transform.position, includeUnbuilt: false);
+                if (nearestFob == null)
+                    return true;
+
+                nearestFob.ChangeSupplies(supplyCrateInfo.StartingSupplies, supplyCrateInfo.StartingSupplies, SupplyChangeReason.ResupplyFob, e.Player);
+                effect.PlayPlacementEffect();
+                return false;
+            },
+            OnConverted = (effect, _) =>
+            {
+                if (effect is IFobEntity entity)
+                    RegisterFobEntity(entity);
+            }
+        };
+
+        Transform? dropTransform = null;
+        if (vehicle.asset.engine.IsFlyingEngine() && TerrainUtility.GetDistanceToGround(vehicle.transform.position) > 3)
+        {
+            dropTransform = vehicle.transform.Find("Drop_Flying");
         }
 
-        e.Grounded = false;
-        e.Exact = true;
+        dropTransform ??= vehicle.transform.Find("Drop");
+        dropTransform ??= e.Player.Transform;
+
+        _fallingEffectManager.CreateFallingEffect<FallingCrateEffect, FallingBuildableArgs>(
+            e.Asset,
+            dropTransform,
+            ref args,
+            (ref effect) => effect.Owner = e.Player
+        );
+
+        e.Cancel();
+        if (e.Page != (Page)255)
+        {
+            PlayerInventory inv = e.Player.UnturnedPlayer.inventory;
+            byte index = inv.getIndex((byte)e.Page, e.X, e.Y);
+
+            if (index != byte.MaxValue)
+                inv.removeItem((byte)e.Page, index);
+        }
     }
 
+    [Ignore] // TODO
     [EventListener(MustRunInstantly = true)]
     void IEventListener<ItemDropped>.HandleEvent(ItemDropped e, IServiceProvider serviceProvider)
     {
         if (e.Item == null || e.DroppedItem == null)
             return;
 
-        ItemAsset asset = e.Item.GetAsset();
+        ItemAsset? asset = e.Asset;
+        if (asset == null)
+            return;
+
         SupplyCrateInfo? supplyCrateInfo = Configuration.SupplyCrates.FirstOrDefault(s => s.SupplyItemAsset.MatchAsset(asset));
 
         bool isInMain = serviceProvider.GetService<ZoneStore>()?.IsInMainBase(e.ServersidePoint) ?? false;
@@ -338,7 +390,7 @@ public partial class FobManager :
                         return false;
                     }
                 }
-                
+
                 return true;
             },
             onConvertedToBuildable: RegisterFobEntity

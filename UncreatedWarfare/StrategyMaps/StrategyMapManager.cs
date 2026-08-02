@@ -290,7 +290,7 @@ public class StrategyMapManager :
         const int groupPerFrame = 6;
         _playersRan = (_playersRan + 1) % groupPerFrame;
 
-        foreach (ZoneProximity x in _zoneStore!.ProximityZones!)
+        foreach (ZoneProximity x in _zoneStore!.ProximityZones)
         {
             if (x.Zone.Type != ZoneType.WarRoom || x.Proximity is not ITrackingProximity<WarfarePlayer> trackingProximity)
                 continue;

@@ -1054,6 +1054,9 @@ public sealed class WarfareModule
         bldr.RegisterType<BarricadeApplySavedStateTweaks>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
+        bldr.RegisterType<FallingEffectManager>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
 
         // Strategy Tables
         bldr.RegisterType<StrategyMapManager>()

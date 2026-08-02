@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using System;
-using System.Collections.ObjectModel;
+using System.Collections.Immutable;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.SupplyCrates;
@@ -14,10 +14,10 @@ namespace Uncreated.Warfare.FOBs;
 /// </summary>
 public sealed class FobConfiguration : BaseAlternateConfigurationFile
 {
-    public IReadOnlyList<SupplyCrateInfo> SupplyCrates { get; private set; }
-    public IReadOnlyList<ThrownAmmoBagInfo> ThrowableAmmoBags { get; private set; }
-    public IReadOnlyList<ThrownVehicleCrateInfo> ThrowableVehicleSupplyCrates { get; private set; }
-    public IReadOnlyList<ShovelableInfo> Shovelables { get; private set; }
+    public ImmutableArray<SupplyCrateInfo> SupplyCrates { get; private set; }
+    public ImmutableArray<ThrownAmmoBagInfo> ThrowableAmmoBags { get; private set; }
+    public ImmutableArray<ThrownVehicleCrateInfo> ThrowableVehicleSupplyCrates { get; private set; }
+    public ImmutableArray<ShovelableInfo> Shovelables { get; private set; }
     public float RepairStationGroundVehicleRepairRadius { get; private set; }
     public float RepairStationAircraftRepairRadius { get; private set; }
     public float RepairStationBuildConsumedPerTick { get; private set; }
@@ -48,7 +48,7 @@ public sealed class FobConfiguration : BaseAlternateConfigurationFile
             crate.SupplyItemAsset ??= AssetLink.Empty<ItemPlaceableAsset>();
             crate.PlacementEffect ??= AssetLink.Empty<EffectAsset>();
         });
-        SupplyCrates = new ReadOnlyCollection<SupplyCrateInfo>((IList<SupplyCrateInfo>?)supplyCrates ?? Array.Empty<SupplyCrateInfo>());
+        SupplyCrates = ImmutableArray.CreateRange((IList<SupplyCrateInfo>?)supplyCrates ?? Array.Empty<SupplyCrateInfo>());
 
         List<ThrownVehicleCrateInfo>? vehicleCrates = UnderlyingConfiguration.GetSection("ThrowableVehicleSupplyCrates").Get<List<ThrownVehicleCrateInfo>>();
         vehicleCrates?.ForEach(crate =>
@@ -56,7 +56,7 @@ public sealed class FobConfiguration : BaseAlternateConfigurationFile
             crate.ThrowableItemAsset ??= AssetLink.Empty<ItemAsset>();
             crate.ResupplyEffect ??= AssetLink.Empty<EffectAsset>();
         });
-        ThrowableVehicleSupplyCrates = new ReadOnlyCollection<ThrownVehicleCrateInfo>((IList<ThrownVehicleCrateInfo>?)vehicleCrates ?? Array.Empty<ThrownVehicleCrateInfo>());
+        ThrowableVehicleSupplyCrates = ImmutableArray.CreateRange((IList<ThrownVehicleCrateInfo>?)vehicleCrates ?? Array.Empty<ThrownVehicleCrateInfo>());
 
         List<ThrownAmmoBagInfo>? ammoBags = UnderlyingConfiguration.GetSection("ThrowableAmmoBags").Get<List<ThrownAmmoBagInfo>>();
         ammoBags?.ForEach(crate =>
@@ -64,7 +64,7 @@ public sealed class FobConfiguration : BaseAlternateConfigurationFile
             crate.ThrowableItemAsset ??= AssetLink.Empty<ItemAsset>();
             crate.AmmoBagBarricadeAsset ??= AssetLink.Empty<ItemBarricadeAsset>();
         });
-        ThrowableAmmoBags = new ReadOnlyCollection<ThrownAmmoBagInfo>((IList<ThrownAmmoBagInfo>?)ammoBags ?? Array.Empty<ThrownAmmoBagInfo>());
+        ThrowableAmmoBags = ImmutableArray.CreateRange((IList<ThrownAmmoBagInfo>?)ammoBags ?? Array.Empty<ThrownAmmoBagInfo>());
         
         List<ShovelableInfo>? shovelables = UnderlyingConfiguration.GetSection("Shovelables").Get<List<ShovelableInfo>>(); // todo: List serialization is flaky. List items get silently skipped if they have fields that can't be serialized
         shovelables?.ForEach(info =>
@@ -73,7 +73,7 @@ public sealed class FobConfiguration : BaseAlternateConfigurationFile
             if (info.Emplacement is { Vehicle: null })
                 info.Emplacement = null;
         });
-        Shovelables = new ReadOnlyCollection<ShovelableInfo>((IList<ShovelableInfo>?)shovelables ?? Array.Empty<ShovelableInfo>());
+        Shovelables = ImmutableArray.CreateRange((IList<ShovelableInfo>?)shovelables ?? Array.Empty<ShovelableInfo>());
 
         RepairStationGroundVehicleRepairRadius =
             UnderlyingConfiguration.GetValue("RepairStation:GroundVehicleRepairRadius", 15);

@@ -6,7 +6,7 @@
     </assembly>
     <member name="T:UnityEngine.AssetBundle">
       <summary>
-        <para>AssetBundles let you stream additional assets via the UnityWebRequest class and instantiate them at runtime. AssetBundles are created via BuildPipeline.BuildAssetBundle.</para>
+        <para>AssetBundles let you stream additional assets via the UnityWebRequest class and instantiate them at runtime.</para>
       </summary>
     </member>
     <member name="P:UnityEngine.AssetBundle.isStreamedSceneAssetBundle">
@@ -31,7 +31,7 @@
       </summary>
       <param name="path">Path of the file on disk
 
-See Also: UnityWebRequestAssetBundle.GetAssetBundle, DownloadHandlerAssetBundle.</param>
+Additional resources: UnityWebRequestAssetBundle.GetAssetBundle, DownloadHandlerAssetBundle.</param>
     </member>
     <member name="M:UnityEngine.AssetBundle.CreateFromMemory(System.Byte[])">
       <summary>
@@ -452,69 +452,14 @@ See Also: UnityWebRequestAssetBundle.GetAssetBundle, DownloadHandlerAssetBundle.
         <para>Asset object being loaded (Read Only).</para>
       </summary>
     </member>
-    <member name="T:UnityEngine.BuildCompression">
+    <member name="T:UnityEngine.AssetBundleUnloadOperation">
       <summary>
-        <para>Contains information about compression methods, compression levels and block sizes that are supported by Asset Bundle compression at build time and recompression at runtime.</para>
+        <para>Async unload operation for an AssetBundle.</para>
       </summary>
     </member>
-    <member name="F:UnityEngine.BuildCompression.LZ4">
+    <member name="M:UnityEngine.AssetBundleUnloadOperation.WaitForCompletion">
       <summary>
-        <para>LZ4HC "Chunk Based" Compression.</para>
-      </summary>
-    </member>
-    <member name="F:UnityEngine.BuildCompression.LZ4Runtime">
-      <summary>
-        <para>LZ4 Compression for runtime recompression.</para>
-      </summary>
-    </member>
-    <member name="F:UnityEngine.BuildCompression.LZMA">
-      <summary>
-        <para>LZMA Compression.</para>
-      </summary>
-    </member>
-    <member name="F:UnityEngine.BuildCompression.Uncompressed">
-      <summary>
-        <para>Uncompressed Asset Bundle.</para>
-      </summary>
-    </member>
-    <member name="F:UnityEngine.BuildCompression.UncompressedRuntime">
-      <summary>
-        <para>Uncompressed Asset Bundle.</para>
-      </summary>
-    </member>
-    <member name="T:UnityEngine.CompressionLevel">
-      <summary>
-        <para>Compression Levels relate to how much time should be spent compressing Assets into an Asset Bundle.</para>
-      </summary>
-    </member>
-    <member name="F:UnityEngine.CompressionLevel.None">
-      <summary>
-        <para>No compression.</para>
-      </summary>
-    </member>
-    <member name="T:UnityEngine.CompressionType">
-      <summary>
-        <para>Compression Method for Asset Bundles.</para>
-      </summary>
-    </member>
-    <member name="F:UnityEngine.CompressionType.Lz4">
-      <summary>
-        <para>LZ4 compression results in larger compressed files than LZMA, but does not require the entire bundle to be decompressed before use.</para>
-      </summary>
-    </member>
-    <member name="F:UnityEngine.CompressionType.Lz4HC">
-      <summary>
-        <para>LZ4HC is a high compression variant of LZ4. LZ4HC compression results in larger compressed files than LZMA, but does not require the entire bundle to be decompressed before use.</para>
-      </summary>
-    </member>
-    <member name="F:UnityEngine.CompressionType.Lzma">
-      <summary>
-        <para>LZMA compression results in smaller compressed Asset Bundles but they must be entirely decompressed before use.</para>
-      </summary>
-    </member>
-    <member name="F:UnityEngine.CompressionType.None">
-      <summary>
-        <para>Uncompressed Asset Bundles are larger than compressed Asset Bundles, but they are the fastest to access once downloaded.</para>
+        <para>Synchronously waits for the operation to complete.</para>
       </summary>
     </member>
     <member name="A:UnityEngine.AssetBundleModule">

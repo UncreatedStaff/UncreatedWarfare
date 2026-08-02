@@ -1,3 +1,4 @@
+using SDG.NetPak;
 using System;
 using System.Runtime.CompilerServices;
 
@@ -243,5 +244,210 @@ public static class MathUtility
         }
 
         return Math.Abs(a1 - a2) <= tolerance;
+    }
+
+    public static void CompressVector3(ref Vector3 position, int intBitCount = 13, int fracBitCount = 7)
+    {
+        // UnityNetPakWriterEx.WriteClampedVector3
+        // UnityNetPakReaderEx.ReadClampedVector3
+
+        CompressFloat(ref position.x, intBitCount, fracBitCount);
+        CompressFloat(ref position.y, intBitCount, fracBitCount);
+        CompressFloat(ref position.z, intBitCount, fracBitCount);
+    }
+
+    public static void CompressYawOrQuaternion(ref Quaternion quaternion, int yawBitCount = 9, int quaternionBitsPerComponent = 9)
+    {
+        // UnityNetPakWriterEx.WriteSpecialYawOrQuaternion
+        // UnityNetPakReaderEx.ReadSpecialYawOrQuaternion
+
+        Vector3 z = quaternion * Vector3.forward;
+        bool isOnlyRotatedAroundYAxis = z.y > 0.9999f;
+        if (!isOnlyRotatedAroundYAxis)
+        {
+            CompressQuaternion(ref quaternion);
+            return;
+        }
+
+        Vector3 y = quaternion * Vector3.up;
+        Vector2 direction = new Vector2(-y.z, -y.x).normalized;
+        float yaw = Mathf.Atan2(direction.y, direction.x);
+        CompressRadians(ref yaw, yawBitCount);
+        quaternion = Quaternion.Euler(-90.0f, yaw * Mathf.Rad2Deg, 0.0f);
+    }
+
+    private static void CompressRadians(ref float radians, int bitCount = 8)
+    {
+        // UnityNetPakWriterEx.WriteRadians
+        // UnityNetPakReaderEx.ReadRadians
+
+        const float tau = Mathf.PI * 2.0f;
+        uint maxValue = 1u << bitCount;
+
+        float remainder = (radians % tau + tau) % tau;
+        uint quantizedValue = (uint)(remainder / tau * maxValue);
+        radians = quantizedValue / (float)maxValue * tau;
+    }
+
+    public static void CompressQuaternion(ref Quaternion quaternion, int bitsPerComponent = 9)
+    {
+        // UnityNetPakWriterEx.WriteQuaternion
+        // UnityNetPakReaderEx.ReadQuaternion
+
+        uint largestComponentIndex = 0;
+        float largestComponentValue;
+        float largestComponentSign;
+
+        if (quaternion.x < 0.0f)
+        {
+            largestComponentValue = -quaternion.x;
+            largestComponentSign = -1.0f;
+        }
+        else
+        {
+            largestComponentValue = quaternion.x;
+            largestComponentSign = 1.0f;
+        }
+
+        for (uint componentIndex = 1; componentIndex < 4; ++componentIndex)
+        {
+            float componentValue = quaternion[(int)componentIndex];
+            if (componentValue < 0.0f)
+            {
+                componentValue = -componentValue;
+                if (componentValue <= largestComponentValue)
+                    continue;
+
+                largestComponentIndex = componentIndex;
+                largestComponentValue = componentValue;
+                largestComponentSign = -1.0f;
+            }
+            else if (componentValue > largestComponentValue)
+            {
+                largestComponentIndex = componentIndex;
+                largestComponentValue = componentValue;
+                largestComponentSign = +1.0f;
+            }
+        }
+
+        float value0;
+        float value1;
+        float value2;
+        switch (largestComponentIndex)
+        {
+            case 0:
+                value0 = quaternion.y;
+                value1 = quaternion.z;
+                value2 = quaternion.w;
+                break;
+
+            case 1:
+                value0 = quaternion.x;
+                value1 = quaternion.z;
+                value2 = quaternion.w;
+                break;
+
+            case 2:
+                value0 = quaternion.x;
+                value1 = quaternion.y;
+                value2 = quaternion.w;
+                break;
+
+            default: // case 3:
+                value0 = quaternion.x;
+                value1 = quaternion.y;
+                value2 = quaternion.z;
+                break;
+        }
+
+        float v0 = value0 * largestComponentSign * NetPakConst.SQRT_OF_TWO;
+        float v1 = value1 * largestComponentSign * NetPakConst.SQRT_OF_TWO;
+        float v2 = value2 * largestComponentSign * NetPakConst.SQRT_OF_TWO;
+
+        CompressSignedNormalizedFloat(ref v0, bitsPerComponent);
+        CompressSignedNormalizedFloat(ref v1, bitsPerComponent);
+        CompressSignedNormalizedFloat(ref v2, bitsPerComponent);
+
+        v0 *= NetPakConst.INV_SQRT_OF_TWO;
+        v1 *= NetPakConst.INV_SQRT_OF_TWO;
+        v2 *= NetPakConst.INV_SQRT_OF_TWO;
+
+        largestComponentValue = Mathf.Sqrt(1.0f - (v0 * v0 + v1 * v1 + v2 * v2));
+        quaternion = largestComponentIndex switch
+        {
+            0 => new Quaternion(largestComponentValue, v0, v1, v2),
+            1 => new Quaternion(v0, largestComponentValue, v1, v2),
+            2 => new Quaternion(v0, v1, largestComponentValue, v2),
+            _ => new Quaternion(v0, v1, v2, largestComponentValue)
+        };
+    }
+
+    private static void CompressFloat(ref float value, int intBitCount, int fracBitCount)
+    {
+        // SystemNetPakWriterEx.WriteClampedFloat
+        // SystemNetPakReaderEx.ReadClampedFloat
+
+        int absMinValue = 1 << (intBitCount - 1);
+        uint maxFracValue = 1u << fracBitCount;
+        uint whole, frac;
+        if (value < -absMinValue)
+        {
+            whole = 0u;
+            frac = 0u;
+        }
+        else if (value >= absMinValue)
+        {
+            whole = Bitmask(intBitCount);
+            frac = Bitmask(fracBitCount);
+        }
+        else if (Mathf.Abs(value) < 0.0001f)
+        {
+            whole = (uint)absMinValue;
+            frac = 0;
+        }
+        else
+        {
+            int intValue = Mathf.FloorToInt(value);
+            whole = (uint)(value + absMinValue);
+            float fracValue = value - intValue;
+            frac = (uint)(fracValue * maxFracValue);
+        }
+
+        value = (int)whole - absMinValue + frac / (float)maxFracValue;
+    }
+
+    private static void CompressSignedNormalizedFloat(ref float value, int bitCount)
+    {
+        // SystemNetPakWriterEx.WriteSignedNormalizedFloat
+        // SystemNetPakReaderEx.ReadSignedNormalizedFloat
+
+        uint maxValuePlusOne = 1u << (bitCount - 1);
+        uint maxValue = maxValuePlusOne - 1;
+
+        uint quantizedValue;
+        if (value >= 0f)
+        {
+            quantizedValue = (uint)(value * maxValue + 0.5f);
+        }
+        else
+        {
+            quantizedValue = (uint)(-value * maxValue + 0.5f);
+            quantizedValue |= maxValuePlusOne;
+        }
+
+        if ((quantizedValue & maxValuePlusOne) == maxValuePlusOne)
+        {
+            value = -((quantizedValue & maxValue) / (float)maxValue);
+        }
+        else
+        {
+            value = quantizedValue / (float)maxValue;
+        }
+    }
+
+    private static uint Bitmask(int amount)
+    {
+        if (amount == 32) return unchecked( (uint)-1 );
+        return (1u << amount) - 1;
     }
 }

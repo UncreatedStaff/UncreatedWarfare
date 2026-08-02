@@ -2,6 +2,7 @@
 using System;
 using System.Diagnostics;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Patches;
 
 namespace Uncreated.Warfare.Util;
 
@@ -43,6 +44,7 @@ public static class EffectUtility
         callback(ref parameters);
 
         EffectManager.triggerEffect(parameters);
+        LastEffectSpawnedOnDedicatedServerPatch.LastEffectSpawned = null;
     }
 
     /// <summary>
@@ -73,6 +75,7 @@ public static class EffectUtility
         parameters.reliable = reliable;
 
         EffectManager.triggerEffect(parameters);
+        LastEffectSpawnedOnDedicatedServerPatch.LastEffectSpawned = null;
     }
 
     /// <summary>
@@ -103,6 +106,7 @@ public static class EffectUtility
         parameters.reliable = reliable;
 
         EffectManager.triggerEffect(parameters);
+        LastEffectSpawnedOnDedicatedServerPatch.LastEffectSpawned = null;
     }
 
     /// <summary>
@@ -134,6 +138,7 @@ public static class EffectUtility
         parameters.reliable = reliable;
 
         EffectManager.triggerEffect(parameters);
+        LastEffectSpawnedOnDedicatedServerPatch.LastEffectSpawned = null;
     }
 
     /// <summary>
@@ -164,6 +169,7 @@ public static class EffectUtility
         parameters.reliable = reliable;
 
         EffectManager.triggerEffect(parameters);
+        LastEffectSpawnedOnDedicatedServerPatch.LastEffectSpawned = null;
     }
 
     /// <summary>
@@ -193,6 +199,7 @@ public static class EffectUtility
         callback(ref parameters);
 
         EffectManager.triggerEffect(parameters);
+        LastEffectSpawnedOnDedicatedServerPatch.LastEffectSpawned = null;
     }
 
     /// <summary>
@@ -223,6 +230,7 @@ public static class EffectUtility
         parameters.reliable = reliable;
 
         EffectManager.triggerEffect(parameters);
+        LastEffectSpawnedOnDedicatedServerPatch.LastEffectSpawned = null;
     }
 
     /// <summary>
@@ -253,6 +261,7 @@ public static class EffectUtility
         parameters.reliable = reliable;
 
         EffectManager.triggerEffect(parameters);
+        LastEffectSpawnedOnDedicatedServerPatch.LastEffectSpawned = null;
     }
 
     private static EffectAsset? _debugEffect;
@@ -290,6 +299,7 @@ public static class EffectUtility
             p.SetUniformScale(scale);
         }
         EffectManager.triggerEffect(p);
+        LastEffectSpawnedOnDedicatedServerPatch.LastEffectSpawned = null;
     }
 
     private static void SetColorIntl(in Color color, ref TriggerEffectParameters parameters)

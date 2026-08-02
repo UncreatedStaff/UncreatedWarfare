@@ -36,6 +36,7 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
     private readonly ChatService _chatService;
     private readonly ITeamManager<Team> _teamManager;
     private readonly ZoneStore _zoneStore;
+    private readonly FallingEffectManager _fallingEffectManager;
 
     public FobConfiguration Configuration { get; }
 
@@ -57,6 +58,7 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
         _chatService = serviceProvider.GetRequiredService<ChatService>();
         _teamManager = serviceProvider.GetRequiredService<ITeamManager<Team>>();
         _zoneStore = serviceProvider.GetRequiredService<ZoneStore>();
+        _fallingEffectManager = serviceProvider.GetRequiredService<FallingEffectManager>();
         _serviceProvider = serviceProvider;
         _logger = logger;
         _fobs = new TrackingList<IFob>(24);

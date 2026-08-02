@@ -377,6 +377,14 @@
         <Publicize Include="Assembly-CSharp:SDG.Unturned.ClientAssetIntegrity.serverKnownMissingGuids" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.Rocket.secondLastPos" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.SteamPlayer.clientPlatform" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.EffectManager.debrisGameObjects" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.EffectManager.pool" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.GameObjectPoolDictionary.pools" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.ChatManager.isVoting" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.BarricadeManager.POSITION_FRAC_BIT_COUNT" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.BarricadeManager.YAW_BIT_COUNT" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.StructureManager.POSITION_FRAC_BIT_COUNT" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.StructureManager.YAW_BIT_COUNT" />
 
     </ItemGroup>
 

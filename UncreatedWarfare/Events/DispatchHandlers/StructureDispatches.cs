@@ -59,7 +59,13 @@ partial class EventDispatcher
             if (newEquippedJar == null || oldEquippedJar != newEquippedJar)
                 return;
 
-            StructureManager.dropReplicatedStructure(args.Structure, args.Position, args.Rotation, args.Owner.m_SteamID, args.GroupOwner.m_SteamID);
+            Vector3 position = args.Position;
+            Quaternion rotation = args.Rotation;
+
+            MathUtility.CompressVector3(ref position, fracBitCount: StructureManager.POSITION_FRAC_BIT_COUNT);
+            MathUtility.CompressQuaternion(ref rotation, StructureManager.YAW_BIT_COUNT);
+
+            StructureManager.dropReplicatedStructure(args.Structure, position, rotation, args.Owner.m_SteamID, args.GroupOwner.m_SteamID);
 
             // since shouldAllow is immediately set to false when the contiuation runs, the item doesn't get consumed in the player's hands.
             // so we need to manually remove it
@@ -98,9 +104,12 @@ partial class EventDispatcher
         if (!shouldAllow)
             return;
 
-        Vector3 rot = args.Rotation.eulerAngles;
+        Quaternion rotation = args.Rotation;
+        MathUtility.CompressYawOrQuaternion(ref rotation, yawBitCount: BarricadeManager.YAW_BIT_COUNT);
+        Vector3 rot = rotation.eulerAngles;
 
         point = args.Position;
+        MathUtility.CompressVector3(ref point, fracBitCount: BarricadeManager.POSITION_FRAC_BIT_COUNT);
         angleX = rot.x;
         angleY = rot.y;
         angleZ = rot.z;

@@ -19,10 +19,10 @@ public class PlayerReputationComponent : IPlayerComponent, IDisposable
 
     private void OnUpdate()
     {
-        int val = Interlocked.Exchange(ref _pendingReputation, 0);
-        if (val == 0)
+        if (_pendingReputation == 0)
             return;
 
+        int val = Interlocked.Exchange(ref _pendingReputation, 0);
         ModifyReputationIntl(val);
     }
 

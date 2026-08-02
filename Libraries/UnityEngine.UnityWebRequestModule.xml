@@ -286,7 +286,7 @@
       </summary>
       <param name="name">Section name.</param>
       <param name="data">String data payload for this section.</param>
-      <param name="contentType">C.</param>
+      <param name="contentType">The value for this section's Content-Type header.</param>
     </member>
     <member name="M:UnityEngine.Networking.MultipartFormDataSection.#ctor(System.String,System.String)">
       <summary>
@@ -431,7 +431,7 @@
     </member>
     <member name="P:UnityEngine.Networking.UnityWebRequest.error">
       <summary>
-        <para>A human-readable string describing any system errors encountered by this UnityWebRequest object while handling HTTP requests or responses. (Read Only)</para>
+        <para>A human-readable string describing any system errors encountered by this UnityWebRequest object while handling HTTP requests or responses. The default value is null. (Read Only)</para>
       </summary>
     </member>
     <member name="P:UnityEngine.Networking.UnityWebRequest.isDone">
@@ -506,7 +506,7 @@
     </member>
     <member name="P:UnityEngine.Networking.UnityWebRequest.timeout">
       <summary>
-        <para>Sets UnityWebRequest to attempt to abort after the number of seconds in timeout have passed.</para>
+        <para>The number of seconds after which UnityWebRequest attempts to abort the request if no response is received.</para>
       </summary>
     </member>
     <member name="P:UnityEngine.Networking.UnityWebRequest.uploadedBytes">
@@ -548,13 +548,13 @@
       <summary>
         <para>Clears stored cookies from the cache.</para>
       </summary>
-      <param name="domain">An optional URL to define which cookies are removed. Only cookies that apply to this URL will be removed from the cache.</param>
+      <param name="uri">An optional URL to define which cookies are removed. Only cookies that apply to this URL are removed from the cache.</param>
     </member>
-    <member name="M:UnityEngine.Networking.UnityWebRequest.ClearCookieCache">
+    <member name="M:UnityEngine.Networking.UnityWebRequest.ClearCookieCache(System.Uri)">
       <summary>
         <para>Clears stored cookies from the cache.</para>
       </summary>
-      <param name="domain">An optional URL to define which cookies are removed. Only cookies that apply to this URL will be removed from the cache.</param>
+      <param name="uri">An optional URL to define which cookies are removed. Only cookies that apply to this URL are removed from the cache.</param>
     </member>
     <member name="M:UnityEngine.Networking.UnityWebRequest.#ctor">
       <summary>
@@ -782,14 +782,35 @@
         <para>A UnityWebRequest configured to transmit a HTTP HEAD request.</para>
       </returns>
     </member>
-    <member name="M:UnityEngine.Networking.UnityWebRequest.Post(System.String,System.String)">
+    <member name="M:UnityEngine.Networking.UnityWebRequest.Head(System.Uri)">
+      <summary>
+        <para>Creates a UnityWebRequest configured to send a HTTP HEAD request.</para>
+      </summary>
+      <param name="uri">The URI to which to send a HTTP HEAD request.</param>
+      <returns>
+        <para>A UnityWebRequest configured to transmit a HTTP HEAD request.</para>
+      </returns>
+    </member>
+    <member name="M:UnityEngine.Networking.UnityWebRequest.Post(System.String,System.String,System.String)">
       <summary>
         <para>Creates a UnityWebRequest configured to send form data to a server via HTTP POST.</para>
       </summary>
-      <param name="uri">The target URI to which form data will be transmitted.</param>
-      <param name="postData">Form body data. Will be URLEncoded prior to transmission.</param>
+      <param name="uri">The target URI to which the string will be transmitted.</param>
+      <param name="postData">Form body data. Will be converted to UTF-8 string.</param>
+      <param name="contentType">Value for the Content-Type header, for example application/json.</param>
       <returns>
-        <para>A UnityWebRequest configured to send form data to uri via POST.</para>
+        <para>A UnityWebRequest configured to send string to uri via POST.</para>
+      </returns>
+    </member>
+    <member name="M:UnityEngine.Networking.UnityWebRequest.Post(System.Uri,System.String,System.String)">
+      <summary>
+        <para>Creates a UnityWebRequest configured to send form data to a server via HTTP POST.</para>
+      </summary>
+      <param name="uri">The target URI to which the string will be transmitted.</param>
+      <param name="postData">Form body data. Will be converted to UTF-8 string.</param>
+      <param name="contentType">Value for the Content-Type header, for example application/json.</param>
+      <returns>
+        <para>A UnityWebRequest configured to send string to uri via POST.</para>
       </returns>
     </member>
     <member name="M:UnityEngine.Networking.UnityWebRequest.Post(System.String,UnityEngine.WWWForm)">
@@ -802,7 +823,28 @@
         <para>A UnityWebRequest configured to send form data to uri via POST.</para>
       </returns>
     </member>
+    <member name="M:UnityEngine.Networking.UnityWebRequest.Post(System.Uri,UnityEngine.WWWForm)">
+      <summary>
+        <para>Create a UnityWebRequest configured to send form data to a server via HTTP POST.</para>
+      </summary>
+      <param name="uri">The target URI to which form data will be transmitted.</param>
+      <param name="formData">Form fields or files encapsulated in a WWWForm object, for formatting and transmission to the remote server.</param>
+      <returns>
+        <para>A UnityWebRequest configured to send form data to uri via POST.</para>
+      </returns>
+    </member>
     <member name="M:UnityEngine.Networking.UnityWebRequest.Post(System.String,System.Collections.Generic.List`1&lt;UnityEngine.Networking.IMultipartFormSection&gt;)">
+      <summary>
+        <para>Create a UnityWebRequest configured to send form data to a server via HTTP POST.</para>
+      </summary>
+      <param name="uri">The target URI to which form data will be transmitted.</param>
+      <param name="multipartFormSections">A list of form fields or files to be formatted and transmitted to the remote server.</param>
+      <param name="boundary">A unique boundary string, which will be used when separating form fields in a multipart form.  If not supplied, a boundary will be generated for you.</param>
+      <returns>
+        <para>A UnityWebRequest configured to send form data to uri via POST.</para>
+      </returns>
+    </member>
+    <member name="M:UnityEngine.Networking.UnityWebRequest.Post(System.Uri,System.Collections.Generic.List`1&lt;UnityEngine.Networking.IMultipartFormSection&gt;)">
       <summary>
         <para>Create a UnityWebRequest configured to send form data to a server via HTTP POST.</para>
       </summary>
@@ -824,12 +866,67 @@
         <para>A UnityWebRequest configured to send form data to uri via POST.</para>
       </returns>
     </member>
+    <member name="M:UnityEngine.Networking.UnityWebRequest.Post(System.Uri,System.Collections.Generic.List`1&lt;UnityEngine.Networking.IMultipartFormSection&gt;,System.Byte[])">
+      <summary>
+        <para>Create a UnityWebRequest configured to send form data to a server via HTTP POST.</para>
+      </summary>
+      <param name="uri">The target URI to which form data will be transmitted.</param>
+      <param name="multipartFormSections">A list of form fields or files to be formatted and transmitted to the remote server.</param>
+      <param name="boundary">A unique boundary string, which will be used when separating form fields in a multipart form.  If not supplied, a boundary will be generated for you.</param>
+      <returns>
+        <para>A UnityWebRequest configured to send form data to uri via POST.</para>
+      </returns>
+    </member>
     <member name="M:UnityEngine.Networking.UnityWebRequest.Post(System.String,System.Collections.Generic.Dictionary`2&lt;System.String,System.String&gt;)">
       <summary>
         <para>Create a UnityWebRequest configured to send form data to a server via HTTP POST.</para>
       </summary>
       <param name="uri">The target URI to which form data will be transmitted.</param>
       <param name="formFields">Strings indicating the keys and values of form fields. Will be automatically formatted into a URL-encoded form body.</param>
+      <returns>
+        <para>A UnityWebRequest configured to send form data to uri via POST.</para>
+      </returns>
+    </member>
+    <member name="M:UnityEngine.Networking.UnityWebRequest.Post(System.Uri,System.Collections.Generic.Dictionary`2&lt;System.String,System.String&gt;)">
+      <summary>
+        <para>Create a UnityWebRequest configured to send form data to a server via HTTP POST.</para>
+      </summary>
+      <param name="uri">The target URI to which form data will be transmitted.</param>
+      <param name="formFields">Strings indicating the keys and values of form fields. Will be automatically formatted into a URL-encoded form body.</param>
+      <returns>
+        <para>A UnityWebRequest configured to send form data to uri via POST.</para>
+      </returns>
+    </member>
+    <member name="M:UnityEngine.Networking.UnityWebRequest.Post(System.String,System.String)">
+      <summary>
+        <para>TODO.</para>
+      </summary>
+      <param name="uri"></param>
+      <param name="postData"></param>
+    </member>
+    <member name="M:UnityEngine.Networking.UnityWebRequest.Post(System.Uri,System.String)">
+      <summary>
+        <para>TODO.</para>
+      </summary>
+      <param name="uri"></param>
+      <param name="postData"></param>
+    </member>
+    <member name="M:UnityEngine.Networking.UnityWebRequest.PostWwwForm(System.String,System.String)">
+      <summary>
+        <para>Creates a UnityWebRequest configured to send form data to a server via HTTP POST.</para>
+      </summary>
+      <param name="uri">The target URI to which form data will be transmitted.</param>
+      <param name="form">An HTML form to send.</param>
+      <returns>
+        <para>A UnityWebRequest configured to send form data to uri via POST.</para>
+      </returns>
+    </member>
+    <member name="M:UnityEngine.Networking.UnityWebRequest.PostWwwForm(System.Uri,System.String)">
+      <summary>
+        <para>Creates a UnityWebRequest configured to send form data to a server via HTTP POST.</para>
+      </summary>
+      <param name="uri">The target URI to which form data will be transmitted.</param>
+      <param name="form">An HTML form to send.</param>
       <returns>
         <para>A UnityWebRequest configured to send form data to uri via POST.</para>
       </returns>
@@ -847,6 +944,30 @@ If a string, the string will be converted to raw bytes via &lt;a href="https:msd
       </returns>
     </member>
     <member name="M:UnityEngine.Networking.UnityWebRequest.Put(System.String,System.String)">
+      <summary>
+        <para>Creates a UnityWebRequest configured to upload raw data to a remote server via HTTP PUT.</para>
+      </summary>
+      <param name="uri">The URI to which the data will be sent.</param>
+      <param name="bodyData">The data to transmit to the remote server.
+
+If a string, the string will be converted to raw bytes via &lt;a href="https:msdn.microsoft.comen-uslibrarysystem.text.encoding.utf8"&gt;System.Text.Encoding.UTF8&lt;a&gt;.</param>
+      <returns>
+        <para>A UnityWebRequest configured to transmit bodyData to uri via HTTP PUT.</para>
+      </returns>
+    </member>
+    <member name="M:UnityEngine.Networking.UnityWebRequest.Put(System.Uri,System.Byte[])">
+      <summary>
+        <para>Creates a UnityWebRequest configured to upload raw data to a remote server via HTTP PUT.</para>
+      </summary>
+      <param name="uri">The URI to which the data will be sent.</param>
+      <param name="bodyData">The data to transmit to the remote server.
+
+If a string, the string will be converted to raw bytes via &lt;a href="https:msdn.microsoft.comen-uslibrarysystem.text.encoding.utf8"&gt;System.Text.Encoding.UTF8&lt;a&gt;.</param>
+      <returns>
+        <para>A UnityWebRequest configured to transmit bodyData to uri via HTTP PUT.</para>
+      </returns>
+    </member>
+    <member name="M:UnityEngine.Networking.UnityWebRequest.Put(System.Uri,System.String)">
       <summary>
         <para>Creates a UnityWebRequest configured to upload raw data to a remote server via HTTP PUT.</para>
       </summary>
