@@ -373,3 +373,4 @@ FodyWeavers.xsd
 /enc_temp_folder
 /_site
 /api
+/Libraries/UnityEngine.*.xml
