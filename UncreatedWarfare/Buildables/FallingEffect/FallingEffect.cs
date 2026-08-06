@@ -1,5 +1,10 @@
-﻿using System;
+﻿using Microsoft.Extensions.DependencyInjection;
+using SDG.Framework.Landscapes;
+using System;
+using System.Diagnostics;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Buildables;
 
@@ -43,10 +48,13 @@ public class FallingEffect : MonoBehaviour
     /// </summary>
     public ItemAsset Item => Group.Item;
 
+    public Team Team => _config.Team;
+
     private protected void BaseInitialize(in FallingEffectInstantiationArgs config, Action? onSettle)
     {
         _onSettle = onSettle;
         _config = config;
+
 
         NeedsClearing = true;
 
@@ -58,6 +66,7 @@ public class FallingEffect : MonoBehaviour
 
         _spawnTime = Time.realtimeSinceStartup;
         _startedSettling = float.NaN;
+        LogMessage($"Initialized. Effect: {config.Asset.name}.");
     }
 
 
@@ -73,7 +82,8 @@ public class FallingEffect : MonoBehaviour
         if (IsDestroyed)
             return;
 
-        _config.Manager.DestroyFallingEffect(this, false);
+        LogMessage("Cancelled.");
+        _config.Manager.DestroyFallingEffect(this);
     }
 
     /// <summary>
@@ -84,11 +94,20 @@ public class FallingEffect : MonoBehaviour
         if (IsDestroyed)
             throw new ObjectDisposedException(nameof(FallingEffect), "Already destroyed.");
 
+        LogMessage("Skipped settle.");
         Settle();
     }
 
     private float _spawnTime;
     private float _startedSettling;
+    protected virtual void StillTick(float timeStill)
+    {
+
+    }
+    protected virtual void MovedTick()
+    {
+
+    }
 
     protected virtual void FixedUpdate()
     {
@@ -106,29 +125,52 @@ public class FallingEffect : MonoBehaviour
         {
             _startedSettling = float.NaN;
 
-            if (t - _spawnTime >= _lifetime)
+            LandscapeCoord c = new LandscapeCoord(_previousPosition);
+            HeightmapCoord h = new HeightmapCoord(c, _previousPosition);
+            float approxHeight = Landscape.getTile(c)?.heightmap[h.x, h.y] ?? 0f;
+            if (position.y < approxHeight)
+            {
+                float pt = TerrainUtility.GetHighestPoint(in _previousPosition, approxHeight);
+                transform.position = _previousPosition with { y = pt };
+                Settle();
+            }
+            else if (t - _spawnTime >= _lifetime)
             {
                 Settle();
                 NeedsClearing = !Mathf.Approximately(_config.Asset.lifetime, 0f);
             }
+            else
+            {
+                MovedTick();
+            }
+
+            _previousPosition = position;
+            _previousRotation = rotation;
         }
         else if (float.IsNaN(_startedSettling))
         {
             _startedSettling = t;
         }
-        else if (t - _startedSettling >= _config.SettleTime)
+        else
         {
-            Settle();
-            NeedsClearing = true;
+            float stillTime = t - _startedSettling;
+            StillTick(stillTime);
+            if (stillTime >= _config.SettleTime)
+            {
+                Settle();
+                NeedsClearing = true;
+            }
         }
     }
 
-    private void Settle()
+    private void Settle(bool destroy = true)
     {
         if (_didSettle)
             return;
 
         _didSettle = true;
+
+        LogMessage("Settling.");
 
         try
         {
@@ -148,7 +190,10 @@ public class FallingEffect : MonoBehaviour
             WarfareModule.Singleton.GlobalLogger.LogError(ex, $"Exception thrown by onSettle handler in {GetType()}.");
         }
 
-        _config.Manager.DestroyFallingEffect(this);
+        if (destroy)
+        {
+            _config.Manager.DestroyFallingEffect(this);
+        }
     }
 
     protected virtual void OnSettle()
@@ -159,9 +204,14 @@ public class FallingEffect : MonoBehaviour
     // OnDisable is called because of pooling, not OnDestroy
     private void OnDisable()
     {
+        if (!_didSettle && _config.SettleOnLifetimeElapsed)
+        {
+            Settle(destroy: false);
+        }
+
         if (!IsDestroyed)
         {
-            _config.Manager.DestroyFallingEffect(this);
+            _config.Manager.DestroyFallingEffect(this, destroy: false);
         }
 
         Dispose();
@@ -169,6 +219,14 @@ public class FallingEffect : MonoBehaviour
 
     protected virtual void Dispose()
     {
+    }
+
+    [Conditional("FALLING_EFFECT_DEBUG_LOGGING")]
+    internal void LogMessage(string msg, LogLevel lvl = LogLevel.Debug)
+    {
+        ILogger<FallingEffect> logger = ServiceProvider.GetRequiredService<ILogger<FallingEffect>>();
+
+        logger.Log(lvl, $"[{Item.FriendlyName} (#{IndexInGroup})] {msg}");
     }
 }
 
@@ -189,13 +247,16 @@ public struct FallingEffectInstantiationArgs
     internal readonly FallingEffectGroup Group;
     internal readonly int IndexInGroup;
 
+    internal bool IsReplicated;
+
     public readonly FallingEffectManager Manager;
     public readonly IServiceProvider ServiceProvider;
     public readonly EffectAsset Asset;
-    public float SettleTime = 0.25f;
-    public WarfarePlayer? Owner;
 
-    internal bool IsReplicated;
+    public Team Team;
+    public float SettleTime;
+    public WarfarePlayer? Owner;
+    public bool SettleOnLifetimeElapsed;
 
     internal FallingEffectInstantiationArgs(FallingEffectManager manager, IServiceProvider serviceProvider, EffectAsset asset, FallingEffectGroup group, int indexInGroup)
     {
@@ -204,5 +265,9 @@ public struct FallingEffectInstantiationArgs
         Asset = asset;
         Group = group;
         IndexInGroup = indexInGroup;
+
+        SettleOnLifetimeElapsed = true;
+        SettleTime = 0.4f;
+        Team = Team.NoTeam;
     }
 }

@@ -1,6 +1,4 @@
-using SDG.NetTransport;
 using StackCleaner;
-using Stripe;
 using System;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Models.Localization;
@@ -22,6 +20,8 @@ public class ChatService
     private readonly ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string>? _sendChatIndividual;
 
     public const int MaxMessageSize = 2047;
+    public const int MaxHintSize = 2047;
+    private const float DefaultHintDuration = 5f;
 
     public event SendingChatMessage? OnSendingChatMessage;
 
@@ -1115,7 +1115,6 @@ public class ChatService
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="ArgumentException">The translation has arguments.</exception>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public void Broadcast(LanguageSetEnumerator set, Translation translation, WarfarePlayer? fromPlayer = null)
     {
         if (GameThread.IsCurrent)
@@ -1151,7 +1150,6 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public void Broadcast<T0>(LanguageSetEnumerator set, Translation<T0> translation, T0 arg0, WarfarePlayer? fromPlayer = null)
     {
         if (GameThread.IsCurrent)
@@ -1188,7 +1186,6 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public void Broadcast<T0, T1>(LanguageSetEnumerator set, Translation<T0, T1> translation, T0 arg0, T1 arg1, WarfarePlayer? fromPlayer = null)
     {
         if (GameThread.IsCurrent)
@@ -1225,7 +1222,6 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public void Broadcast<T0, T1, T2>(LanguageSetEnumerator set, Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2, WarfarePlayer? fromPlayer = null)
     {
         if (GameThread.IsCurrent)
@@ -1262,7 +1258,6 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public void Broadcast<T0, T1, T2, T3>(LanguageSetEnumerator set, Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, WarfarePlayer? fromPlayer = null)
     {
         if (GameThread.IsCurrent)
@@ -1299,7 +1294,6 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public void Broadcast<T0, T1, T2, T3, T4>(LanguageSetEnumerator set, Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, WarfarePlayer? fromPlayer = null)
     {
         if (GameThread.IsCurrent)
@@ -1336,7 +1330,6 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public void Broadcast<T0, T1, T2, T3, T4, T5>(LanguageSetEnumerator set, Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, WarfarePlayer? fromPlayer = null)
     {
         if (GameThread.IsCurrent)
@@ -1373,7 +1366,6 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public void Broadcast<T0, T1, T2, T3, T4, T5, T6>(LanguageSetEnumerator set, Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, WarfarePlayer? fromPlayer = null)
     {
         if (GameThread.IsCurrent)
@@ -1410,7 +1402,6 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7>(LanguageSetEnumerator set, Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, WarfarePlayer? fromPlayer = null)
     {
         if (GameThread.IsCurrent)
@@ -1447,7 +1438,6 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7, T8>(LanguageSetEnumerator set, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, WarfarePlayer? fromPlayer = null)
     {
         if (GameThread.IsCurrent)
@@ -1484,7 +1474,6 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(LanguageSetEnumerator set, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, WarfarePlayer? fromPlayer = null)
     {
         if (GameThread.IsCurrent)
@@ -1522,7 +1511,6 @@ public class ChatService
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="ArgumentException">The translation has arguments.</exception>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public void Broadcast(Translation translation, WarfarePlayer? fromPlayer = null)
     {
         Broadcast(_translationService.SetOf.AllPlayers(), translation, fromPlayer);
@@ -1533,7 +1521,6 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public void Broadcast<T0>(Translation<T0> translation, T0 arg0, WarfarePlayer? fromPlayer = null)
     {
         Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, fromPlayer);
@@ -1544,7 +1531,6 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public void Broadcast<T0, T1>(Translation<T0, T1> translation, T0 arg0, T1 arg1, WarfarePlayer? fromPlayer = null)
     {
         Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, fromPlayer);
@@ -1555,7 +1541,6 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public void Broadcast<T0, T1, T2>(Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2, WarfarePlayer? fromPlayer = null)
     {
         Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, arg2, fromPlayer);
@@ -1566,7 +1551,6 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public void Broadcast<T0, T1, T2, T3>(Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, WarfarePlayer? fromPlayer = null)
     {
         Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, arg2, arg3, fromPlayer);
@@ -1577,7 +1561,6 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public void Broadcast<T0, T1, T2, T3, T4>(Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, WarfarePlayer? fromPlayer = null)
     {
         Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, arg2, arg3, arg4, fromPlayer);
@@ -1588,7 +1571,6 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public void Broadcast<T0, T1, T2, T3, T4, T5>(Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, WarfarePlayer? fromPlayer = null)
     {
         Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, arg2, arg3, arg4, arg5, fromPlayer);
@@ -1599,7 +1581,6 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public void Broadcast<T0, T1, T2, T3, T4, T5, T6>(Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, WarfarePlayer? fromPlayer = null)
     {
         Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, fromPlayer);
@@ -1610,7 +1591,6 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7>(Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, WarfarePlayer? fromPlayer = null)
     {
         Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, fromPlayer);
@@ -1621,7 +1601,6 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7, T8>(Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, WarfarePlayer? fromPlayer = null)
     {
         Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, fromPlayer);
@@ -1632,7 +1611,6 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, WarfarePlayer? fromPlayer = null)
     {
         Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, fromPlayer);
@@ -1838,6 +1816,255 @@ public class ChatService
         else
         {
             value = new string(truncated);
+        }
+    }
+
+    /// <summary>
+    /// Sends a hint message (the black box near the bottom of the screen) to the player.
+    /// </summary>
+    public void SendHint(WarfarePlayer player, string text, bool richText, float duration = DefaultHintDuration)
+    {
+        ProcessHintArgs(ref text, richText, duration, player.Save.IMGUI);
+
+        if (GameThread.IsCurrent)
+        {
+            SendRawHint(player, text, duration);
+        }
+        else
+        {
+            WarfarePlayer wp = player;
+            string text2 = text;
+            float d2 = duration;
+            UniTask.Create(async () =>
+            {
+                await UniTask.SwitchToMainThread();
+                SendRawHint(wp, text2, d2);
+            });
+        }
+    }
+    
+    /// <summary>
+    /// Send a 0-arg translation to a player.
+    /// </summary>
+    /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
+    /// <exception cref="ArgumentNullException"/>
+    /// <exception cref="ArgumentException">The translation has arguments.</exception>
+    public void SendHint(WarfarePlayer player, Translation translation, float duration = DefaultHintDuration)
+    {
+        if (!(player ?? throw new ArgumentNullException(nameof(player))).IsOnline)
+            return;
+
+        if (translation == null)
+            throw new ArgumentNullException(nameof(translation));
+
+        string value = translation.Translate(player, canUseIMGUI: true);
+        SendHint(player, value, (translation.Options & TranslationOptions.NoRichText) != TranslationOptions.NoRichText, duration);
+    }
+
+    /// <summary>
+    /// Send a 1-arg translation to a player.
+    /// </summary>
+    /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
+    /// <exception cref="ArgumentNullException"/>
+    public void SendHint<T0>(WarfarePlayer player, Translation<T0> translation, T0 arg0, float duration = DefaultHintDuration)
+    {
+        if (!(player ?? throw new ArgumentNullException(nameof(player))).IsOnline)
+            return;
+
+        if (translation == null)
+            throw new ArgumentNullException(nameof(translation));
+
+        string value = translation.Translate(arg0, player, canUseIMGUI: true);
+        SendHint(player, value, (translation.Options & TranslationOptions.NoRichText) != TranslationOptions.NoRichText, duration);
+    }
+
+    /// <summary>
+    /// Send a 2-arg translation to a player.
+    /// </summary>
+    /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
+    /// <exception cref="ArgumentNullException"/>
+    public void SendHint<T0, T1>(WarfarePlayer player, Translation<T0, T1> translation, T0 arg0, T1 arg1, float duration = DefaultHintDuration)
+    {
+        if (!(player ?? throw new ArgumentNullException(nameof(player))).IsOnline)
+            return;
+
+        if (translation == null)
+            throw new ArgumentNullException(nameof(translation));
+
+        string value = translation.Translate(arg0, arg1, player, canUseIMGUI: true);
+        SendHint(player, value, (translation.Options & TranslationOptions.NoRichText) != TranslationOptions.NoRichText, duration);
+    }
+
+    /// <summary>
+    /// Send a 3-arg translation to a player.
+    /// </summary>
+    /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
+    /// <exception cref="ArgumentNullException"/>
+    public void SendHint<T0, T1, T2>(WarfarePlayer player, Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2, float duration = DefaultHintDuration)
+    {
+        if (!(player ?? throw new ArgumentNullException(nameof(player))).IsOnline)
+            return;
+
+        if (translation == null)
+            throw new ArgumentNullException(nameof(translation));
+
+        string value = translation.Translate(arg0, arg1, arg2, player, canUseIMGUI: true);
+        SendHint(player, value, (translation.Options & TranslationOptions.NoRichText) != TranslationOptions.NoRichText, duration);
+    }
+
+    /// <summary>
+    /// Send a 4-arg translation to a player.
+    /// </summary>
+    /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
+    /// <exception cref="ArgumentNullException"/>
+    public void SendHint<T0, T1, T2, T3>(WarfarePlayer player, Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, float duration = DefaultHintDuration)
+    {
+        if (!(player ?? throw new ArgumentNullException(nameof(player))).IsOnline)
+            return;
+
+        if (translation == null)
+            throw new ArgumentNullException(nameof(translation));
+
+        string value = translation.Translate(arg0, arg1, arg2, arg3, player, canUseIMGUI: true);
+        SendHint(player, value, (translation.Options & TranslationOptions.NoRichText) != TranslationOptions.NoRichText, duration);
+    }
+
+    /// <summary>
+    /// Send a 5-arg translation to a player.
+    /// </summary>
+    /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
+    /// <exception cref="ArgumentNullException"/>
+    public void SendHint<T0, T1, T2, T3, T4>(WarfarePlayer player, Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, float duration = DefaultHintDuration)
+    {
+        if (!(player ?? throw new ArgumentNullException(nameof(player))).IsOnline)
+            return;
+
+        if (translation == null)
+            throw new ArgumentNullException(nameof(translation));
+
+        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, player, canUseIMGUI: true);
+        SendHint(player, value, (translation.Options & TranslationOptions.NoRichText) != TranslationOptions.NoRichText, duration);
+    }
+
+    /// <summary>
+    /// Send a 6-arg translation to a player.
+    /// </summary>
+    /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
+    /// <exception cref="ArgumentNullException"/>
+    public void SendHint<T0, T1, T2, T3, T4, T5>(WarfarePlayer player, Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, float duration = DefaultHintDuration)
+    {
+        if (!(player ?? throw new ArgumentNullException(nameof(player))).IsOnline)
+            return;
+
+        if (translation == null)
+            throw new ArgumentNullException(nameof(translation));
+
+        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, player, canUseIMGUI: true);
+        SendHint(player, value, (translation.Options & TranslationOptions.NoRichText) != TranslationOptions.NoRichText, duration);
+    }
+
+    /// <summary>
+    /// Send a 7-arg translation to a player.
+    /// </summary>
+    /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
+    /// <exception cref="ArgumentNullException"/>
+    public void SendHint<T0, T1, T2, T3, T4, T5, T6>(WarfarePlayer player, Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, float duration = DefaultHintDuration)
+    {
+        if (!(player ?? throw new ArgumentNullException(nameof(player))).IsOnline)
+            return;
+
+        if (translation == null)
+            throw new ArgumentNullException(nameof(translation));
+
+        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, player, canUseIMGUI: true);
+        SendHint(player, value, (translation.Options & TranslationOptions.NoRichText) != TranslationOptions.NoRichText, duration);
+    }
+
+    /// <summary>
+    /// Send a 8-arg translation to a player.
+    /// </summary>
+    /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
+    /// <exception cref="ArgumentNullException"/>
+    public void SendHint<T0, T1, T2, T3, T4, T5, T6, T7>(WarfarePlayer player, Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, float duration = DefaultHintDuration)
+    {
+        if (!(player ?? throw new ArgumentNullException(nameof(player))).IsOnline)
+            return;
+
+        if (translation == null)
+            throw new ArgumentNullException(nameof(translation));
+
+        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, player, canUseIMGUI: true);
+        SendHint(player, value, (translation.Options & TranslationOptions.NoRichText) != TranslationOptions.NoRichText, duration);
+    }
+
+    /// <summary>
+    /// Send a 9-arg translation to a player.
+    /// </summary>
+    /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
+    /// <exception cref="ArgumentNullException"/>
+    public void SendHint<T0, T1, T2, T3, T4, T5, T6, T7, T8>(WarfarePlayer player, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, float duration = DefaultHintDuration)
+    {
+        if (!(player ?? throw new ArgumentNullException(nameof(player))).IsOnline)
+            return;
+
+        if (translation == null)
+            throw new ArgumentNullException(nameof(translation));
+
+        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, player, canUseIMGUI: true);
+        SendHint(player, value, (translation.Options & TranslationOptions.NoRichText) != TranslationOptions.NoRichText, duration);
+    }
+
+    /// <summary>
+    /// Send a 10-arg translation to a player.
+    /// </summary>
+    /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
+    /// <exception cref="ArgumentNullException"/>
+    public void SendHint<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(WarfarePlayer player, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, float duration = DefaultHintDuration)
+    {
+        if (!(player ?? throw new ArgumentNullException(nameof(player))).IsOnline)
+            return;
+
+        if (translation == null)
+            throw new ArgumentNullException(nameof(translation));
+
+        string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, player, canUseIMGUI: true);
+        SendHint(player, value, (translation.Options & TranslationOptions.NoRichText) != TranslationOptions.NoRichText, duration);
+    }
+
+    private static void SendRawHint(WarfarePlayer player, string text, float duration)
+    {
+        if (!player.IsOnline)
+            return;
+
+        player.UnturnedPlayer.ServerShowHint(text, duration);
+    }
+
+    // ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local
+    private void ProcessHintArgs(ref string text, bool richText, float duration, bool imgui)
+    {
+        if (duration <= 0)
+            throw new ArgumentOutOfRangeException(nameof(duration), "Expected duration > 0.");
+
+        if (richText)
+        {
+            if (imgui)
+                text = TranslationFormattingUtility.CreateIMGUIString(text);
+        }
+        else
+        {
+            text = FormattingUtility.RemoveRichText(text);
+        }
+
+        // 4 = max number of bytes per code point (UTF-8)
+        if (text.Length < MaxHintSize / 4)
+            return;
+
+        ReadOnlySpan<char> textSpan = text.AsSpan();
+        ReadOnlySpan<char> truncated = StringUtility.TruncateUtf8Bytes(textSpan, MaxMessageSize, out _);
+        if (truncated.Length != textSpan.Length)
+        {
+            _logger.LogWarning($"Raw text too long for hint message: \"{text[..32]}...\".");
+            text = new string(truncated);
         }
     }
 }

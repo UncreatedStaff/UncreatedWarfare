@@ -1,5 +1,6 @@
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
+using SDG.Framework.Water;
 using System;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
@@ -122,7 +123,7 @@ public partial class FobManager :
             }
 
             // fobs need their own special shoveable with a completed event
-            if (TryCreatShovelable(e.Buildable, team, out shovelable))
+            if (TryCreateShovelable(e.Buildable, team, out shovelable))
             {
                 shovelable.IsIconVisible = !unbuiltFob.HasBeenRebuilt;
                 shovelable.OnComplete += completedBuildable =>
@@ -191,7 +192,7 @@ public partial class FobManager :
 
     private bool TryCreateShoveableForFobEntity(IBuildable buildable, Team team, WarfarePlayer? placer, [NotNullWhen(true)] out ShovelableBuildable? newShovelable)
     {
-        if (!TryCreatShovelable(buildable, team, out newShovelable))
+        if (!TryCreateShovelable(buildable, team, out newShovelable))
             return false;
 
         BunkerFob? nearestFriendlyFob = FindNearestBunkerFob(newShovelable.Buildable.Group, buildable.Position);
@@ -205,7 +206,7 @@ public partial class FobManager :
         return true;
     }
 
-    private bool TryCreatShovelable(IBuildable buildable, Team team, [NotNullWhen(true)] out ShovelableBuildable? shovelable)
+    private bool TryCreateShovelable(IBuildable buildable, Team team, [NotNullWhen(true)] out ShovelableBuildable? shovelable)
     {
         shovelable = null;
 
@@ -227,6 +228,19 @@ public partial class FobManager :
     void IEventListener<IBuildableDestroyedEvent>.HandleEvent(IBuildableDestroyedEvent e, IServiceProvider serviceProvider)
     {
         IBuildableFob? fob = FindBuildableFob<IBuildableFob>(e.Buildable);
+
+        if (BuildableExtensions.TryGetBuildableBounds(e.Buildable.Asset, out Bounds buildableBounds))
+        {
+            float r = Math.Max(buildableBounds.size.x, buildableBounds.size.z) + 4f;
+            Vector3 position = e.Buildable.Position;
+            UniTask.Create(async () =>
+            {
+                // wait for buildable to be destroyed
+                await UniTask.NextFrame();
+                UpdateNearbySupplyCrateSupports(position, r);
+            });
+        }
+
         if (fob is BunkerFob buildableFob)
         {
             if (buildableFob.IsBuilt)
@@ -276,11 +290,79 @@ public partial class FobManager :
         DeregisterFobEntity(entity);
     }
 
+    private void UpdateNearbySupplyCrateSupports(Vector3 buildablePosition, float radius)
+    {
+        radius *= radius;
+        foreach (SupplyCrate crate in _entities.OfType<SupplyCrate>())
+        {
+            float sqrDst = (crate.Position - buildablePosition).sqrMagnitude;
+            if (sqrDst > radius)
+                continue;
+
+            if (crate.Stack.Crates.Count > 1)
+            {
+                // don't bother with stacks
+                continue;
+            }
+
+            crate.RecheckSupport();
+        }
+    }
+
+    private bool CheckValidSupplyCrateDropLocation(SupplyCrateInfo supplyCrateInfo, WarfarePlayer player, Team team, Vector3 estimatedDropPosition)
+    {
+        Zone? mainBase = _zoneStore.FindClosestZone(estimatedDropPosition, ZoneType.MainBase, Configuration.MinFobDistanceFromMain);
+        if (mainBase != null)
+        {
+            // is too near main base
+            _chatService.SendHint(player, _translations.DropSupplyCrateTooNearMain, Configuration.MinFobDistanceFromMain, 8f);
+            return false;
+        }
+
+        if (WaterUtility.isPointUnderwater(estimatedDropPosition))
+        {
+            // will likely drop underwater
+            _chatService.SendHint(player, _translations.DropSupplyCrateUnderwater, 8f);
+            return false;
+        }
+
+        if (supplyCrateInfo.Type != CrateType.FobCreation)
+            return true;
+
+        BunkerFob? fobInRange = FindNearestBunkerFob(team, estimatedDropPosition);
+        if (fobInRange != null)
+        {
+            // is restocking existing FOB.
+            return true;
+        }
+
+        BunkerFob? nearestBunkerFob = _fobs.OfType<BunkerFob>()
+            .AggregateOrDefault((curr, next) => (curr.Position - estimatedDropPosition).sqrMagnitude > (next.Position - estimatedDropPosition).sqrMagnitude ? next : curr);
+
+        if (nearestBunkerFob == null)
+        {
+            // is making new FOB
+            return true;
+        }
+
+        if (MathUtility.WithinRange(nearestBunkerFob.Position, in estimatedDropPosition, Configuration.MinDistanceBetweenFobs))
+        {
+            // too close to an existing FOB to make a new FOB
+            if (nearestBunkerFob.Team.IsFriendly(team))
+                _chatService.SendHint(player, _translations.DropSupplyCrateTooNearFriendlyFob, nearestBunkerFob, Configuration.MinDistanceBetweenFobs, 8f);
+            else
+                _chatService.SendHint(player, _translations.DropSupplyCrateTooNearEnemyFob, Configuration.MinDistanceBetweenFobs, 8f);
+            return false;
+        }
+
+        return true;
+    }
+
     [EventListener]
     void IEventListener<DropItemRequested>.HandleEvent(DropItemRequested e, IServiceProvider serviceProvider)
     {
         InteractableVehicle vehicle = e.Player.UnturnedPlayer.movement.getVehicle();
-        if (vehicle == null)
+        if (vehicle == null || !e.Player.Team.IsValid)
             return;
 
         if (vehicle.isDead || vehicle.isExploded)
@@ -293,34 +375,8 @@ public partial class FobManager :
         if (supplyCrateInfo == null)
             return;
 
-        Team team = e.Player.Team;
-
-        FallingBuildableArgs args = new FallingBuildableArgs
-        {
-            Buildable = (ItemPlaceableAsset)e.Asset,
-            GroupId = team.GroupId,
-            ShouldConvert = effect =>
-            {
-                if (supplyCrateInfo.Type != CrateType.FobCreation)
-                    return true;
-
-                BunkerFob? nearestFob = FindNearestBunkerFob(team, effect.transform.position, includeUnbuilt: false);
-                if (nearestFob == null)
-                    return true;
-
-                nearestFob.ChangeSupplies(supplyCrateInfo.StartingSupplies, supplyCrateInfo.StartingSupplies, SupplyChangeReason.ResupplyFob, e.Player);
-                effect.PlayPlacementEffect();
-                return false;
-            },
-            OnConverted = (effect, _) =>
-            {
-                if (effect is IFobEntity entity)
-                    RegisterFobEntity(entity);
-            }
-        };
-
         Transform? dropTransform = null;
-        if (vehicle.asset.engine.IsFlyingEngine() && TerrainUtility.GetDistanceToGround(vehicle.transform.position) > 3)
+        if (vehicle.asset.engine.IsFlyingEngine() && TerrainUtility.GetDistanceToGround(vehicle.transform.position) > 6)
         {
             dropTransform = vehicle.transform.Find("Drop_Flying");
         }
@@ -328,12 +384,69 @@ public partial class FobManager :
         dropTransform ??= vehicle.transform.Find("Drop");
         dropTransform ??= e.Player.Transform;
 
-        _fallingEffectManager.CreateFallingEffect<FallingCrateEffect, FallingBuildableArgs>(
+        /* VALIDATION */
+
+        Vector3 dropPoint = dropTransform.transform.position;
+
+        float groundPointY = TerrainUtility.GetHighestPoint(in dropPoint, float.NaN);
+
+        Vector3 estDropPoint = dropPoint with { y = groundPointY };
+
+        if (vehicle.asset.engine.IsFlyingEngine())
+        {
+            // limit of 150m above terrain to drop crates
+            float limit = Configuration.SupplyCrateMaxDropHeight;
+
+            if (dropPoint.y - groundPointY > limit)
+            {
+                _chatService.SendHint(e.Player, _translations.DropSupplyCrateTooHigh, limit);
+                e.Cancel();
+                return;
+            }
+        }
+
+        if (!CheckValidSupplyCrateDropLocation(supplyCrateInfo, e.Player, e.Player.Team, estDropPoint))
+        {
+            e.Cancel();
+            return;
+        }
+
+        FallingCrateArgs<BunkerFob> args = new FallingCrateArgs<BunkerFob>
+        {
+            Buildable = (ItemPlaceableAsset)e.Asset,
+            OnConverted = (effect, _) =>
+            {
+                if (effect is IFobEntity entity)
+                    RegisterFobEntity(entity);
+            }
+        };
+
+        if (supplyCrateInfo.Type == CrateType.FobCreation)
+        {
+            args.OnDroppedNearFob = (fob, effect) =>
+            {
+                fob.ChangeSupplies(supplyCrateInfo.StartingSupplies, supplyCrateInfo.StartingSupplies, SupplyChangeReason.ResupplyFob, e.Player);
+                effect.PlayPlacementEffect();
+                return true;
+            };
+        }
+
+        if (_fallingEffectManager.IsFallingEffectObstructed(e.Asset, dropTransform))
+        {
+            e.Cancel();
+            _chatService.SendHint(e.Player, _translations.DropSupplyCrateObstructed);
+            return;
+        }
+
+        _fallingEffectManager.CreateFallingEffect<FallingBunkerFobCrateEffect, FallingCrateArgs<BunkerFob>>(
             e.Asset,
             dropTransform,
             ref args,
-            (ref effect) => effect.Owner = e.Player
-        );
+            (ref effect) =>
+            {
+                effect.Owner = e.Player;
+                effect.Team = e.Player.Team;
+            });
 
         e.Cancel();
         if (e.Page != (Page)255)
@@ -346,7 +459,6 @@ public partial class FobManager :
         }
     }
 
-    [Ignore] // TODO
     [EventListener(MustRunInstantly = true)]
     void IEventListener<ItemDropped>.HandleEvent(ItemDropped e, IServiceProvider serviceProvider)
     {
@@ -359,14 +471,19 @@ public partial class FobManager :
 
         SupplyCrateInfo? supplyCrateInfo = Configuration.SupplyCrates.FirstOrDefault(s => s.SupplyItemAsset.MatchAsset(asset));
 
-        bool isInMain = serviceProvider.GetService<ZoneStore>()?.IsInMainBase(e.ServersidePoint) ?? false;
-        if (isInMain)
-            return;
-        
         if (supplyCrateInfo == null)
             return;
 
         Team team = e.Player.Team;
+        if (!CheckValidSupplyCrateDropLocation(supplyCrateInfo, e.Player, team, e.LandingPoint))
+        {
+            return;
+        }
+
+        bool isInMain = serviceProvider.GetService<ZoneStore>()?.IsInMainBase(e.ServersidePoint) ?? false;
+        if (isInMain)
+            return;
+        
         if (!team.IsValid)
             return;
 

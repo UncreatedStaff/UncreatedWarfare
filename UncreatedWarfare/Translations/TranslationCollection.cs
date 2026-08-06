@@ -105,7 +105,7 @@ public abstract class TranslationCollection : IDisposable
             {
                 if (!_translations.TryGetValue(translation.Key.TranslationKey, out Translation translationMember))
                 {
-                    _logger.LogWarning("Unknown translation in collection {0}.", GetType());
+                    _logger.LogWarning($"Unknown translation {translation.Key.TranslationKey} in collection {GetType()} ({Name}).");
                     continue;
                 }
 
@@ -113,7 +113,7 @@ public abstract class TranslationCollection : IDisposable
 
                 if (language is null)
                 {
-                    _logger.LogWarning("Unknown language {0} in collection {1}.", translation.Key.LanguageCode, GetType());
+                    _logger.LogWarning($"Unknown language {translation.Key.LanguageCode} in collection {GetType()} ({Name}).");
                 }
 
                 translationMember.UpdateValue(translation.Value, language ?? new LanguageInfo(translation.Key.LanguageCode, LanguageService));

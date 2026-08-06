@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace Uncreated.Warfare.Util.List;
 public static class TrackingListExtensions

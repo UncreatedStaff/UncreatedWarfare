@@ -32,8 +32,9 @@ public class RestockableBuildableFobEntity<TInfo> : BuildableFobEntity<TInfo> wh
         bool enableAutoRestock,
         TInfo? info,
         Team team,
-        TimeSpan refillInterval = default)
-        : base(info, buildable, team, serviceProvider)
+        TimeSpan refillInterval = default,
+        bool iconVisible = true)
+        : base(info, buildable, team, serviceProvider, iconVisible: iconVisible)
     {
         if (buildable.IsStructure || !enableAutoRestock || buildable.Asset is not ItemStorageAsset)
             return;

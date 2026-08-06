@@ -562,6 +562,18 @@ public static class CollectionUtility
         public TValue? OldValue;
         public bool HadValue;
     }
+
+    public static T? AggregateOrDefault<T>(this IEnumerable<T> source, Func<T, T, T> func)
+    {
+        try
+        {
+            return source.Aggregate(func);
+        }
+        catch (InvalidOperationException)
+        {
+            return default;
+        }
+    }
 }
 
 public class DistanceComparer<TValue> : IComparer<TValue>

@@ -195,39 +195,54 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
         _logger.LogDebug($"Deregistered FOB Entity: {entity} ({entity.GetType().Name})");
         return true;
     }
+
     public TBuildableFobType? FindBuildableFob<TBuildableFobType>(IBuildable matchingBuildable) where TBuildableFobType : IBuildableFob
     {
         return _fobs.OfType<TBuildableFobType>().FirstOrDefault(f => f.Buildable.Equals(matchingBuildable));
     }
+
+    public TFobType? FindNearestFob<TFobType>(Team team, Vector3 position, Func<TFobType, bool>? selector = null)
+        where TFobType : IFob, ITransformObject
+    {
+        return _fobs
+            .OfType<TFobType>()
+            .Where(f => f.Team == team && (selector == null || selector(f)))
+            .AggregateOrDefault((curr, next) => (curr.Position - position).sqrMagnitude > (next.Position - position).sqrMagnitude ? next : curr);
+    }
+
     public ResourceFob? FindNearestResourceFob(Team team, Vector3 position)
     {
-        return _fobs.OfType<ResourceFob>().FirstOrDefault(f =>
+        return _fobs.OfType<ResourceFob>().Where(f =>
             f.Team == team &&
             MathUtility.WithinRange(position, f.Position, f.EffectiveRadius)
-        );
+        ).AggregateOrDefault((curr, next) => (curr.Position - position).sqrMagnitude > (next.Position - position).sqrMagnitude ? next : curr);
     }
+
     public BunkerFob? FindNearestBunkerFob(Team team, Vector3 position, bool includeUnbuilt = true)
     {
-        return _fobs.OfType<BunkerFob>().FirstOrDefault(f =>
+        return _fobs.OfType<BunkerFob>().Where(f =>
             f.Team == team &&
             MathUtility.WithinRange(position, f.Position, f.EffectiveRadius) &&
             (includeUnbuilt || f.IsBuilt)
-        );
+        ).AggregateOrDefault((curr, next) => (curr.Position - position).sqrMagnitude > (next.Position - position).sqrMagnitude ? next : curr);
     }
+
     public BunkerFob? FindNearestBunkerFob(CSteamID teamGroup, Vector3 position, bool includeUnbuilt = true)
     {
-        return _fobs.OfType<BunkerFob>().FirstOrDefault(f =>
+        return _fobs.OfType<BunkerFob>().Where(f =>
             f.Team.GroupId == teamGroup
             && MathUtility.WithinRange(position, f.Position, f.EffectiveRadius)
             && (includeUnbuilt || f.IsBuilt)
-        );
+        ).AggregateOrDefault((curr, next) => (curr.Position - position).sqrMagnitude > (next.Position - position).sqrMagnitude ? next : curr);
     }
+
     public IEnumerable<BunkerFob> FriendlyBunkerFobs(Team team, bool includeUnbuilt = true)
     {
         return _fobs.OfType<BunkerFob>().Where(f =>
             f.Team == team && (includeUnbuilt || f.IsBuilt)
         );
     }
+
     public TEntity? GetBuildableFobEntity<TEntity>(IBuildable buildable) where TEntity : IBuildableFobEntity
     {
         return _entities.OfType<TEntity>().FirstOrDefault(f =>

@@ -34,8 +34,8 @@ public class ShovelableBuildable : BuildableFobEntity<ShovelableInfo>
     public event Action<IBuildable?>? OnComplete;
     public event Action? OnProgressUpdated;
 
-    public ShovelableBuildable(Team team, ShovelableInfo info, IBuildable foundation, IServiceProvider serviceProvider, IAssetLink<EffectAsset>? shovelEffect = null)
-        : base(info ?? throw new ArgumentNullException(nameof(info)), foundation, team, serviceProvider, "Effects:Fobs:Shovel")
+    public ShovelableBuildable(Team team, ShovelableInfo info, IBuildable foundation, IServiceProvider serviceProvider, IAssetLink<EffectAsset>? shovelEffect = null, bool iconVisible = true)
+        : base(info ?? throw new ArgumentNullException(nameof(info)), foundation, team, serviceProvider, "Effects:Fobs:Shovel", iconVisible: iconVisible)
     {
         _shovelEffect = shovelEffect?.GetAssetOrFail();
         HitsRemaining = info.RequiredShovelHits;

@@ -243,6 +243,14 @@ public class WorldIconInfo : ITransformObject, IDisposable
         LifetimeSeconds = FirstSpawnRealtime == 0 ? seconds : Time.realtimeSinceStartup - FirstSpawnRealtime + seconds;
     }
 
+    /// <summary>
+    /// Indicates that the position for the icon should be updated as soon as possible.
+    /// </summary>
+    public void Update()
+    {
+        LastPositionUpdateRealtime = 0;
+    }
+
     internal void UpdateRelevantPlayers(IPlayerService playerService, ref PooledTransportConnectionList? list, ref ITransportConnection? single, in Vector3 spawnPosition, HashSet<ITransportConnection> workingHashSetCache)
     {
         bool distanceLimited = IsDistanceLimited;

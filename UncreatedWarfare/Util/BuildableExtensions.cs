@@ -376,20 +376,25 @@ public static class BuildableExtensions
     /// <remarks>Note that these bounds are rotated so that up is actually up.</remarks>
     public static bool TryGetBuildableBounds(ItemPlaceableAsset buildableAsset, out Bounds localBounds)
     {
-        localBounds = default;
-
-        if (buildableAsset.GUID == Guid.Empty)
-            return false;
-
-        if (CachedBarricadeBounds.TryGetValue(buildableAsset.GUID, out localBounds))
-            return true;
-
         GameObject? model = buildableAsset switch
         {
             ItemBarricadeAsset barricade => barricade.barricade,
             ItemStructureAsset structure => structure.structure,
             _ => null
         };
+
+        return TryGetObjectBounds(model, buildableAsset, out localBounds);
+    }
+
+    internal static bool TryGetObjectBounds(GameObject? model, Asset asset, out Bounds localBounds)
+    {
+        localBounds = default;
+
+        if (asset.GUID == Guid.Empty)
+            return false;
+
+        if (CachedBarricadeBounds.TryGetValue(asset.GUID, out localBounds))
+            return true;
 
         if (model == null)
             return false;
@@ -404,7 +409,7 @@ public static class BuildableExtensions
             for (int i = 0; i < WorkingColliders.Count; i++)
             {
                 Collider collider = WorkingColliders[i];
-                if (collider.gameObject.layer == LayerMasks.NAVMESH)
+                if (collider.isTrigger || collider.gameObject.layer == LayerMasks.NAVMESH)
                     continue;
 
                 Bounds b = default;
@@ -454,7 +459,7 @@ public static class BuildableExtensions
         Vector3 e = workingBounds.extents;
         workingBounds.extents = new Vector3(Math.Abs(e.x), Math.Abs(e.z), Math.Abs(e.y));
 
-        if (buildableAsset is ItemBarricadeAsset { offset: not 0 } bAsset)
+        if (asset is ItemBarricadeAsset { offset: not 0 } bAsset)
         {
             Vector3 c = workingBounds.center;
             c.y += bAsset.offset;
@@ -462,7 +467,7 @@ public static class BuildableExtensions
         }
 
         localBounds = workingBounds;
-        CachedBarricadeBounds.Add(buildableAsset.GUID, workingBounds);
+        CachedBarricadeBounds.Add(asset.GUID, workingBounds);
         return true;
     }
 }

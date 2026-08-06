@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics.CodeAnalysis;
 using Uncreated.Warfare.Buildables;
 
 namespace Uncreated.Warfare.Events.Models.Barricades;

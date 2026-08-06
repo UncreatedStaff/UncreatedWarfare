@@ -234,6 +234,7 @@ public static class StringUtility
             return default;
         }
 
+        // max size per character in UTF8 is 4
         int byteCt = Encoding.UTF8.GetByteCount(text);
         if (byteCt <= maximumBytes)
         {

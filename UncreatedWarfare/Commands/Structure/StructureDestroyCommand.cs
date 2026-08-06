@@ -32,7 +32,7 @@ internal sealed class StructureDestroyCommand : IExecutableCommand
     {
         Context.AssertRanByPlayer();
 
-        if (Context.TryGetVehicleTarget(out InteractableVehicle? vehicle))
+        if (Context.TryGetVehicleTarget(out InteractableVehicle? vehicle, allowDead: true))
         {
             await _vehicleService.DeleteVehicleAsync(vehicle, token);
 

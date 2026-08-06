@@ -39,6 +39,38 @@ public sealed class FallingEffectManager : IDisposable
                     Assets.find<EffectAsset>(new Guid("d3f5d1af0f534b13b52986f6f44aede9"))  // Physical_SupplyCrate_1_Inst10
                 ],
                 this
+            ),
+            new FallingEffectGroup(
+                Assets.find<ItemAsset>(new Guid("de94da4a993e4ebdbfd56d6e73d0af78")),       // AmmoCrate_1
+                [
+                    Assets.find<EffectAsset>(new Guid("f582c9cb20ee40dd926175591e632449")), // Physical_AmmoCrate_1_Inst1
+                    Assets.find<EffectAsset>(new Guid("d97ce0ee9bd9427fbc4c00a2351d19fb")), // Physical_AmmoCrate_1_Inst2
+                    Assets.find<EffectAsset>(new Guid("f48a15d6c2ea432cadcd3ca3a2a03a58")), // Physical_AmmoCrate_1_Inst3
+                    Assets.find<EffectAsset>(new Guid("b77ea88db84c46c2a7c6f6fe9261d28a")), // Physical_AmmoCrate_1_Inst4
+                    Assets.find<EffectAsset>(new Guid("0dfb69f64263421b858f498468098e78")), // Physical_AmmoCrate_1_Inst5
+                    Assets.find<EffectAsset>(new Guid("e8fe0fca755244d8b4b7685c2e83478a")), // Physical_AmmoCrate_1_Inst6
+                    Assets.find<EffectAsset>(new Guid("81f788d520854a68afe468c1313319ee")), // Physical_AmmoCrate_1_Inst7
+                    Assets.find<EffectAsset>(new Guid("b0496a24aa714a2faef73b9f20a8c89d")), // Physical_AmmoCrate_1_Inst8
+                    Assets.find<EffectAsset>(new Guid("48d1474f7e7f43909a77eefaa26bba08")), // Physical_AmmoCrate_1_Inst9
+                    Assets.find<EffectAsset>(new Guid("6aaf8a12198c48148036522357773ea2"))  // Physical_AmmoCrate_1_Inst10
+                ],
+                this
+            ),
+            new FallingEffectGroup(
+                Assets.find<ItemAsset>(new Guid("5c88dbd8e81444678f0f3a653f3e7e5d")),       // AmmoCrate_2
+                [
+                    Assets.find<EffectAsset>(new Guid("3703f73e6c814fbd8ff7f92d020ef32a")), // Physical_AmmoCrate_2_Inst1
+                    Assets.find<EffectAsset>(new Guid("4bcddaa9c10248099b53325bea163c51")), // Physical_AmmoCrate_2_Inst2
+                    Assets.find<EffectAsset>(new Guid("02932f975a2b4ef199ac304f82424b53")), // Physical_AmmoCrate_2_Inst3
+                    Assets.find<EffectAsset>(new Guid("9b1d8a9a33b74c57a43403d32e7e4e26")), // Physical_AmmoCrate_2_Inst4
+                    Assets.find<EffectAsset>(new Guid("c6b59e93a9dc401aaccaa16757eef32f")), // Physical_AmmoCrate_2_Inst5
+                    Assets.find<EffectAsset>(new Guid("3495eb27c7e840808758c0c6598f2601")), // Physical_AmmoCrate_2_Inst6
+                    Assets.find<EffectAsset>(new Guid("cb23b9ad7dc4491fb56239c2285b2bd1")), // Physical_AmmoCrate_2_Inst7
+                    Assets.find<EffectAsset>(new Guid("0d3d079caa264477b374a34b7226eef1")), // Physical_AmmoCrate_2_Inst8
+                    Assets.find<EffectAsset>(new Guid("374156907c8b4000a904593dbf966393")), // Physical_AmmoCrate_2_Inst9
+                    Assets.find<EffectAsset>(new Guid("5557fdf828824cb3ab450a3b466a3f25"))  // Physical_AmmoCrate_2_Inst10
+                ],
+                this
             )
         ];
     }
@@ -177,13 +209,20 @@ public sealed class FallingEffectManager : IDisposable
         return fallingEffect;
     }
 
-    internal void DestroyFallingEffect(FallingEffect effect, bool settle = false)
+    internal void DestroyFallingEffect(FallingEffect effect, bool settle = false, bool destroy = true)
     {
+        if (settle && destroy)
+            throw new ArgumentException("Can't settle on destroy.", nameof(destroy));
+
         GameThread.AssertCurrent();
 
         if (effect.IsDestroyed)
+        {
+            effect.LogMessage("Already destroyed.");
             return;
+        }
 
+        effect.LogMessage("Destroying...");
         if (settle)
         {
             effect.SkipWaitForSettle();
@@ -192,7 +231,12 @@ public sealed class FallingEffectManager : IDisposable
         effect.IsDestroyed = true;
         if (effect.IsReplicated)
         {
-            EffectManager.ClearEffectByGuid_AllPlayers(effect.Effect.GUID);
+            if (destroy)
+            {
+                effect.LogMessage("Clearing...");
+                EffectManager.ClearEffectByGuid_AllPlayers(effect.Effect.GUID);
+            }
+
             effect.Group.RemoveEffect(effect);
         }
         else
@@ -200,6 +244,7 @@ public sealed class FallingEffectManager : IDisposable
             _nonReplicatedEffects.Remove(effect);
         }
 
+        effect.LogMessage("Destroying effect.");
         Object.Destroy(effect);
     }
 
@@ -219,5 +264,44 @@ public sealed class FallingEffectManager : IDisposable
         }
 
         _nonReplicatedEffects.Clear();
+    }
+
+    public bool IsFallingEffectObstructed(ItemAsset item, Transform transform)
+    {
+        GameThread.AssertCurrent();
+
+        transform.GetPositionAndRotation(out Vector3 position, out Quaternion rotation);
+        return IsFallingEffectObstructed(item, position, rotation);
+    }
+
+    public bool IsFallingEffectObstructed(ItemAsset item, ITransformObject transform)
+    {
+        GameThread.AssertCurrent();
+
+        return IsFallingEffectObstructed(item, transform.Position, transform.Rotation);
+    }
+
+    public bool IsFallingEffectObstructed(ItemAsset item, Vector3 position, Quaternion rotation)
+    {
+        GameThread.AssertCurrent();
+
+        FallingEffectGroup? group = Groups.FirstOrDefault(x => x.Item.GUID == item.GUID);
+        if (group == null)
+            throw new ArgumentException($"No group configured for item {item.name}.", nameof(item));
+
+        EffectAsset effectAsset = group.Effects[0];
+
+        if (!BuildableExtensions.TryGetObjectBounds(effectAsset.effect, effectAsset, out Bounds bounds))
+        {
+            return false;
+        }
+
+        return Physics.CheckBox(
+            position,
+            bounds.extents * 1.5f,
+            rotation,
+            (RayMasks.BLOCK_COLLISION | RayMasks.DEBRIS) & ~RayMasks.VEHICLE,
+            QueryTriggerInteraction.Ignore
+        );
     }
 }

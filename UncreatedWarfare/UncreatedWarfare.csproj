@@ -92,6 +92,7 @@
     <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
 
       <!--<DefineConstants>$(DefineConstants);MAP_TACK_UI_DEBUG_LOGGING</DefineConstants>-->
+      <DefineConstants>$(DefineConstants);FALLING_EFFECT_DEBUG_LOGGING</DefineConstants>
 
     </PropertyGroup>
 

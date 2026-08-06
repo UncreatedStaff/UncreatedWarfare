@@ -1,4 +1,5 @@
 using System;
+using Uncreated.Warfare.Interaction;
 
 namespace Uncreated.Warfare.Translations;
 
@@ -80,5 +81,10 @@ public enum TranslationOptions
     /// <summary>
     /// Configures the translator to output text that can be easily viewed from the termnial.
     /// </summary>
-    ForTerminal = TranslateWithTerminalRichText | ReplaceRichTextWithTerminalRichText
+    ForTerminal = TranslateWithTerminalRichText | ReplaceRichTextWithTerminalRichText,
+
+    /// <summary>
+    /// A hint sent with <see cref="Player.ServerShowHint"/> or <see cref="ChatService.SendHint"/>.
+    /// </summary>
+    Hint = UI
 }

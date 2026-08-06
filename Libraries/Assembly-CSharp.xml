@@ -3668,6 +3668,31 @@
             Is the Ctrl-C or Ctrl-Break signal being handled?
             </summary>
         </member>
+        <member name="T:SDG.Unturned.DamagePlayerParameters">
+            <summary>
+            Payload for the DamageTool.damagePlayer function.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.DamagePlayerParameters.respectArmor">
+            <summary>
+            Should armor worn on matching limb be factored in?
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.DamagePlayerParameters.applyGlobalArmorMultiplier">
+            <summary>
+            Should game mode config damage multiplier be factored in?
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.DamagePlayerParameters.trackKill">
+            <summary>
+            If player dies should it count towards quests?
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.DamagePlayerParameters.ragdollEffect">
+            <summary>
+            Effect to apply to ragdoll if dead.
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.ELoadingTip.MAX">
             <summary>
             Marker for counting number of tips.
@@ -3693,31 +3718,6 @@
         <member name="M:SDG.Unturned.LoadingUI.PickNonLevelBackgroundImage">
             <summary>
             Select a loading image while on the startup screen or a level without any images.
-            </summary>
-        </member>
-        <member name="T:SDG.Unturned.DamagePlayerParameters">
-            <summary>
-            Payload for the DamageTool.damagePlayer function.
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.DamagePlayerParameters.respectArmor">
-            <summary>
-            Should armor worn on matching limb be factored in?
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.DamagePlayerParameters.applyGlobalArmorMultiplier">
-            <summary>
-            Should game mode config damage multiplier be factored in?
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.DamagePlayerParameters.trackKill">
-            <summary>
-            If player dies should it count towards quests?
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.DamagePlayerParameters.ragdollEffect">
-            <summary>
-            Effect to apply to ragdoll if dead.
             </summary>
         </member>
         <member name="F:SDG.Unturned.ESteamCallValidation.ONLY_FROM_SERVER">
@@ -9452,6 +9452,13 @@
             Perhaps in the future all asset/content systems will be consolidated.
             </summary>
         </member>
+        <member name="M:SDG.Unturned.MasterBundleReference`1.LoadAssetAsync(System.Boolean)">
+            <summary>
+            TODO: if adding additional calls, result should ideally wrap AssetBundleRequest so that
+            bundle.processLoadedObject runs before returning the result. Should be consolidated with
+            MasterBundleConfig.LoadAssetAsync, too.
+            </summary>
+        </member>
         <member name="P:SDG.Unturned.MasterBundleReference`1.isNull">
             <summary>
             Are name or path null or empty?
@@ -14634,6 +14641,13 @@
             Load the underlying asset bundle.
             </summary>
         </member>
+        <member name="M:SDG.Unturned.MasterBundleConfig.LoadAssetAsync``1(System.String)">
+            <summary>
+            TODO: if adding additional calls, result should ideally wrap AssetBundleRequest so that
+            bundle.processLoadedObject runs before returning the result. Should be consolidated with
+            MasterBundleReference.LoadAssetAsync, too.
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.MasterBundleConfig.sourceConfig">
             <summary>
             If true, the associated asset bundle couldn't be loaded and was instead copied from another config.
@@ -19365,6 +19379,12 @@
             <summary>
             Note: unfortunately it appears the stupid skin system always instantiated materials, but never destroys
             them... will need to clean this up, but it will be tricky because the game does not hold a reference to them.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.SkinAsset.overrideAnimations">
+            <summary>
+            Same as ItemAsset.animations.
+            Necessary to fix incompatibility between classic canned beans skin and newer eating animations.
             </summary>
         </member>
         <member name="P:SDG.Unturned.SkinAsset.ShouldHideMagazine">

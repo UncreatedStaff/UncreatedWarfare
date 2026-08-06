@@ -26,8 +26,8 @@ public class FobAmmoVendor : BuildableFobEntity<ShovelableInfo>, IAmmoStorage
         remove => AmmoCountUpdated -= value;
     }
 
-    public FobAmmoVendor(ShovelableInfo? info, Team team, IBuildable buildable, FobManager fobManager, IServiceProvider serviceProvider, string? iconOverride = null)
-        : base(info, buildable, team, serviceProvider, iconOverride)
+    public FobAmmoVendor(ShovelableInfo? info, Team team, IBuildable buildable, FobManager fobManager, IServiceProvider serviceProvider, string? iconOverride = null, bool iconVisible = true)
+        : base(info, buildable, team, serviceProvider, iconOverride, iconVisible)
     {
         _fobManager = fobManager;
         _intxSemaphore = new SemaphoreSlim(1, 1);

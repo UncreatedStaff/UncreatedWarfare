@@ -26,6 +26,10 @@ public sealed class FobConfiguration : BaseAlternateConfigurationFile
     public float MaximumDistanceFromFobToDeployToMain { get; private set; }
     public float MaximumDistanceFromEnemiesToDeployToMain { get; private set; }
     public TimeSpan DeployFobToMainDelay { get; private set; }
+    public float SupplyCrateMaxDropHeight { get; private set; }
+    public float MinDistanceBetweenFobs { get; private set; }
+    public int MaxNumberOfFobs { get; private set; }
+    public float MinFobDistanceFromMain { get; private set; }
 
     /// <summary>
     /// Home for storing FOB and buildable data.
@@ -98,5 +102,17 @@ public sealed class FobConfiguration : BaseAlternateConfigurationFile
 
         DeployFobToMainDelay =
             UnderlyingConfiguration.GetValue("RepairStation:DeployFobToMainDelay", TimeSpan.FromSeconds(7));
+
+        SupplyCrateMaxDropHeight =
+            UnderlyingConfiguration.GetValue("SupplyCrateMaxDropHeight", 150f);
+
+        MinDistanceBetweenFobs =
+            UnderlyingConfiguration.GetValue("MinDistanceBetweenFobs", 150f);
+
+        MaxNumberOfFobs =
+            UnderlyingConfiguration.GetValue("MaxNumberOfFobs", 10);
+
+        MinFobDistanceFromMain =
+            UnderlyingConfiguration.GetValue("MinFobDistanceFromMain", 120f);
     }
 }

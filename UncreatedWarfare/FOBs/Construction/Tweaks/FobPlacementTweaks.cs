@@ -90,7 +90,8 @@ public class FobPlacementTweaks :
             return;
         }
 
-        int maxNumberOfFobs = _fobManager.Configuration.GetValue("MaxNumberOfFobs", 10);
+        // FobCreation supply crates use similar logic in FobEvents.cs, remember to update both
+        int maxNumberOfFobs = _fobManager.Configuration.MaxNumberOfFobs;
         bool fobLimitReached = _fobManager.FriendlyBunkerFobs(e.OriginalPlacer.Team).Count() >= maxNumberOfFobs;
         if (fobLimitReached)
         {
@@ -99,7 +100,7 @@ public class FobPlacementTweaks :
             return;
         }
 
-        float minDistanceBetweenFobs = _fobManager.Configuration.GetValue("MinDistanceBetweenFobs", 150f);
+        float minDistanceBetweenFobs = _fobManager.Configuration.MinDistanceBetweenFobs;
         BunkerFob? tooCloseFob = _fobManager.FriendlyBunkerFobs(e.OriginalPlacer.Team).FirstOrDefault(f =>
             MathUtility.WithinRange(e.Position, f.Position, minDistanceBetweenFobs)
         );
@@ -111,7 +112,7 @@ public class FobPlacementTweaks :
             return;
         }
 
-        float minFobDistanceFromMain = _fobManager.Configuration.GetValue<float>("MinFobDistanceFromMain", 120);
+        float minFobDistanceFromMain = _fobManager.Configuration.MinFobDistanceFromMain;
 
         ZoneStore? zoneStore = serviceProvider.GetService<ZoneStore>();
         if (zoneStore != null)
@@ -124,13 +125,6 @@ public class FobPlacementTweaks :
                 e.Cancel();
                 return;
             }
-        }
-        
-        if (WaterUtility.isPointUnderwater(e.Position))
-        {
-            chatService.Send(e.OriginalPlacer, _translations.BuildFOBUnderwater);
-            e.Cancel();
-            return;
         }
         
         if (WaterUtility.isPointUnderwater(e.Position))
