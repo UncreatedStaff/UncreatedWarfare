@@ -165,12 +165,14 @@ public class SupplyCrateStack : IDisposable
         string? iconPath = firstCrate.Info?.Icon;
         IAssetLink<EffectAsset>? asset = string.IsNullOrEmpty(iconPath) ? null : _assetConfiguration.GetAssetLink<EffectAsset>(iconPath);
 
+        bool newIcon = false;
         if (Icon == null)
         {
             if (existingIcon == null || asset == null)
                 return;
 
             Icon = new WorldIconInfo(ColliderObject.transform, asset, team);
+            newIcon = true;
         }
         else if (existingIcon == null)
         {
@@ -191,12 +193,17 @@ public class SupplyCrateStack : IDisposable
             {
                 Icon.Dispose();
                 Icon = new WorldIconInfo(ColliderObject.transform, asset, team);
+                newIcon = true;
             }
         }
 
         Vector3 originalOffset = firstCrate.Info?.IconOffset ?? default;
-        Icon.Offset = originalOffset + ColliderObject.transform.TransformPoint(new Vector3(_stackBounds.center.x, _stackBounds.max.y, _stackBounds.center.z));
-        _worldIconManager.CreateIcon(Icon);
+        Icon.Offset = originalOffset + new Vector3(_stackBounds.center.x, _stackBounds.size.y, _stackBounds.center.z);
+
+        if (newIcon)
+        {
+            _worldIconManager.CreateIcon(Icon);
+        }
 
         foreach (StackedSupplyCrate crate in Crates)
         {
