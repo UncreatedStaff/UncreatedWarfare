@@ -107,7 +107,7 @@ public class FobTranslations : TranslationCollection
     public Translation<BunkerFob, float> DropSupplyCrateTooNearFriendlyFob = new Translation<BunkerFob, float>("There is already a FOB nearby ({0}). New FOBs must be built at least {1}m away from an existing FOB.", TranslationOptions.Hint, arg1Fmt: "F0");
     
     [TranslationData("Sent as a hint when a player tries to drop a supply crate too near another FOB. They can be dropped within the radius of a FOB but not outside that radius.", "Minimum distance between FOBs (meters)")]
-    public Translation<float> DropSupplyCrateTooNearEnemyFob = new Translation<float>("There's already an enemy FOB nearby. New FOBs must be built at least {1}m away from an existing FOB.", TranslationOptions.Hint, arg0Fmt: "F0");
+    public Translation<float> DropSupplyCrateTooNearEnemyFob = new Translation<float>("There's already an enemy FOB nearby. New FOBs must be built at least {0}m away from an existing FOB.", TranslationOptions.Hint, arg0Fmt: "F0");
     
     [TranslationData("Sent as a hint when a player tries to drop a supply crate close to main base.", "Minimum distance between FOBs (meters)")]
     public Translation<float> DropSupplyCrateTooNearMain = new Translation<float>("You're too close to spawn. FOBs must be built at least {0}m away from main base.", TranslationOptions.Hint, arg0Fmt: "F0");

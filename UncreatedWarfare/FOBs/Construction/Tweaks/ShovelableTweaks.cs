@@ -87,7 +87,7 @@ internal class ShovelableTweaks :
         if (!shovelableInfo.MaxAllowedPerFob.HasValue || buildableInKit)
             return;
 
-        ResourceFob? nearestFob = _fobManager?.FindNearestResourceFob(e.OriginalPlacer.Team, e.Position);
+        ResourceFob? nearestFob = _fobManager?.FindNearestBunkerFob(e.OriginalPlacer.Team, e.Position);
 
         if (nearestFob == null && !(placerIsCombatEngineer && shovelableInfo.CombatEngineerCanPlaceAnywhere))
         {

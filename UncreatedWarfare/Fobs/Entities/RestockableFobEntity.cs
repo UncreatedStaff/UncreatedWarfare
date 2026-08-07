@@ -55,6 +55,11 @@ public class RestockableBuildableFobEntity<TInfo> : BuildableFobEntity<TInfo> wh
             _refillState = buildable.GetItem<Barricade>().state;
         }
 
+        if (buildable.GetDrop<BarricadeDrop>() is { interactable: InteractableStorage storage })
+        {
+            storage.despawnWhenDestroyed = true;
+        }
+
         try
         {
             BarricadeUtility.VerifyState(_refillState, (ItemBarricadeAsset)Buildable.Asset);
