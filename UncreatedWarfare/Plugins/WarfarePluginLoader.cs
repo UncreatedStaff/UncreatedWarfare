@@ -322,7 +322,7 @@ public class WarfarePluginLoader
 
         IConfigurationBuilder configBuilder = new ConfigurationBuilder();
 
-        ConfigurationHelper.AddSourceWithMapOverride(configBuilder, _warfare.FileProvider, configLocation, optional: true);
+        ConfigurationHelper.AddSourceWithMapOverride(configBuilder, _warfare.FileProvider, configLocation, optional: true, reloadOnChange: _warfare.UseFileWatchers);
 
         return configBuilder.Build();
     }

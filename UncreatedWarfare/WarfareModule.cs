@@ -209,7 +209,11 @@ public sealed class WarfareModule
             }
         }
     }
+
+    public bool UseFileWatchers { get; private set; }
+
 #nullable restore
+
     internal void Initialize()
     {
         IsActive = true;
@@ -241,6 +245,8 @@ public sealed class WarfareModule
 
         ConfigurationHelper.AddJsonOrYamlFile(configBuilder, FileProvider, systemConfigLocation, optional: true, reloadOnChange: true);
         Configuration = configBuilder.Build();
+
+        UseFileWatchers = Configuration.GetValue("tests:enableFileWatchers", true);
 
         bldr.RegisterInstance(Configuration);
 

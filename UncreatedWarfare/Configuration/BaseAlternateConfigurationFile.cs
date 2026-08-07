@@ -54,6 +54,9 @@ public abstract class BaseAlternateConfigurationFile : IConfiguration, IDisposab
     protected BaseAlternateConfigurationFile(IServiceProvider serviceProvider, string fileName, bool? mapSpecific = null, bool optional = false, bool reload = true)
     {
         _module = serviceProvider.GetRequiredService<WarfareModule>();
+
+        reload &= _module.UseFileWatchers;
+
         _fileName = fileName;
         _optional = optional;
         _reloadable = reload;
