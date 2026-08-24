@@ -193,44 +193,7 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
         }
     }
 
-    private void AddModIdToServerMenu(ulong workshopId)
-    {
-        GameThread.AssertCurrent();
-
-        if (Provider.getServerWorkshopFileIDs().Contains(workshopId))
-            return;
-
-        Provider.registerServerUsingWorkshopFileId(workshopId);
-        List<ulong> ids = Provider.getServerWorkshopFileIDs();
-
-        if (ids.Count <= 0)
-            return;
-
-        StringBuilder modList = new StringBuilder(ids.Count * 17 + (ids.Count - 1));
-        for (int index = 0; index < ids.Count; ++index)
-        {
-            if (index != 0)
-                modList.Append(',');
-
-            modList.Append(ids[index]);
-        }
-
-        int ttlLen = modList.Length;
-
-        // split the mod list into 127 character segments of the whole string.
-        // See Provder.onDedicatedUGCInstalled and MenuPlayServerInfoUI.onRulesQueryRefreshed
-        int segmentCount = (ttlLen - 1) / 127 + 1;
-        int segmentIndex = 0;
-        SteamGameServer.SetKeyValue("Mod_Count", segmentCount.ToString());
-        for (int segmentStartIndex = 0; segmentStartIndex < ttlLen; segmentStartIndex += 127)
-        {
-            int length = Math.Min(ttlLen - segmentStartIndex, 127);
-            string segmentContents = modList.ToString(segmentStartIndex, length);
-            SteamGameServer.SetKeyValue("Mod_" + segmentIndex, segmentContents);
-            ++segmentIndex;
-        }
-    }
-
+    
     async UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
         _hasStartedUp = true;
@@ -248,7 +211,7 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
 
         if (_modEnabled && _workshopId != 0)
         {
-            AddModIdToServerMenu(_workshopId);
+            WorkshopUtility.AddModIdToServerMenu(new PublishedFileId_t(_workshopId));
         }
 
         await _config.Read(token);
@@ -431,7 +394,7 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
             if (modId.Value != 0)
             {
                 await UniTask.SwitchToMainThread(CancellationToken.None);
-                AddModIdToServerMenu(modId.Value);
+                WorkshopUtility.AddModIdToServerMenu(new PublishedFileId_t(modId.Value));
             }
             _logger.LogInformation("Mod upload complete. ID: {0}.", modId.Value);
             _workshopId = modId.Value;

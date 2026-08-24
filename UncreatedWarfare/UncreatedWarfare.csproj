@@ -386,6 +386,8 @@
         <Publicize Include="Assembly-CSharp:SDG.Unturned.BarricadeManager.YAW_BIT_COUNT" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.StructureManager.POSITION_FRAC_BIT_COUNT" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.StructureManager.YAW_BIT_COUNT" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.Provider+ServerRequiredWorkshopFile" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.Provider.ServerRequiredWorkshopFile.fileId" />
 
     </ItemGroup>
 

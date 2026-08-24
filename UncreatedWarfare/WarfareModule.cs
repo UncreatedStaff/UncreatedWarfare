@@ -314,6 +314,8 @@ public sealed class WarfareModule
     }
 #endif
 
+    internal bool CanUseConnectionCode { get; private set; }
+
     [MethodImpl(MethodImplOptions.NoInlining)]
     private void Init()
     {
@@ -351,7 +353,14 @@ public sealed class WarfareModule
             ?.GetValue(null) is CommandLineFlag clUseP2PSocket)
         {
             clUseP2PSocket.value = false;
+            CanUseConnectionCode = false;
         }
+        else
+        {
+            CanUseConnectionCode = true;
+        }
+#else
+        CanUseConnectionCode = true;
 #endif
 
         Provider.modeConfigData.Players.Lose_Items_PvP = 0;
