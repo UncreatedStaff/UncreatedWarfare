@@ -171,7 +171,7 @@
         <PackageReference Include="Autofac" Version="9.1.0" />
         <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="11.0.0" />
 
-        <PackageReference Include="SSH.NET" Version="2025.1.0" />
+        <PackageReference Include="SSH.NET" Version="2026.0.0" />
 
         <PackageReference Include="System.Runtime.Caching" Version="10.0.8" />
         <PackageReference Include="System.Memory" Version="4.6.3" />

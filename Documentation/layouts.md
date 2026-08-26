@@ -14,7 +14,7 @@ Type: Layout
 Name: AAS Air Assault 1
 
 # Image used as the background in the voting UI. Should be 200x100px if using the official UI mod.
-Image: https://i.imgur.com/Ur8J86b.png
+Image: https://u.cubeupload.com/BlazingFlame/AAS200x100.png
 
 # Display name of the gamemode
 GamemodeName: Advance and Secure

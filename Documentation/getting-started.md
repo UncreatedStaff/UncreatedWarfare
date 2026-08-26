@@ -278,21 +278,21 @@ If you want to use the configuration from the live server, the following SQL scr
 SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
 
 INSERT INTO `factions` (`pk`, `Id`, `Name`, `ShortName`, `Abbreviation`, `HexColor`, `FlagImageUrl`, `SpriteIndex`, `Emoji`, `UnarmedKitId`, `KitPrefix`) VALUES
-	(1, 'admins', 'Admins', 'Admins', 'ADMIN', '0099ff', 'https://i.imgur.com/z0HE5P3.png', 0, NULL, NULL, ''),
-	(2, 'usa', 'United States', 'USA', 'USA', '78b2ff', 'https://i.imgur.com/P4JgkHB.png', 1, '🇺🇸', NULL, 'us'),
-	(3, 'russia', 'Russia', 'Russia', 'RU', 'f53b3b', 'https://i.imgur.com/YMWSUZC.png', 2, '🇷🇺', NULL, 'ru'),
-	(4, 'mec', 'Middle Eastern Coalition', 'MEC', 'MEC', 'ffcd8c', 'https://i.imgur.com/rPmpNzz.png', 3, '938653900913901598|938654469518950410', NULL, 'me'),
-	(5, 'germany', 'Germany', 'Germany', 'DE', 'ffcc00', 'https://i.imgur.com/91Apxc5.png', 4, '🇩🇪', NULL, 'ge'),
-	(6, 'china', 'China', 'China', 'CN', 'ee1c25', 'https://i.imgur.com/Yns89Yk.png', 5, '🇨🇳', NULL, 'ch'),
-	(7, 'usmc', 'US Marine Corps', 'U.S.M.C.', 'USMC', '004481', 'https://i.imgur.com/MO9nPmf.png', 6, '989069549817171978|989032657834885150', NULL, 'usmc'),
-	(8, 'soviet', 'Soviet', 'Soviet', 'SOV', 'cc0000', 'https://i.imgur.com/vk8gBBm.png', 7, '989037438972334091|989037438972334091', NULL, 'sov'),
-	(9, 'poland', 'Poland', 'Poland', 'PL', 'dc143c', 'https://i.imgur.com/fu3nCS3.png', 8, '🇵🇱', NULL, 'pl'),
-	(10, 'militia', 'Militia', 'Militia', 'MIL', '526257', 'https://i.imgur.com/z0HE5P3.png', 9, NULL, NULL, 'mi'),
-	(11, 'israel', 'Israel Defense Forces', 'IDF', 'IDF', '005eb8', 'https://i.imgur.com/Wzdspd3.png', 10, '🇮🇱', NULL, 'idf'),
-	(12, 'france', 'France', 'France', 'FR', '002654', 'https://i.imgur.com/TYY0kwp.png', 11, '🇫🇷', NULL, 'fr'),
-	(13, 'canada', 'Canadian Armed Forces', 'Canada', 'CAF', '80aaff', 'https://i.imgur.com/zs81UMe.png', 12, '🇨🇦', NULL, 'caf'),
-	(14, 'southafrica', 'South Africa', 'S. Africa', 'ZA', '007749', 'https://i.imgur.com/2orfzTh.png', 13, '🇿🇦', NULL, 'sa'),
-	(15, 'mozambique', 'Mozambique', 'Mozambique', 'MZ', 'ffd100', 'https://i.imgur.com/9nXhlMH.png', 14, '🇲🇿', NULL, 'mz');
+	(1, 'admins', 'Admins', 'Admins', 'ADMIN', '0099ff', 'https://u.cubeupload.com/BlazingFlame/flagunknown.png', 0, NULL, NULL, ''),
+	(2, 'usa', 'United States', 'USA', 'USA', '78b2ff', 'https://u.cubeupload.com/BlazingFlame/flagus.png', 1, '🇺🇸', NULL, 'us'),
+	(3, 'russia', 'Russia', 'Russia', 'RU', 'f53b3b', 'https://u.cubeupload.com/BlazingFlame/flagru.png', 2, '🇷🇺', NULL, 'ru'),
+	(4, 'mec', 'Middle Eastern Coalition', 'MEC', 'MEC', 'ffcd8c', 'https://u.cubeupload.com/BlazingFlame/flagmec.png', 3, '938653900913901598|938654469518950410', NULL, 'me'),
+	(5, 'germany', 'Germany', 'Germany', 'DE', 'ffcc00', 'https://u.cubeupload.com/BlazingFlame/flagde.png', 4, '🇩🇪', NULL, 'ge'),
+	(6, 'china', 'China', 'China', 'CN', 'ee1c25', 'https://u.cubeupload.com/BlazingFlame/flagcn.png', 5, '🇨🇳', NULL, 'ch'),
+	(7, 'usmc', 'US Marine Corps', 'U.S.M.C.', 'USMC', '004481', 'https://u.cubeupload.com/BlazingFlame/flagusmc.png', 6, '989069549817171978|989032657834885150', NULL, 'usmc'),
+	(8, 'soviet', 'Soviet', 'Soviet', 'SOV', 'cc0000', 'https://u.cubeupload.com/BlazingFlame/flagsov.png', 7, '989037438972334091|989037438972334091', NULL, 'sov'),
+	(9, 'poland', 'Poland', 'Poland', 'PL', 'dc143c', 'https://u.cubeupload.com/BlazingFlame/flagpl.png', 8, '🇵🇱', NULL, 'pl'),
+	(10, 'militia', 'Militia', 'Militia', 'MIL', '526257', 'https://u.cubeupload.com/BlazingFlame/flagunknown.png', 9, NULL, NULL, 'mi'),
+	(11, 'israel', 'Israel Defense Forces', 'IDF', 'IDF', '005eb8', 'https://u.cubeupload.com/BlazingFlame/flagidf.png', 10, '🇮🇱', NULL, 'idf'),
+	(12, 'france', 'France', 'France', 'FR', '002654', 'https://u.cubeupload.com/BlazingFlame/flagfr.png', 11, '🇫🇷', NULL, 'fr'),
+	(13, 'canada', 'Canadian Armed Forces', 'Canada', 'CAF', '80aaff', 'https://u.cubeupload.com/BlazingFlame/flagca.png', 12, '🇨🇦', NULL, 'caf'),
+	(14, 'southafrica', 'South Africa', 'S. Africa', 'ZA', '007749', 'https://u.cubeupload.com/BlazingFlame/flagza.png', 13, '🇿🇦', NULL, 'sa'),
+	(15, 'mozambique', 'Mozambique', 'Mozambique', 'MZ', 'ffd100', 'https://u.cubeupload.com/BlazingFlame/flagmz.png', 14, '🇲🇿', NULL, 'mz');
 
 INSERT INTO `faction_assets` (`pk`, `Faction`, `Redirect`, `Asset`, `VariantKey`) VALUES
 	(1, 2, 'AmmoSupply', '51e1e372bf5341e1b4b16a0eacce37eb', NULL),

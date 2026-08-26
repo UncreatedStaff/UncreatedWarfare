@@ -213,7 +213,11 @@ public class ConsoleActor : IModerationActor
         AvatarSize size,
         CancellationToken token = default
     )
-        => new ValueTask<string?>(WarfareModule.IsActive ? "https://i.imgur.com/f2axLoQ.png" /* this image has rounded corners */ : "https://i.imgur.com/NRZFfKN.png");
+        => new ValueTask<string?>(
+            WarfareModule.IsActive
+                ? "https://u.cubeupload.com/BlazingFlame/ucnrnd2.png" // this is more rounded than other one
+                : "https://u.cubeupload.com/BlazingFlame/ucnrnd1.png"
+            );
 }
 
 [JsonConverter(typeof(ActorConverter))]
@@ -237,7 +241,9 @@ public class BattlEyeActor : IModerationActor
     private BattlEyeActor() { }
     public override string ToString() => "BattlEye";
     public ValueTask<string> GetDisplayName(DatabaseInterface database, CancellationToken token = default) => new ValueTask<string>("BattlEye");
-    public ValueTask<string?> GetProfilePictureURL(DatabaseInterface database, AvatarSize size, CancellationToken token = default) => new ValueTask<string?>("https://i.imgur.com/jasTgpD.jpg");
+    public ValueTask<string?> GetProfilePictureURL(DatabaseInterface database, AvatarSize size, CancellationToken token = default) => new ValueTask<string?>(
+        "https://www.battleye.com/wp-content/themes/battleye/images/logo-large.png"
+    );
 }
 public enum AvatarSize
 {

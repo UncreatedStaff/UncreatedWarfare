@@ -157,7 +157,7 @@ SuppliesBuildToast: <#a1998d><#dbb67f>{0}</color> are nevoie de provizii la FOB.
 #  Name:         Germany
 #  Short Name:   Germany
 #  Abbreviation: DE
-#  Flag:         https://i.imgur.com/91Apxc5.png
+#  Flag:         https://u.cubeupload.com/BlazingFlame/flagde.png
 # Default: Germany
 Name: 德意志联邦共和国
 # Default: Germany
