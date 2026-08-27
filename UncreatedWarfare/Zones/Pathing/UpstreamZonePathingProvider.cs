@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Exceptions;
@@ -108,7 +107,7 @@ public class UpstreamZonePathingProvider : IZonePathingProvider
 
     private int FindZoneIndex(string zoneName)
     {
-        for (int i = 0; i < _zones.Zones.Count; ++i)
+        for (int i = 0; i < _zones.Zones.Length; ++i)
         {
             Zone zone = _zones.Zones[i];
             if (!zone.IsPrimary || !zoneName.Equals(zone.Name, StringComparison.Ordinal))

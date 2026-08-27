@@ -11,7 +11,6 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Fobs;
 using Uncreated.Warfare.Events.Models.Squads;
-using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
@@ -21,7 +20,7 @@ using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Util;
 
-namespace Uncreated.Warfare.Fobs.UI;
+namespace Uncreated.Warfare.FOBs.UI;
 
 [UnturnedUI(BasePath = "FobList")]
 public class FobHUD : 
@@ -181,7 +180,8 @@ public class FobHUD :
             newInfo.Color = fob.GetColor(player.Team);
             newInfo.Location = fob.GetClosestLocation(shortName: true) ?? string.Empty;
             newInfo.Visible = true;
-            if (fob is IResourceFob resourceFob)
+            
+            if (fob is IResourceFob { ShowResources: true } resourceFob)
             {
                 newInfo.Build = Mathf.CeilToInt(resourceFob.BuildCount);
                 newInfo.Ammo = Mathf.CeilToInt(resourceFob.AmmoCount);

@@ -1,23 +1,28 @@
 using System;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.FOBs.SupplyCrates;
 
-public class AmmoSupplyCrate : ITemporaryAmmoStorage
+public class AmmoCrate : ITemporaryAmmoStorage
 {
     private int _hasAmmoCountSub;
-    private event Action? AmmoCountUpdatedIntl;
-
-    private readonly NearbySupplyCrates _nearbySupplyCrates;
+    private event Action<float>? AmmoCountUpdatedIntl;
+    
     private readonly SupplyCrate _supplyCrate;
     public bool CanChangeKit => _supplyCrate.Info is { CanChangeKit: true };
-    public float AmmoCount => _nearbySupplyCrates.AmmoCount;
+
+    public float AmmoCount
+    {
+        get => _supplyCrate.SupplyCount;
+        private set => _supplyCrate.SupplyCount = value;
+    }
+
     public CSteamID Owner { get; }
     public Team Team => _supplyCrate.Team;
 
-    public event Action? AmmoCountUpdated
+    public event Action<float>? AmmoCountUpdated
     {
         add
         {
@@ -30,7 +35,7 @@ public class AmmoSupplyCrate : ITemporaryAmmoStorage
                 //   1: already subscribed
                 
                 case 2:
-                    throw new ObjectDisposedException(nameof(AmmoSupplyCrate));
+                    throw new ObjectDisposedException(nameof(AmmoCrate));
             }
 
             AmmoCountUpdatedIntl += value;
@@ -38,25 +43,31 @@ public class AmmoSupplyCrate : ITemporaryAmmoStorage
         remove => AmmoCountUpdatedIntl -= value;
     }
 
-    private AmmoSupplyCrate(SupplyCrate supplyCrate, FobManager fobManager)
+    private AmmoCrate(SupplyCrate supplyCrate)
     {
-        _nearbySupplyCrates = NearbySupplyCrates.FromSingleCrate(supplyCrate, fobManager);
-        Owner = supplyCrate.Buildable.Owner;
         _supplyCrate = supplyCrate;
+        Owner = supplyCrate.Buildable.Owner;
     }
 
     private void HandleSupplyCountUpdated()
     {
-        AmmoCountUpdatedIntl?.Invoke();
+        AmmoCountUpdatedIntl?.Invoke(AmmoCount);
     }
 
-    public static AmmoSupplyCrate FromSupplyCrate(SupplyCrate supplyCrate, FobManager fobManager)
+    public static AmmoCrate FromSupplyCrate(SupplyCrate supplyCrate)
     {
-        return new AmmoSupplyCrate(supplyCrate, fobManager);
+        return new AmmoCrate(supplyCrate);
     }
+
     public void SubtractAmmo(float ammoCount)
     {
-        _nearbySupplyCrates.SubtractSupplies(ammoCount, SupplyType.Ammo, SupplyChangeReason.ConsumeGeneral);
+        GameThread.AssertCurrent();
+
+        AmmoCount = Mathf.Max(AmmoCount - ammoCount, 0);
+        if (AmmoCount == 0)
+        {
+            _supplyCrate.Buildable.Destroy();
+        }
     }
 
     public override string ToString()
@@ -71,5 +82,7 @@ public class AmmoSupplyCrate : ITemporaryAmmoStorage
     }
 
     Vector3 IAmmoStorage.Point => _supplyCrate.Position;
+    bool IAmmoStorage.AllowDiscountedRearm => _supplyCrate.Info is { AllowDiscountedRearm: true };
     float IAmmoStorage.InteractRange => 8;
+    SemaphoreSlim IAmmoStorage.InteractSemaphore => _supplyCrate.SupplyAccessSync;
 }

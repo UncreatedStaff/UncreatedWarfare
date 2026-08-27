@@ -1,6 +1,9 @@
 ﻿using System;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Items;
+using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Tweaks;
 
@@ -9,8 +12,16 @@ namespace Uncreated.Warfare.Tweaks;
 /// </summary>
 internal sealed class NoCraftingTweak : IEventListener<CraftItemRequested>
 {
+    private readonly ChatService _chatService;
+    private readonly PlayersTranslations _translations;
     private static readonly Guid AmmoTagGuid = new Guid("d739926736374e5ba34b4ac6ffbb5c8f");
     private static readonly Guid RepairTagGuid = new Guid("732ee6ffeb18418985cf4f9fde33dd11");
+
+    public NoCraftingTweak(TranslationInjection<PlayersTranslations> translations, ChatService chatService)
+    {
+        _chatService = chatService;
+        _translations = translations.Value;
+    }
 
     void IEventListener<CraftItemRequested>.HandleEvent(CraftItemRequested e, IServiceProvider serviceProvider)
     {
@@ -19,5 +30,6 @@ internal sealed class NoCraftingTweak : IEventListener<CraftItemRequested>
             return;
 
         e.CancelAction();
+        _chatService.SendHint(e.Player, _translations.NoCraftingBlueprint);
     }
 }

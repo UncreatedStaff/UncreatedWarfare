@@ -1,8 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Models.Factions;
@@ -124,8 +122,8 @@ public class FactionDataStore : IFactionDataStore, IHostedService
 
     public async Task ReloadCache(CancellationToken token = default)
     {
-        IServiceScope scope = _serviceProvider.CreateScope();
-        await using IFactionDbContext dbContext = scope.ServiceProvider.GetRequiredService<IFactionDbContext>();
+        await using AsyncServiceScope scope = _serviceProvider.CreateAsyncScope();
+        IFactionDbContext dbContext = scope.ServiceProvider.GetRequiredService<IFactionDbContext>();
 
         List<Faction> dbModels = await dbContext.Factions
             .Include(faction => faction.Assets)

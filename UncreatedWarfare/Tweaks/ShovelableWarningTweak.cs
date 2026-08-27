@@ -4,7 +4,7 @@ using System.Linq;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Projectiles;
-using Uncreated.Warfare.Fobs;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;

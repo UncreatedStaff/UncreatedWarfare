@@ -28,6 +28,7 @@ public class Layout : IDisposable
     private readonly CancellationTokenSource _cancellationTokenSource;
     private readonly WarfareLifetimeComponent _appLifetime;
     internal bool UnloadedHostedServices;
+    internal bool IsReadyToHost;
     private readonly IList<IDisposable> _disposableVariationConfigurationRoots;
 
     protected ILogger<Layout> Logger;

@@ -1,3 +1,4 @@
+using System;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.FOBs.Construction;
 
@@ -7,7 +8,7 @@ public class SupplyCrateInfo : IBuildableFobEntityInfo
 {
     public required IAssetLink<ItemPlaceableAsset> SupplyItemAsset { get; set; }
     public required IAssetLink<EffectAsset> PlacementEffect { get; set; }
-    public SupplyType Type { get; set; }
+    public CrateType Type { get; set; }
     public int StartingSupplies { get; set; } = 30;
     public int SupplyRadius { get; set; } = 40;
 
@@ -18,6 +19,8 @@ public class SupplyCrateInfo : IBuildableFobEntityInfo
     public int MaxStackHeight { get; set; } = 3;
     public int MaxStackWidth { get; set; } = 7;
     public bool CanChangeKit { get; set; }
+    public bool AllowDiscountedRearm { get; set; } = true;
+    public TimeSpan? DespawnAfter { get; set; }
 
     IAssetLink<ItemPlaceableAsset> IBuildableFobEntityInfo.IdentifyingAsset => SupplyItemAsset;
 

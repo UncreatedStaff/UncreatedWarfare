@@ -5,7 +5,6 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Events.Models.Players;
-using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
@@ -88,7 +87,7 @@ internal class ShovelableTweaks :
         if (!shovelableInfo.MaxAllowedPerFob.HasValue || buildableInKit)
             return;
 
-        ResourceFob? nearestFob = _fobManager?.FindNearestResourceFob(e.OriginalPlacer.Team, e.Position);
+        ResourceFob? nearestFob = _fobManager?.FindNearestBunkerFob(e.OriginalPlacer.Team, e.Position);
 
         if (nearestFob == null && !(placerIsCombatEngineer && shovelableInfo.CombatEngineerCanPlaceAnywhere))
         {
@@ -145,7 +144,20 @@ internal class ShovelableTweaks :
             _chatService.Send(e.Player, _translations.ShovelableNotFriendly);
             return;
         }
+
         
+        // prevent shoveling FOBs if there are no supply crates nearby (perhaps they were destroyed after placing)
+        if (shovelable.Info.ConstuctionType == ShovelableType.Fob)
+        {
+            BunkerFob? correspondingFob = _fobManager.FindBuildableFob<BunkerFob>(shovelable.Buildable);
+            if (correspondingFob is {HasBeenRebuilt: false} &&
+                _fobManager.FindNearbyFobCreationCrates(shovelable.Position, shovelable.Team).Count == 0)
+            {
+                _chatService.Send(e.Player, _translations.BuildFOBNoSupplyCrate);
+                return;
+            }
+        }
+
         shovelable.Shovel(e.Player, e.InputInfo.point);
     }
 }

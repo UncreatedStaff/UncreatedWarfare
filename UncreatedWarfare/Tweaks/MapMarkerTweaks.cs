@@ -14,7 +14,7 @@ using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Tweaks;
 
-public class MapMarkerTweaks : IEventListener<PlayerDropMarkerRequested>, IEventListener<SquadMemberLeft>, IEventListener<SquadLeaderUpdated>, ILayoutHostedService
+internal class MapMarkerTweaks : IEventListener<PlayerDropMarkerRequested>, IEventListener<SquadMemberLeft>, IEventListener<SquadLeaderUpdated>, ILayoutHostedService
 {
     private readonly IPlayerService _playerService;
 
@@ -32,7 +32,7 @@ public class MapMarkerTweaks : IEventListener<PlayerDropMarkerRequested>, IEvent
         {
             ChatService chatService = serviceProvider.GetRequiredService<ChatService>();
             RangeCommandTranslations translations = serviceProvider.GetRequiredService<TranslationInjection<RangeCommandTranslations>>().Value;
-            chatService.Send(e.Player, translations.DropMarkerNotSquadleader);
+            chatService.SendHint(e.Player, translations.DropMarkerNotSquadleader);
             e.Cancel();
             return;
         }

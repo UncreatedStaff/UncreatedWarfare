@@ -1,13 +1,21 @@
+using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Diagnostics;
 using System.Linq;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.FOBs.SupplyCrates;
+using Uncreated.Warfare.Interaction.Icons;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.FOBs.Construction;
 
 public class SupplyCrateStack : IDisposable
 {
-    private static readonly Collider?[] ColliderBuffer = new Collider?[1];
+    internal static readonly int RayMaskBlockSupplyCrate = RayMasks.BLOCK_COLLISION & ~RayMasks.VEHICLE;
+
+    private readonly WorldIconManager? _worldIconManager;
+    private readonly AssetConfiguration _assetConfiguration;
 
     private readonly List<List<StackedSupplyCrate?>> _levels;
     private readonly List<StackedSupplyCrate> _crates;
@@ -20,6 +28,7 @@ public class SupplyCrateStack : IDisposable
     public BoxCollider Collider { get; private set; }
 
     public ItemPlaceableAsset Asset { get; }
+    public Team Team { get; }
 
     public int MaxHeight { get; }
     public int MaxWidth { get; }
@@ -35,14 +44,19 @@ public class SupplyCrateStack : IDisposable
     public IReadOnlyList<IReadOnlyList<StackedSupplyCrate?>> Levels { get; }
     public IReadOnlyList<StackedSupplyCrate> Crates { get; }
 
+    public WorldIconInfo? Icon { get; private set; }
+
     public Quaternion Rotation { get; }
 
-    public SupplyCrateStack(SupplyCrate firstCrate)
+    public SupplyCrateStack(SupplyCrate firstCrate, IServiceProvider serviceProvider)
     {
         if (!BuildableExtensions.TryGetBuildableBounds(firstCrate.Buildable.Asset, out _buildableBounds))
         {
             _buildableBounds = new Bounds(Vector3.zero, Vector3.one);
         }
+
+        _worldIconManager = serviceProvider.GetService<WorldIconManager>();
+        _assetConfiguration = serviceProvider.GetRequiredService<AssetConfiguration>();
 
         Vector3 size = _buildableBounds.size;
 
@@ -78,6 +92,8 @@ public class SupplyCrateStack : IDisposable
             Bounds = _buildableBounds
         };
 
+        Icon = null;
+
         _levels = new List<List<StackedSupplyCrate?>>(3) { new List<StackedSupplyCrate?> { crate } };
         Levels = _levels.AsReadOnly();
 
@@ -101,6 +117,8 @@ public class SupplyCrateStack : IDisposable
         UpdateBounds();
 
         ColliderObject.GetComponent<SupplyStackComponent>().Init(this);
+
+        LogMessage("New single supply crate created.");
     }
 
     private void UpdateBounds()
@@ -123,6 +141,76 @@ public class SupplyCrateStack : IDisposable
         Collider.size = _stackBounds.size;
     }
 
+    internal void UpdateIconDisplay()
+    {
+        if (_worldIconManager == null)
+            return;
+
+        SupplyCrate firstCrate = Crates[0].Crate;
+        if (Crates.Count == 1)
+        {
+            if (Icon == null)
+                return;
+
+            Icon.Dispose();
+            Icon = null;
+            firstCrate.IsIconVisible = true;
+            return;
+        }
+
+        WorldIconInfo? existingIcon = firstCrate.Icon;
+
+        Team team = firstCrate.Team;
+
+        string? iconPath = firstCrate.Info?.Icon;
+        IAssetLink<EffectAsset>? asset = string.IsNullOrEmpty(iconPath) ? null : _assetConfiguration.GetAssetLink<EffectAsset>(iconPath);
+
+        bool newIcon = false;
+        if (Icon == null)
+        {
+            if (existingIcon == null || asset == null)
+                return;
+
+            Icon = new WorldIconInfo(ColliderObject.transform, asset, team);
+            newIcon = true;
+        }
+        else if (existingIcon == null)
+        {
+            Icon.Dispose();
+            Icon = null;
+            return;
+        }
+        else
+        {
+            if (asset == null)
+            {
+                Icon.Dispose();
+                Icon = null;
+                return;
+            }
+
+            if (!Icon.Effect.MatchAsset(asset))
+            {
+                Icon.Dispose();
+                Icon = new WorldIconInfo(ColliderObject.transform, asset, team);
+                newIcon = true;
+            }
+        }
+
+        Vector3 originalOffset = firstCrate.Info?.IconOffset ?? default;
+        Icon.Offset = originalOffset + new Vector3(_stackBounds.center.x, _stackBounds.size.y, _stackBounds.center.z);
+
+        if (newIcon)
+        {
+            _worldIconManager.CreateIcon(Icon);
+        }
+
+        foreach (StackedSupplyCrate crate in Crates)
+        {
+            crate.Crate.IsIconVisible = false;
+        }
+    }
+
     private bool CheckIndicesValid(StackedSupplyCrate crate)
     {
         return crate is { Index: >= 0, Level: >= 0 } && crate.Level < _levels.Count && crate.Index < _levels[crate.Level].Count;
@@ -130,6 +218,10 @@ public class SupplyCrateStack : IDisposable
 
     public bool TryGetNextCratePosition(out int level, out int index, out Vector3 position)
     {
+#if FALLING_EFFECT_DEBUG_LOGGING
+        EffectUtility.ClearDebugEffect();
+#endif
+
         level = -1;
         index = -1;
         for (int l = 0; l < _levels.Count; ++l)
@@ -152,24 +244,40 @@ public class SupplyCrateStack : IDisposable
                 level = l;
                 index = emptySlot;
                 if (TestEmptyCratePosition(level, index, out position))
+                {
+                    LogMessage($"Filled empty slot ({level}, {index}).");
                     return true;
+                }
+                
+                LogMessage($"({level}, {index}) invalid (1).");
             }
 
             // the level above this one has less than this level minus one
-            if (lvl.Count > 1 && (l == _levels.Count - 1 || _levels[l + 1].Count < lvl.Count - 1))
+            if (lvl.Count >= 2 && l + 1 < MaxHeight)
             {
-                continue;
+                int nextLvlCt = l >= _levels.Count - 1 ? 0 : _levels[l + 1].Count;
+                if (nextLvlCt < lvl.Count - 1)
+                {
+                    LogMessage($"Next level {l + 1} has more space than level {l}: {lvl.Count} vs {nextLvlCt}.");
+                    continue;
+                }
             }
 
-            if (lvl.Count >= MaxWidth - l)
+            if (lvl.Count >= MaxWidth - (l % 2 == 1 ? 1 : 0))
             {
+                LogMessage($"Level {l} at max width ({lvl.Count}: {MaxWidth - l}).");
                 continue;
             }
 
             level = l;
             index = lvl.Count;
             if (HasSupport(level, index) && TestEmptyCratePosition(level, index, out position))
+            {
+                LogMessage($"Added new slot ({level}, {index}).");
                 return true;
+            }
+
+            LogMessage($"({level}, {index}) invalid (2).");
         }
 
         // start new level
@@ -179,12 +287,19 @@ public class SupplyCrateStack : IDisposable
             index = 0;
             while (!HasSupport(level, index) && index < _levels[^1].Count)
             {
+                LogMessage($"Initial new level position ({level}, {index}) missing support.");
                 ++index;
             }
             if (HasSupport(level, index) && TestEmptyCratePosition(level, index, out position))
+            {
+                LogMessage($"Started new level {level}.");
                 return true;
+            }
+
+            LogMessage($"({level}, {index}) invalid (3).");
         }
 
+        LogMessage("No open space.");
         position = default;
         return false;
     }
@@ -209,18 +324,51 @@ public class SupplyCrateStack : IDisposable
 
     private bool TestEmptyCratePosition(int level, int index, out Vector3 position)
     {
+        LogMessage($"Testing ({level}, {index})...");
         position = GetPosition(level, index);
-        int ct = Physics.OverlapBoxNonAlloc(
-            ColliderObject.transform.TransformPoint(position + _buildableBounds.center),
-            _buildableBounds.extents * 0.75f,
-            ColliderBuffer,
-            _rotation,
-            RayMasks.BLOCK_BARRICADE
-        );
-        position = ColliderObject.transform.TransformPoint(position);
-        ColliderBuffer[0] = null;
+        Vector3 boxCenter = ColliderObject.transform.TransformPoint(position + _buildableBounds.center);
+        Vector3 boundsExtents = ColliderObject.transform.TransformVector(_buildableBounds.extents);
+#if FALLING_EFFECT_DEBUG_LOGGING
+        EffectUtility.TriggerDebugEffectBox(boxCenter, boundsExtents, _rotation, clear: false, effectScale: 0.2f);
+#endif
 
-        return ct == 0;
+        // test for stuff blocking the box
+        Vector3 blockingExtents = boundsExtents * 0.5f;
+        bool blocking = Physics.CheckBox(boxCenter, blockingExtents, _rotation, RayMaskBlockSupplyCrate, QueryTriggerInteraction.Ignore);
+        if (blocking)
+        {
+            LogMessage(" - Blocked.");
+#if FALLING_EFFECT_DEBUG_LOGGING
+            EffectUtility.TriggerDebugEffectBox(boxCenter, blockingExtents, _rotation, clear: false, effectScale: 0.5f);
+#else
+            position = default;
+            return false;
+#endif
+        }
+
+        bool supporting = true;
+        if (level == 0) // we already checked on the higher levels
+        {
+            float supportBoxSize = _buildableBounds.extents.y;
+
+            // test for support below. basically checks a rectangle stretching the bottom face of the rectangle
+            Vector3 supportCenter = new Vector3(boxCenter.x, boxCenter.y - boundsExtents.y, boxCenter.z);
+            Vector3 supprtExtents = new Vector3(boundsExtents.x * 0.9f, supportBoxSize, boundsExtents.z * 0.9f);
+            supporting = Physics.CheckBox(supportCenter, supprtExtents, _rotation, RayMaskBlockSupplyCrate, QueryTriggerInteraction.Ignore);
+            if (!supporting)
+            {
+                LogMessage(" - Unsupported.");
+#if FALLING_EFFECT_DEBUG_LOGGING
+                EffectUtility.TriggerDebugEffectBox(supportCenter, supprtExtents, _rotation, clear: false);
+#else
+                position = default;
+                return false;
+#endif
+            }
+        }
+
+        position = ColliderObject.transform.TransformPoint(position);
+        return !blocking && supporting;
     }
 
     public StackedSupplyCrate AddCrate(SupplyCrate supplyCrate, int level, int index)
@@ -231,9 +379,11 @@ public class SupplyCrateStack : IDisposable
             Bounds = _buildableBounds
         };
 
+        LogMessage($"Adding crate ({level}, {index}).");
         crate.Bounds.center += crate.RelativePosition;
 
         _crates.Add(crate);
+        supplyCrate.IsIconVisible = _crates.Count == 1;
         List<StackedSupplyCrate?> crates;
         if (_levels.Count <= level)
         {
@@ -249,6 +399,7 @@ public class SupplyCrateStack : IDisposable
             crates.Add(null);
         crates[index] = crate;
         UpdateBounds();
+        UpdateIconDisplay();
         return crate;
     }
 
@@ -259,6 +410,7 @@ public class SupplyCrateStack : IDisposable
             return;
         }
 
+        LogMessage($"Removing crate ({crate.Level}, {crate.Index}).");
         crate.IsRemoved = true;
 
         List<StackedSupplyCrate?> level = _levels[crate.Level];
@@ -294,6 +446,7 @@ public class SupplyCrateStack : IDisposable
         crateToReplaceOld.RelativePosition = position;
         crateToReplaceOld.Bounds.center = position + _buildableBounds.center;
         UpdateBounds();
+        UpdateIconDisplay();
         return;
 
         void Remove(int level, int index, bool updateBounds)
@@ -306,12 +459,18 @@ public class SupplyCrateStack : IDisposable
                 if (_levels.Count == 0)
                     Dispose();
                 else if (updateBounds)
+                {
                     UpdateBounds();
+                    UpdateIconDisplay();
+                }
             }
             else if (index == 0 || index == lvl.Count - 1)
             {
-                if (updateBounds)
-                    UpdateBounds();
+                if (!updateBounds)
+                    return;
+
+                UpdateBounds();
+                UpdateIconDisplay();
             }
         }
     }
@@ -353,6 +512,14 @@ public class SupplyCrateStack : IDisposable
                 Collider = null!;
             });
         }
+    }
+
+    [Conditional("FALLING_EFFECT_DEBUG_LOGGING")]
+    internal void LogMessage(string msg, LogLevel lvl = LogLevel.Debug)
+    {
+        ILogger<SupplyCrateStack> logger = WarfareModule.Singleton.ServiceProvider.Resolve<ILogger<SupplyCrateStack>>();
+
+        logger.Log(lvl, $"[{Asset.FriendlyName})] {Collider.transform.gameObject.GetInstanceID()} {msg}");
     }
 }
 

@@ -7,7 +7,7 @@
 
     <PropertyGroup>
 
-        <Version>4.1.0</Version>
+        <Version>4.1.1</Version>
 
         <!-- Enable this for telemetry tracking -->
         <DefineConstants>$(DefineConstants);TELEMETRY</DefineConstants>
@@ -92,6 +92,7 @@
     <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
 
       <!--<DefineConstants>$(DefineConstants);MAP_TACK_UI_DEBUG_LOGGING</DefineConstants>-->
+      <!--<DefineConstants>$(DefineConstants);FALLING_EFFECT_DEBUG_LOGGING</DefineConstants>-->
 
     </PropertyGroup>
 
@@ -170,7 +171,7 @@
         <PackageReference Include="Autofac" Version="9.1.0" />
         <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="11.0.0" />
 
-        <PackageReference Include="SSH.NET" Version="2025.1.0" />
+        <PackageReference Include="SSH.NET" Version="2026.0.0" />
 
         <PackageReference Include="System.Runtime.Caching" Version="10.0.8" />
         <PackageReference Include="System.Memory" Version="4.6.3" />
@@ -382,6 +383,14 @@
         <Publicize Include="Assembly-CSharp:SDG.Unturned.CargoDeclaration" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.CargoDeclaration.lines" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.Asset.BuildCargoData" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.EffectManager.debrisGameObjects" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.EffectManager.pool" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.GameObjectPoolDictionary.pools" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.ChatManager.isVoting" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.BarricadeManager.POSITION_FRAC_BIT_COUNT" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.BarricadeManager.YAW_BIT_COUNT" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.StructureManager.POSITION_FRAC_BIT_COUNT" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.StructureManager.YAW_BIT_COUNT" />
 
     </ItemGroup>
 

@@ -1,4 +1,3 @@
-using System;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.FOBs.Construction;
@@ -16,10 +15,10 @@ public enum ShovelableType
     Fob,
 
     /// <summary>
-    /// A crate where players can refill their ammo and use Ammo Supplies.
+    /// An ammo vending buildable where players can rearm/change their kits using FOB ammo.
     /// </summary>
-    [TranslatableValue("Ammo Crate"), Obsolete]
-    AmmoCrate,
+    [TranslatableValue("Fob Ammo Vendor")]
+    FobAmmoVendor,
 
     /// <summary>
     /// A buildable that repairs nearby vehicles using Building Supplies.

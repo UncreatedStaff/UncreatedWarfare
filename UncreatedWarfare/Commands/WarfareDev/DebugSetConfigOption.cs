@@ -8,7 +8,7 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Commands;
 
 [Command("setconfigoption"), SubCommandOf(typeof(WarfareDevCommand)), HideFromHelp]
-internal sealed class BlankCommand : IExecutableCommand
+internal sealed class DebugSetConfigOption : IExecutableCommand
 {
     private readonly PlayerReplicatedConfigManager _manager;
 
@@ -16,7 +16,7 @@ internal sealed class BlankCommand : IExecutableCommand
 
     public required CommandContext Context { get; init; }
 
-    public BlankCommand(PlayerReplicatedConfigManager manager)
+    public DebugSetConfigOption(PlayerReplicatedConfigManager manager)
     {
         _manager = manager;
     }

@@ -17,8 +17,6 @@ public class DutyUI : UnturnedUI, IHudUIListener
 
     private bool _wasVoting;
 
-    private static StaticGetter<bool>? _getIsVoting;
-
     private readonly UnturnedUIElement _positionNoVote = new UnturnedUIElement("LogicPositionNoVote");
 
     private readonly UnturnedUIElement _positionVote = new UnturnedUIElement("LogicPositionVote");
@@ -37,11 +35,9 @@ public class DutyUI : UnturnedUI, IHudUIListener
         _hudManager.OnPluginVotingUpdated += PluginVotingUpdated;
         if (ChatManager.voteAllowed)
         {
-            _getIsVoting ??= Accessor.GenerateStaticGetter<ChatManager, bool>("isVoting", throwOnError: false);
+            TimeUtility.updated += UpdateVotePosition;
+            _subbedUpdate = true;
         }
-
-        TimeUtility.updated += UpdateVotePosition;
-        _subbedUpdate = true;
     }
 
     protected override void OnDisposing()
@@ -66,7 +62,7 @@ public class DutyUI : UnturnedUI, IHudUIListener
 
     private void UpdateVotePosition()
     {
-        bool isVoting = _getIsVoting != null && _getIsVoting();
+        bool isVoting = ChatManager.isVoting;
         if (_wasVoting == isVoting)
             return;
 

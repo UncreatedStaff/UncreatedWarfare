@@ -45,6 +45,11 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
     private UniTask _setupTask;
 
     private readonly SemaphoreSlim _loadoutStartSemaphore;
+
+    // note: when running on my test server using a remote database,
+    // ILevelHostedService would take so long that the level would be loaded after initialization,
+    // then it would finish the OnLevelLoaded callback so hosting would run twice for the first layout.
+    private bool _hasLevelLoaded;
     private bool _isFirstLoadout;
 
     private readonly string _layoutDir;
@@ -235,15 +240,26 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
                 // invoke ILevelHostedService
                 await _warfare.InvokeLevelLoaded(CancellationToken.None);
 
+                await UniTask.SwitchToMainThread();
+
+                if (_warfare.GetActiveLayout().IsReadyToHost)
+                {
 #if TELEMETRY
-                activity?.AddEvent(new ActivityEvent("Starting pending layout."));
-                Activity.Current = activity;
+                    activity?.AddEvent(new ActivityEvent("Starting pending layout."));
+                    Activity.Current = activity;
 #endif
-                await StartPendingLayoutAsync(hasPlayerConnectionLock
+                    await StartPendingLayoutAsync(hasPlayerConnectionLock
 #if TELEMETRY
-                    , activity
+                        , activity
 #endif
-                );
+                    );
+                }
+                else
+                {
+                    _logger.LogTrace("Layout not ready to host after level started. Still initializing.");
+                }
+
+                _hasLevelLoaded = true;
                 hasPlayerConnectionLock = false;
 
 #if TELEMETRY
@@ -622,6 +638,8 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
                 , initActivity
 #endif
             );
+
+            await UniTask.SwitchToMainThread(CancellationToken.None);
         }
 
         if (_playerService is PlayerService playerServiceImpl)
@@ -629,8 +647,10 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
             playerServiceImpl.ReinitializeScopedPlayerComponentServices();
         }
 
-        if (Level.isLoaded)
-        {
+        layout.IsReadyToHost = true;
+
+        if (_hasLevelLoaded)
+        { 
             await StartPendingLayoutAsync(playerJoinLockTaken
 #if TELEMETRY
                 , activity

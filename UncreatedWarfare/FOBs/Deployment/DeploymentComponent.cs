@@ -3,7 +3,6 @@ using System;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
-using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;

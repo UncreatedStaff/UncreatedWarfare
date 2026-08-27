@@ -624,6 +624,9 @@ public static class FormattingUtility
         else if (length == 0)
             return str;
 
+        if (str.AsSpan(index, length).IndexOf('<') < 0)
+            return str;
+
         char[] rtn = new char[str.Length + 16];
         int nextCopyStartIndex = 0;
         int writeIndex = 0;

@@ -9,7 +9,7 @@ using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Tweaks;
 
-public class PreventLeaveGroupTweak : IAsyncEventListener<PlayerLeaveGroupRequested>
+internal class PreventLeaveGroupTweak : IAsyncEventListener<PlayerLeaveGroupRequested>
 {
     public const string LeaveGroupPermissionName = "warfare::features.leavegroup";
     public static readonly PermissionLeaf LeaveGroupPermission = new(LeaveGroupPermissionName);

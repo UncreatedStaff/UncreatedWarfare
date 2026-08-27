@@ -7,7 +7,7 @@ namespace Uncreated.Warfare.FOBs.Entities;
 
 public class FortificationEntity : BuildableFobEntity<ShovelableInfo>
 {
-    public FortificationEntity(ShovelableInfo info, Team team, IBuildable buildable, IServiceProvider serviceProvider)
-        : base(info, buildable, team, serviceProvider)
+    public FortificationEntity(ShovelableInfo info, Team team, IBuildable buildable, IServiceProvider serviceProvider, string? iconOverride = null, bool iconVisible = true)
+        : base(info, buildable, team, serviceProvider, iconOverride, iconVisible)
     { }
 }

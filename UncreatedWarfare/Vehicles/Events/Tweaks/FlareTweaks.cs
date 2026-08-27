@@ -5,7 +5,7 @@ using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Vehicles.Events.Tweaks;
 
-public class FlareTweaks : 
+internal class FlareTweaks : 
     IEventListener<EnterVehicle>,
     IEventListener<VehicleSwappedSeat>,
     IEventListener<ExitVehicle>

@@ -4,8 +4,6 @@ using System.Linq;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Throwables;
-using Uncreated.Warfare.Fobs;
-using Uncreated.Warfare.Fobs.SupplyCrates;
 using Uncreated.Warfare.FOBs.SupplyCrates.Throwable.AmmoBags;
 using Uncreated.Warfare.FOBs.SupplyCrates.Throwable.Vehicle;
 using Uncreated.Warfare.Translations;
@@ -13,7 +11,7 @@ using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.FOBs.SupplyCrates.Throwable;
 
-public class ThrowableSupplyCrateTweaks : IEventListener<ThrowableSpawned>
+internal class ThrowableSupplyCrateTweaks : IEventListener<ThrowableSpawned>
 {
     public void HandleEvent(ThrowableSpawned e,  IServiceProvider serviceProvider)
     {

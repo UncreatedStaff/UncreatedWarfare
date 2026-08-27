@@ -1,16 +1,15 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Events.Models.Fobs;
-using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.Entities;
+using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.FOBs.SupplyCrates.Throwable.Vehicle;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits.Whitelists;
@@ -22,7 +21,7 @@ using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
 using Uncreated.Warfare.Zones;
 
-namespace Uncreated.Warfare.Fobs;
+namespace Uncreated.Warfare.FOBs;
 
 public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedService, IDisposable
 {
@@ -37,6 +36,7 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
     private readonly ChatService _chatService;
     private readonly ITeamManager<Team> _teamManager;
     private readonly ZoneStore _zoneStore;
+    private readonly FallingEffectManager _fallingEffectManager;
 
     public FobConfiguration Configuration { get; }
 
@@ -58,6 +58,7 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
         _chatService = serviceProvider.GetRequiredService<ChatService>();
         _teamManager = serviceProvider.GetRequiredService<ITeamManager<Team>>();
         _zoneStore = serviceProvider.GetRequiredService<ZoneStore>();
+        _fallingEffectManager = serviceProvider.GetRequiredService<FallingEffectManager>();
         _serviceProvider = serviceProvider;
         _logger = logger;
         _fobs = new TrackingList<IFob>(24);
@@ -138,6 +139,8 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
         if (existing == null)
             return false;
 
+        _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FobDeregistered { Fob = fob, BuildableDestroyedEvent = buildableDestroyedEvent });
+
         if (existing is IDisposable disposable)
         {
             try
@@ -151,7 +154,6 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
         }
 
         _logger.LogDebug("Deregistered FOB: " + fob);
-        _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FobDeregistered { Fob = fob, BuildableDestroyedEvent = buildableDestroyedEvent});
         return true;
     }
     public IFob RegisterFob(IFob fob)
@@ -169,7 +171,7 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
             return;
         }
         _entities.Add(entity);
-        _logger.LogDebug($"Registered new FOB Entity: {entity}");
+        _logger.LogDebug($"Registered new FOB Entity: {entity} ({entity.GetType()})");
 
     }
     public bool DeregisterFobEntity(IFobEntity entity)
@@ -186,46 +188,61 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, $"Error disposing FOB Entity: {entity}.");
+                _logger.LogWarning(ex, $"Error disposing FOB Entity: {entity} ({entity.GetType()}).");
             }
         }
 
-        _logger.LogDebug($"Deregistered FOB Entity: {entity}");
+        _logger.LogDebug($"Deregistered FOB Entity: {entity} ({entity.GetType().Name})");
         return true;
     }
+
     public TBuildableFobType? FindBuildableFob<TBuildableFobType>(IBuildable matchingBuildable) where TBuildableFobType : IBuildableFob
     {
         return _fobs.OfType<TBuildableFobType>().FirstOrDefault(f => f.Buildable.Equals(matchingBuildable));
     }
+
+    public TFobType? FindNearestFob<TFobType>(Team team, Vector3 position, Func<TFobType, bool>? selector = null)
+        where TFobType : IFob, ITransformObject
+    {
+        return _fobs
+            .OfType<TFobType>()
+            .Where(f => f.Team == team && (selector == null || selector(f)))
+            .AggregateOrDefault((curr, next) => (curr.Position - position).sqrMagnitude > (next.Position - position).sqrMagnitude ? next : curr);
+    }
+
     public ResourceFob? FindNearestResourceFob(Team team, Vector3 position)
     {
-        return _fobs.OfType<ResourceFob>().FirstOrDefault(f =>
+        return _fobs.OfType<ResourceFob>().Where(f =>
             f.Team == team &&
             MathUtility.WithinRange(position, f.Position, f.EffectiveRadius)
-        );
+        ).AggregateOrDefault((curr, next) => (curr.Position - position).sqrMagnitude > (next.Position - position).sqrMagnitude ? next : curr);
     }
+
     public BunkerFob? FindNearestBunkerFob(Team team, Vector3 position, bool includeUnbuilt = true)
     {
-        return _fobs.OfType<BunkerFob>().FirstOrDefault(f =>
+        return _fobs.OfType<BunkerFob>().Where(f =>
             f.Team == team &&
             MathUtility.WithinRange(position, f.Position, f.EffectiveRadius) &&
             (includeUnbuilt || f.IsBuilt)
-        );
+        ).AggregateOrDefault((curr, next) => (curr.Position - position).sqrMagnitude > (next.Position - position).sqrMagnitude ? next : curr);
     }
+
     public BunkerFob? FindNearestBunkerFob(CSteamID teamGroup, Vector3 position, bool includeUnbuilt = true)
     {
-        return _fobs.OfType<BunkerFob>().FirstOrDefault(f =>
+        return _fobs.OfType<BunkerFob>().Where(f =>
             f.Team.GroupId == teamGroup
             && MathUtility.WithinRange(position, f.Position, f.EffectiveRadius)
             && (includeUnbuilt || f.IsBuilt)
-        );
+        ).AggregateOrDefault((curr, next) => (curr.Position - position).sqrMagnitude > (next.Position - position).sqrMagnitude ? next : curr);
     }
+
     public IEnumerable<BunkerFob> FriendlyBunkerFobs(Team team, bool includeUnbuilt = true)
     {
         return _fobs.OfType<BunkerFob>().Where(f =>
             f.Team == team && (includeUnbuilt || f.IsBuilt)
         );
     }
+
     public TEntity? GetBuildableFobEntity<TEntity>(IBuildable buildable) where TEntity : IBuildableFobEntity
     {
         return _entities.OfType<TEntity>().FirstOrDefault(f =>
@@ -237,6 +254,14 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
         return _entities.OfType<EmplacementEntity>().FirstOrDefault(f =>
             f.Vehicle.Vehicle.instanceID == emplacementVehicle.instanceID
         );
+    }
+    
+    public TrackingList<SupplyCrate> FindNearbyFobCreationCrates(Vector3 vector3, Team team)
+    {
+        return Entities
+            .OfType<SupplyCrate>()
+            .Where(e => e.Type == CrateType.FobCreation && e.Team == team && e.IsWithinRadius(vector3))
+            .ToTrackingList();
     }
 
     /// <inheritdoc />

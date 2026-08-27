@@ -3,8 +3,7 @@ using System;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Fobs;
-using Uncreated.Warfare.Fobs.Entities;
+using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
@@ -51,8 +50,6 @@ public class RepairStation : RestockableBuildableFobEntity<ShovelableInfo>
 
     private void RepairTick(ILoopTicker ticker, TimeSpan timeSinceStart, TimeSpan deltaTime)
     {
-        NearbySupplyCrates supplyCrateGroup = NearbySupplyCrates.FindNearbyCrates(Buildable.Position, Team.GroupId, _fobManager);
-
         float maxRadius = Math.Max(
             _fobManager.Configuration.RepairStationAircraftRepairRadius,
             _fobManager.Configuration.RepairStationGroundVehicleRepairRadius
@@ -75,9 +72,11 @@ public class RepairStation : RestockableBuildableFobEntity<ShovelableInfo>
             
             if (_zoneStore != null && !_zoneStore.IsInMainBase(vehicle.Position))
             {
-                if (supplyCrateGroup.BuildCount > 0)
+                ResourceFob? nearestResourceFob = _fobManager.FindNearestResourceFob(Team, Position);
+                float buildToConsume = _fobManager.Configuration.RepairStationBuildConsumedPerTick;
+                if (nearestResourceFob != null && nearestResourceFob.BuildCount >= buildToConsume)
                 {
-                    supplyCrateGroup.SubtractSupplies(_fobManager.Configuration.RepairStationBuildConsumedPerTick, SupplyType.Build, SupplyChangeReason.ConsumeRepairVehicle);
+                    nearestResourceFob.ChangeBuild(-buildToConsume, SupplyChangeReason.ConsumeRepairVehicle);
                 }
                 else
                 {

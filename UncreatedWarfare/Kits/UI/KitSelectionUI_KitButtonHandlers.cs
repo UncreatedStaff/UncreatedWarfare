@@ -6,12 +6,14 @@ using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Kits.Loadouts;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Users;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Squads.UI;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Kits.UI;
@@ -587,9 +589,12 @@ partial class KitSelectionUI
 
     private void StartRestock(WarfarePlayer player, KitSelectionUIData data, Kit kit, Class @class = Class.None, int kitIndex = -1)
     {
+        GameThread.AssertCurrent();
+
         IAmmoStorage? ammoStorage = data.AmmoStorage;
+
         if (ammoStorage == null
-            || ammoStorage.AmmoCount == 0
+            || !CanAffordRearmKit(player, kit, ammoStorage, out _)
             || !(data.AmmoStorage == null ? _zoneStore.IsInMainBase(player, player.Team.Faction) : IsWithinRangeOfAmmoStorage(data, player)))
         {
             if (kitIndex >= 0)

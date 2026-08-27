@@ -3,7 +3,6 @@ using System;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Interaction.Icons;
@@ -16,6 +15,7 @@ public class BuildableFobEntity<TInfo> : IBuildableFobEntity, IDisposable where 
     private readonly string? _iconOverride;
     private readonly AssetConfiguration _assetConfiguration;
     private readonly WorldIconManager? _worldIconManager;
+    private bool _isIconVisible;
 
     /// <summary>
     /// Shovelable or supply crate info of this buildable if it's configured.
@@ -32,11 +32,11 @@ public class BuildableFobEntity<TInfo> : IBuildableFobEntity, IDisposable where 
     /// </summary>
     public bool IsIconVisible
     {
-        get => Icon is { IsVisible: true };
+        get => _isIconVisible;
         set
         {
-            if (Icon != null)
-                Icon.IsVisible = value;
+            Icon?.IsVisible = value;
+            _isIconVisible = value;
         }
     }
 
@@ -52,7 +52,7 @@ public class BuildableFobEntity<TInfo> : IBuildableFobEntity, IDisposable where 
 
     public virtual bool PreventItemDrops => false;
 
-    public BuildableFobEntity(TInfo? info, IBuildable buildable, Team team, IServiceProvider serviceProvider, string? iconOverride = null)
+    public BuildableFobEntity(TInfo? info, IBuildable buildable, Team team, IServiceProvider serviceProvider, string? iconOverride = null, bool iconVisible = true)
     {
         _iconOverride = iconOverride;
         Info = info;
@@ -61,6 +61,7 @@ public class BuildableFobEntity<TInfo> : IBuildableFobEntity, IDisposable where 
         Team = team;
         _assetConfiguration = serviceProvider.GetRequiredService<AssetConfiguration>();
         _worldIconManager = serviceProvider.GetService<WorldIconManager>();
+        _isIconVisible = iconVisible;
 
         // world icon
         UpdateIcon();
@@ -83,19 +84,20 @@ public class BuildableFobEntity<TInfo> : IBuildableFobEntity, IDisposable where 
                 icon ??= Info.Icon;
         }
 
-        if (icon == null)
+        if (icon == null || _worldIconManager == null)
             return;
 
         IAssetLink<EffectAsset> iconAsset = _assetConfiguration.GetAssetLink<EffectAsset>(icon);
 
-        if (!iconAsset.TryGetAsset(out _) || _worldIconManager == null)
+        if (!iconAsset.TryGetAsset(out _))
             return;
 
         Icon = new WorldIconInfo(Buildable, iconAsset, Team)
         {
             Offset = offset,
             RelevanceRegions = Buildable.IsStructure ? StructureManager.STRUCTURE_REGIONS : BarricadeManager.BARRICADE_REGIONS,
-            TickSpeed = 10f
+            TickSpeed = 10f,
+            IsVisible = _isIconVisible
         };
 
         _worldIconManager.CreateIcon(Icon);

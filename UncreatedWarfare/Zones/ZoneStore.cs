@@ -1,6 +1,6 @@
 using SDG.Framework.Landscapes;
 using System;
-using System.Collections.ObjectModel;
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
 using Uncreated.Warfare.Events;
@@ -31,18 +31,17 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
     /// <summary>
     /// All available zones (not just the ones in-game).
     /// </summary>
-    public IReadOnlyList<Zone> Zones { get; private set; }
+    public ImmutableArray<Zone> Zones { get; private set; }
 
     /// <summary>
     /// All available zones (not just the ones in-game).
     /// </summary>
     /// <remarks>This is only available on the global <see cref="ZoneStore"/>.</remarks>
-    public IReadOnlyList<ZoneProximity>? ProximityZones { get; private set; }
+    public ImmutableArray<ZoneProximity> ProximityZones { get; private set; }
 
     /// <summary>
     /// If this instance of <see cref="ZoneStore"/> is the global instance, not the one created for flag layouts.
     /// </summary>
-    [MemberNotNullWhen(true, nameof(ProximityZones))]
     public bool IsGlobal { get; }
 
     public ZoneStore(IEnumerable<IZoneProvider> zoneProviders, IPlayerService playerService, ILogger<ZoneStore> logger, bool isGlobal, WarfareModule warfare, EventDispatcher eventDispatcher)
@@ -54,10 +53,10 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
         _eventDispatcher = eventDispatcher;
         IsGlobal = isGlobal;
 
-        Zones = Array.Empty<Zone>();
+        Zones = ImmutableArray<Zone>.Empty;
         if (isGlobal)
         {
-            ProximityZones = Array.Empty<ZoneProximity>();
+            ProximityZones = ImmutableArray<ZoneProximity>.Empty;
         }
     }
 
@@ -72,7 +71,7 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
     /// <inheritdoc />
     public void Dispose()
     {
-        if (ProximityZones == null)
+        if (ProximityZones.IsDefault)
             return;
         
         foreach (ZoneProximity prox in ProximityZones)
@@ -81,7 +80,7 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
                 disp.Dispose();
         }
 
-        ProximityZones = Array.Empty<ZoneProximity>();
+        ProximityZones = ImmutableArray<ZoneProximity>.Empty;
     }
 
     UniTask IHostedService.StopAsync(CancellationToken token)
@@ -105,7 +104,7 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
         if (Interlocked.Exchange(ref _init, 1) != 0)
             throw new InvalidOperationException("Already initialized.");
 
-        List<Zone> zones = new List<Zone>(64);
+        ImmutableArray<Zone>.Builder zones = ImmutableArray.CreateBuilder<Zone>(64);
         foreach (IZoneProvider zoneProvider in _zoneProviders)
         {
             foreach (Zone zone in await zoneProvider.GetZones(token))
@@ -114,15 +113,15 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
             }
         }
 
-        Zones = new ReadOnlyCollection<Zone>(zones);
-        _logger.LogInformation("Discovered {0} zone(s) with {1} provider(s).", zones.Count, _zoneProviders.Count);
+        Zones = zones.DrainToImmutable();
+        _logger.LogInformation("Discovered {0} zone(s) with {1} provider(s).", Zones.Length, _zoneProviders.Count);
         _zoneProviders.Clear();
 
         if (!IsGlobal)
             return;
 
-        List<ZoneProximity> proxZones = new List<ZoneProximity>(zones.Count);
-        foreach (Zone zone in zones)
+        ImmutableArray<ZoneProximity>.Builder proxZones = ImmutableArray.CreateBuilder<ZoneProximity>(Zones.Length);
+        foreach (Zone zone in Zones)
         {
             if (zone.Type is ZoneType.Flag)
             {
@@ -157,7 +156,7 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
             proxZones.Add(new ZoneProximity(colliderForZone, zone));
         }
 
-        ProximityZones = proxZones.AsReadOnly();
+        ProximityZones = proxZones.DrainToImmutable();
     }
 
     /// <summary>
@@ -251,7 +250,7 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
     /// </summary>
     public Zone? FindClosestZone(in Vector3 point, out float sqrDistance, ZoneType? type = null, float maxRange = float.NaN)
     {
-        if (ProximityZones == null)
+        if (ProximityZones.IsDefault)
         {
             sqrDistance = float.NaN;
             return null;
@@ -290,7 +289,7 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
     /// </summary>
     public Zone? FindClosestZone(Vector2 point, out float sqrDistance, ZoneType? type = null, float maxRange = float.NaN)
     {
-        if (ProximityZones == null)
+        if (ProximityZones.IsDefault)
         {
             sqrDistance = float.NaN;
             return null;
@@ -328,7 +327,7 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
     /// </summary>
     public IEnumerable<Zone> EnumerateInsideZones(Vector3 point, ZoneType? type = null)
     {
-        if (ProximityZones == null)
+        if (ProximityZones.IsDefault)
             yield break;
 
         foreach (ZoneProximity proximity in ProximityZones)
@@ -345,7 +344,7 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
     /// </summary>
     public IEnumerable<Zone> EnumerateInsideZones(Vector2 point, ZoneType? type = null)
     {
-        if (ProximityZones == null)
+        if (ProximityZones.IsDefault)
             yield break;
 
         foreach (ZoneProximity proximity in ProximityZones)
@@ -389,7 +388,7 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
     {
         Zone? closest = null;
         float closestSqrDist = 0;
-        if (ProximityZones != null)
+        if (!ProximityZones.IsDefault)
         {
             // based on closest border point
             foreach (ZoneProximity prox in ProximityZones)
@@ -531,12 +530,12 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
     /// <param name="noOverlap">If <see langword="null"/> should be returned if more than one zone match.</param>
     public Zone? FindInsideZone(Vector3 pos, bool noOverlap)
     {
-        if (ProximityZones == null)
+        if (ProximityZones.IsDefault)
             return null;
 
         Zone? current = null;
         float area = 0;
-        for (int i = 0; i < ProximityZones.Count; ++i)
+        for (int i = 0; i < ProximityZones.Length; ++i)
         {
             ZoneProximity proximity = ProximityZones[i];
             if (!proximity.Proximity.TestPoint(pos))
@@ -569,12 +568,12 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
     /// <param name="noOverlap">If <see langword="null"/> should be returned if more than one zone match.</param>
     public Zone? FindInsideZone(Vector2 pos, bool noOverlap)
     {
-        if (ProximityZones == null)
+        if (ProximityZones.IsDefault)
             return null;
 
         Zone? current = null;
         float area = 0;
-        for (int i = 0; i < ProximityZones.Count; ++i)
+        for (int i = 0; i < ProximityZones.Length; ++i)
         {
             ZoneProximity proximity = ProximityZones[i];
             if (!proximity.Proximity.TestPoint(pos))

@@ -34,8 +34,6 @@ using Uncreated.Warfare.Discord;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.ListenerProviders;
 using Uncreated.Warfare.Events.Logging;
-using Uncreated.Warfare.Fobs;
-using Uncreated.Warfare.Fobs.UI;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Construction.Tweaks;
 using Uncreated.Warfare.FOBs.Deployment;
@@ -44,6 +42,7 @@ using Uncreated.Warfare.FOBs.StateStorage;
 using Uncreated.Warfare.FOBs.StateStorage.Tweaks;
 using Uncreated.Warfare.FOBs.SupplyCrates.AutoResupply;
 using Uncreated.Warfare.FOBs.SupplyCrates.Throwable;
+using Uncreated.Warfare.FOBs.UI;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Interaction.Icons;
@@ -211,7 +210,11 @@ public sealed class WarfareModule
             }
         }
     }
+
+    public bool UseFileWatchers { get; private set; }
+
 #nullable restore
+
     internal void Initialize()
     {
         IsActive = true;
@@ -243,6 +246,8 @@ public sealed class WarfareModule
 
         ConfigurationHelper.AddJsonOrYamlFile(configBuilder, FileProvider, systemConfigLocation, optional: true, reloadOnChange: true);
         Configuration = configBuilder.Build();
+
+        UseFileWatchers = Configuration.GetValue("tests:enableFileWatchers", true);
 
         bldr.RegisterInstance(Configuration);
 
@@ -1060,6 +1065,9 @@ public sealed class WarfareModule
         bldr.RegisterType<BarricadeApplySavedStateTweaks>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
+        bldr.RegisterType<FallingEffectManager>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
 
         // Strategy Tables
         bldr.RegisterType<StrategyMapManager>()

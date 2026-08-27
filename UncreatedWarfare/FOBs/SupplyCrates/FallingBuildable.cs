@@ -11,15 +11,17 @@ public class FallingBuildable : FallingItem
     private readonly ItemPlaceableAsset _buildableToPlace;
     private readonly EffectAsset? _placementEffect;
     protected readonly float PlacementYaw;
+    private readonly Func<FallingBuildable, bool>? _shouldConvertToBuildable;
     private readonly Action<FallingBuildable, IBuildable>? _onConvertedToBuildable;
     protected static readonly Collider?[] WorkingColliderBuffer = new Collider?[1];
 
-    public FallingBuildable(WarfarePlayer player, ItemData itemData, Vector3 landingPoint, Vector3 dropPoint, ItemPlaceableAsset buildableToPlace, EffectAsset? placementEffect, float placementYaw, Action<FallingBuildable, IBuildable>? onConvertedToBuildable = null)
+    public FallingBuildable(WarfarePlayer player, ItemData itemData, Vector3 landingPoint, Vector3 dropPoint, ItemPlaceableAsset buildableToPlace, EffectAsset? placementEffect, float placementYaw, Func<FallingBuildable, bool>? shouldConvertToBuildable = null, Action<FallingBuildable, IBuildable>? onConvertedToBuildable = null)
         : base(player, itemData, landingPoint, dropPoint)
     {
         _buildableToPlace = buildableToPlace;
         _placementEffect = placementEffect;
         PlacementYaw = placementYaw;
+        _shouldConvertToBuildable = shouldConvertToBuildable;
         _onConvertedToBuildable = onConvertedToBuildable;
     }
 
@@ -52,11 +54,16 @@ public class FallingBuildable : FallingItem
 
     protected override void OnHitGround()
     {
-        // drop the barricade
+        // try drop the barricade
 
         float offset = _buildableToPlace is ItemBarricadeAsset b ? b.offset : 0;
 
         GetHitTransform(out Vector3 position, out Quaternion rotation);
+        
+        ItemUtility.DestroyDroppedItem(ItemData, true);
+
+        if (_shouldConvertToBuildable != null && !_shouldConvertToBuildable.Invoke(this))
+            return;
 
         IBuildable buildable = BuildableExtensions.DropBuildable(
             _buildableToPlace,
@@ -66,11 +73,12 @@ public class FallingBuildable : FallingItem
             group: Team.GroupId
         );
 
-        // destroy the dropped item
-        ItemUtility.DestroyDroppedItem(ItemData, true);
-
+        PlayPlacementEffect();
         _onConvertedToBuildable?.Invoke(this, buildable);
+    }
 
+    public void PlayPlacementEffect()
+    {
         if (_placementEffect == null)
             return;
 

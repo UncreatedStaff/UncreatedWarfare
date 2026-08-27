@@ -131,7 +131,9 @@ public class MySqlLanguageDataStore : ICachableLanguageDataStore
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await using ILanguageDbContext dbContext = _serviceProvider.GetRequiredService<ILanguageDbContext>();
+            await using AsyncServiceScope scope = _serviceProvider.CreateAsyncScope();
+            ILanguageDbContext dbContext = scope.ServiceProvider.GetRequiredService<ILanguageDbContext>();
+
             if (info.Key == 0)
                 await dbContext.Languages.AddAsync(info, token);
             else
@@ -164,10 +166,14 @@ public class MySqlLanguageDataStore : ICachableLanguageDataStore
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await using ILanguageDbContext dbContext = _serviceProvider.GetRequiredService<ILanguageDbContext>();
+            await using AsyncServiceScope scope = _serviceProvider.CreateAsyncScope();
+            ILanguageDbContext dbContext = scope.ServiceProvider.GetRequiredService<ILanguageDbContext>();
             dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
 
-            LanguagePreferences? dbExisting = await dbContext.LanguagePreferences.FirstOrDefaultAsync(x => x.Steam64 == preferences.Steam64, token).ConfigureAwait(false);
+            LanguagePreferences? dbExisting = await dbContext.LanguagePreferences
+                .FirstOrDefaultAsync(x => x.Steam64 == preferences.Steam64, token)
+                .ConfigureAwait(false);
+
             if (dbExisting == null)
             {
                 dbContext.LanguagePreferences.Add(new LanguagePreferences
@@ -197,13 +203,15 @@ public class MySqlLanguageDataStore : ICachableLanguageDataStore
             _semaphore.Release();
         }
     }
-    private IQueryable<LanguageInfo> Include(IQueryable<LanguageInfo> set)
+
+    private static IQueryable<LanguageInfo> Include(IQueryable<LanguageInfo> set)
     {
         return set
             .Include(x => x.Aliases)
             .Include(x => x.Contributors).ThenInclude(x => x.ContributorData)
             .Include(x => x.SupportedCultures);
     }
+    
     public async Task<LanguagePreferences> GetLanguagePreferences(ulong steam64, CancellationToken token = default)
     {
         if (_langs == null)
@@ -212,8 +220,14 @@ public class MySqlLanguageDataStore : ICachableLanguageDataStore
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await using ILanguageDbContext dbContext = _serviceProvider.GetRequiredService<ILanguageDbContext>();
-            LanguagePreferences? pref = await dbContext.LanguagePreferences.AsNoTracking().FirstOrDefaultAsync(x => x.Steam64 == steam64, token).ConfigureAwait(false);
+            await using AsyncServiceScope scope = _serviceProvider.CreateAsyncScope();
+            ILanguageDbContext dbContext = scope.ServiceProvider.GetRequiredService<ILanguageDbContext>();
+
+            LanguagePreferences? pref = await dbContext.LanguagePreferences
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Steam64 == steam64, token)
+                .ConfigureAwait(false);
+
             return pref ?? new LanguagePreferences
             {
                 Steam64 = steam64
@@ -249,7 +263,9 @@ public class MySqlLanguageDataStore : ICachableLanguageDataStore
     }
     public async Task GetLanguages(IList<LanguageInfo> outputList, CancellationToken token = default)
     {
-        await using ILanguageDbContext dbContext = _serviceProvider.GetRequiredService<ILanguageDbContext>();
+        await using AsyncServiceScope scope = _serviceProvider.CreateAsyncScope();
+        ILanguageDbContext dbContext = scope.ServiceProvider.GetRequiredService<ILanguageDbContext>();
+
         List<LanguageInfo> info = await Include(dbContext.Languages).AsNoTracking().ToListAsync(token).ConfigureAwait(false);
         
         LanguageService? languageService = LanguageService;

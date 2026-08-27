@@ -141,8 +141,8 @@ internal sealed class SendBarricadeRegionPatch : IHarmonyPatch
                             break;
                     }
 
-                    writer.WriteClampedVector3(serversideData.point, fracBitCount: 11);
-                    writer.WriteSpecialYawOrQuaternion(serversideData.rotation, yawBitCount: 23);
+                    writer.WriteClampedVector3(serversideData.point, fracBitCount: BarricadeManager.POSITION_FRAC_BIT_COUNT);
+                    writer.WriteSpecialYawOrQuaternion(serversideData.rotation, yawBitCount: BarricadeManager.YAW_BIT_COUNT);
 
                     writer.WriteUInt8((byte)Mathf.RoundToInt(serversideData.barricade.health / (float)serversideData.barricade.asset.health * 100f));
                     writer.WriteUInt64(serversideData.owner);

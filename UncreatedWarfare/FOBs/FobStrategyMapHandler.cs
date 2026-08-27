@@ -2,7 +2,6 @@ using System;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Fobs;
-using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.StrategyMaps;
 using Uncreated.Warfare.StrategyMaps.MapTacks;
 

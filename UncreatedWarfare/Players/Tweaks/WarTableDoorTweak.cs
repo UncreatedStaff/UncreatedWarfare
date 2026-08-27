@@ -12,7 +12,7 @@ using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Players.Tweaks;
 
-public class WarTableDoorTweak :
+internal class WarTableDoorTweak :
     IEventListener<PlayerKitChanged>,
     IEventListener<PlayerTeamChanged>,
     IEventListener<QuestObjectInteracted>,

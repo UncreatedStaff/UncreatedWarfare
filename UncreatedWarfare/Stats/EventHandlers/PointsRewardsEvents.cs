@@ -347,24 +347,26 @@ public class PointsRewardsEvents :
         ).ConfigureAwait(false);
     }
 
-
+    public const float RequiredFobSuppliesToReceiveReward = 50;
+    
     public async UniTask HandleEventAsync(FobSuppliesChanged e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
-        if (e.Instigator == null || e.AmountDelta <= 0 || !TrackPoints)
+        if (e.Instigator == null || (e.BuildAmountDelta <= 0 && e.AmmoAmountDelta <= 0) || !TrackPoints)
             return;
 
-        if (e.SupplyType == SupplyType.Build && e.Fob.BuildCount >= 120)
+        if (e.BuildAmountDelta > 0 && e.Fob.BuildCount >= RequiredFobSuppliesToReceiveReward)
             return;
 
-        if (e.SupplyType == SupplyType.Ammo && e.Fob.AmmoCount >= 120)
+        if (e.AmmoAmountDelta > 0 && e.Fob.AmmoCount >= RequiredFobSuppliesToReceiveReward)
             return;
 
         // todo: maximum
         EventInfo @event = _points.GetEvent("ResuppliedFob");
         Translation translation = _translations.XPToastResuppliedFob;
-
-        double nominalResupplyAmount = @event.Configuration.GetValue<double>("NominalResupplyAmount", 50);
-        ResolvedEventInfo scaledEvent = new ResolvedEventInfo(@event, e.AmountDelta / nominalResupplyAmount);
+        
+        double nominalResupplyAmount = @event.Configuration.GetValue<double>("NominalResupplyAmount", 15f); // the amount of supplies you'd need to drop in order to receive the full reward
+        float biggestAmountAdded = Mathf.Max(e.BuildAmountDelta, e.AmmoAmountDelta);
+        ResolvedEventInfo scaledEvent = new ResolvedEventInfo(@event, biggestAmountAdded / nominalResupplyAmount);
 
         await _points.ApplyEvent(
             e.Instigator.Steam64,

@@ -17,7 +17,7 @@ namespace Uncreated.Warfare.Teams;
 [CannotApplyEqualityOperator]
 public class FactionInfo : ICloneable, ITranslationArgument, IEquatable<FactionInfo>
 {
-    public const string UnknownTeamImgURL = "https://i.imgur.com/z0HE5P3.png";
+    public const string UnknownTeamImgURL = "https://u.cubeupload.com/BlazingFlame/flagunknown.png";
     public const int FactionIDMaxCharLimit = 16;
     public const int FactionNameMaxCharLimit = 32;
     public const int FactionShortNameMaxCharLimit = 24;
@@ -700,7 +700,7 @@ public class FactionInfo : ICloneable, ITranslationArgument, IEquatable<FactionI
             },
         Color = new Color(0.7058823529f, 0.7058823529f, 0.7058823529f, 1f), // 0xb4b4b4
         KitPrefix = "ua",
-        FlagImageURL = "https://i.imgur.com/z0HE5P3.png",
+        FlagImageURL = UnknownTeamImgURL,
         IsDefaultFaction = true
     };
 

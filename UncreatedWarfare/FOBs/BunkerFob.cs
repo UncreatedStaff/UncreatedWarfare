@@ -2,9 +2,10 @@ using Microsoft.Extensions.Configuration;
 using System;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.Deployment;
+using Uncreated.Warfare.FOBs.Entities;
+using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
@@ -15,9 +16,11 @@ using Uncreated.Warfare.Util.DamageTracking;
 
 namespace Uncreated.Warfare.FOBs;
 
-public class BunkerFob : ResourceFob, IFobStrategyMapTackHandler, IDamageableFob
+public class BunkerFob : ResourceFob, IFobStrategyMapTackHandler, IDamageableFob, IResourceFob
 {
+    private readonly IServiceProvider _serviceProvider;
     private ShovelableBuildable? _shovelable;
+    private RestockableBuildableFobEntity<ShovelableInfo>? _restocker;
 
     public bool IsBuilt { get; private set; }
     public bool HasBeenRebuilt { get; private set; }
@@ -46,6 +49,7 @@ public class BunkerFob : ResourceFob, IFobStrategyMapTackHandler, IDamageableFob
 
     public BunkerFob(IServiceProvider serviceProvider, string name, IBuildable buildable) : base(serviceProvider, name, buildable)
     {
+        _serviceProvider = serviceProvider;
         IsBuilt = false;
         HasBeenRebuilt = false;
         DamageTracker = new DamageTracker(name);
@@ -69,11 +73,20 @@ public class BunkerFob : ResourceFob, IFobStrategyMapTackHandler, IDamageableFob
         IsBuilt = true;
         HasBeenRebuilt = true;
         Buildable = newBuildable;
+
+        if (newBuildable.Asset is ItemStorageAsset)
+        {
+            // must go before 'Shovelable = null'
+            CreateRestocker(newBuildable);
+        }
+        
         Shovelable = null;
+
         UpdateIcon();
         InvokeHealthUpdated();
         InvokeAttributesUpdated();
     }
+
     public void MarkUnbuilt(IBuildable newBuildable)
     {
         IsBuilt = false;
@@ -81,7 +94,50 @@ public class BunkerFob : ResourceFob, IFobStrategyMapTackHandler, IDamageableFob
         UpdateIcon();
         InvokeHealthUpdated();
         InvokeAttributesUpdated();
+
+        DestroyRestocker();
     }
+
+    #region Restocking
+
+    private void CreateRestocker(IBuildable buildable)
+    {
+        ShovelableInfo? shovelableInfo = Shovelable?.Info;
+        if (shovelableInfo == null)
+        {
+            DestroyRestocker();
+            return;
+        }
+
+        if (_restocker != null)
+        {
+            if (_restocker.Buildable.Equals(buildable))
+            {
+                // already set up correctly
+                return;
+            }
+
+            DestroyRestocker();
+        }
+
+        _restocker = new RestockableBuildableFobEntity<ShovelableInfo>(
+            buildable,
+            _serviceProvider,
+            true,
+            shovelableInfo,
+            Team
+        );
+    }
+
+    private void DestroyRestocker()
+    {
+        if (_restocker == null)
+            return;
+
+        FobManager.DeregisterFobEntity(_restocker);
+    }
+
+    #endregion
 
     #region Deployment
 
@@ -154,8 +210,6 @@ public class BunkerFob : ResourceFob, IFobStrategyMapTackHandler, IDamageableFob
 
     #endregion
 
-
-
     #region Map Tacks
 
     protected virtual MapTack? CreateMapTack(StrategyMapManager manager, StrategyMap map, AssetConfiguration assetConfig)
@@ -208,14 +262,24 @@ public class BunkerFob : ResourceFob, IFobStrategyMapTackHandler, IDamageableFob
 
         return attributes;
     }
+    
+    public override int? GetSupplyCount(SupplyType type)
+    {
+        if (!HasBeenRebuilt)
+            return null;
+        
+        return base.GetSupplyCount(type);  
+    }
 
     #endregion
 
     /// <inheritdoc />
-    protected override void Dispose(bool isDisposing)
+    protected override void Dispose(bool disposing)
     {
-        base.Dispose(isDisposing);
-
+        base.Dispose(disposing);
         Shovelable = null;
+        DestroyRestocker();
     }
+
+    bool IResourceFob.ShowResources => HasBeenRebuilt;
 }

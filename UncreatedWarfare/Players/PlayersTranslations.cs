@@ -37,20 +37,11 @@ public sealed class PlayersTranslations : TranslationCollection
     [TranslationData("Message sent when a player tries to place a non-whitelisted item in a storage inventory.", "Item being stored")]
     public readonly Translation<ItemAsset> ProhibitedStoring = new Translation<ItemAsset>("<#fa9e9e>You are not allowed to store {0}.", arg0Fmt: new ArgumentFormat(PluralAddon.Always(), RarityColorAddon.Instance));
 
-    [TranslationData("Sent when a player tries to point or mark while not a squad leader.")]
-    public readonly Translation MarkerNotInSquad = new Translation("<#fa9e9e>Only your squad can see markers. Create a squad with <#cedcde>/squad create</color> to use this feature.");
-
     [TranslationData("Sent on a SEVERE toast when the player enters enemy territory.", "Seconds until death")]
     public readonly Translation<string> EnteredEnemyTerritory = new Translation<string>("ENEMY HQ PROXIMITY\nLEAVE IMMEDIATELY\nDEAD IN <uppercase>{0}</uppercase>", TranslationOptions.UnityUI);
 
-    [TranslationData("Sent 2 times before a player is kicked for inactivity.", "Time code")]
-    public readonly Translation<string> InactivityWarning = new Translation<string>("<#fa9e9e>You will be AFK-Kicked in <#cedcde>{0}</color> if you don't move.</color>");
-
-    [TranslationData("Sent when an unauthorized player attempts to edit a sign.")]
-    public readonly Translation ProhibitedSignEditing = new Translation("<#ff8c69>You are not allowed to edit that sign.");
-
     [TranslationData("Sent when a player tries to craft a blacklisted blueprint.")]
-    public readonly Translation NoCraftingBlueprint = new Translation("<#b3a6a2>Crafting is disabled for this item.");
+    public readonly Translation NoCraftingBlueprint = new Translation("Crafting is disabled for this item.", TranslationOptions.Hint);
 
     [TranslationData("Shows above the XP UI when divisions are enabled.", "Branch (Division) the player is a part of.")]
     public readonly Translation<Branch> XPUIDivision = new Translation<Branch>("{0} Division");

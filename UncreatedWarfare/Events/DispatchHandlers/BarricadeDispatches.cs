@@ -103,8 +103,12 @@ partial class EventDispatcher
                 return;
             }
 
+            Vector3 position = args.Position;
             Vector3 rot = args.Rotation.eulerAngles;
             Quaternion rotation = BarricadeManager.getRotation(args.Barricade.asset, rot.x, rot.y, rot.z);
+
+            MathUtility.CompressVector3(ref position, fracBitCount: BarricadeManager.POSITION_FRAC_BIT_COUNT);
+            MathUtility.CompressQuaternion(ref rotation, BarricadeManager.YAW_BIT_COUNT);
             
             if (plantTargetAlive)
             {
@@ -151,10 +155,13 @@ partial class EventDispatcher
 
         if (!shouldAllow)
             return;
-        
-        Vector3 rot = args.Rotation.eulerAngles;
+
+        Quaternion rotation = args.Rotation;
+        MathUtility.CompressYawOrQuaternion(ref rotation, yawBitCount: BarricadeManager.YAW_BIT_COUNT);
+        Vector3 rot = rotation.eulerAngles;
 
         point = args.Position;
+        MathUtility.CompressVector3(ref point, fracBitCount: BarricadeManager.POSITION_FRAC_BIT_COUNT);
         angleX = rot.x;
         angleY = rot.y;
         angleZ = rot.z;

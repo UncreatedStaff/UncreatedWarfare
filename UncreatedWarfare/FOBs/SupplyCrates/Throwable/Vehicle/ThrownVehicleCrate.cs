@@ -1,8 +1,5 @@
 using System;
-using System.Collections.Generic;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Fobs;
-using Uncreated.Warfare.Fobs.SupplyCrates;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Util;
@@ -75,8 +72,8 @@ public class ThrownVehicleCrate : ThrownSupplyCrate
             }
 
             // note: this used to directly subtract from the FOB but led to mismatches between FOB ammo and crate ammo.
-            NearbySupplyCrates crates = NearbySupplyCrates.FindNearbyCrates(nearestFob.Position, nearestFob.Team.GroupId, _fobManager);
-            crates.SubtractSupplies(requiredAmmoCount, SupplyType.Ammo, SupplyChangeReason.ConsumeRearmVehicle);
+            // todo: is this comment^ still relevant?
+            nearestFob.ChangeAmmo(-requiredAmmoCount, SupplyChangeReason.ConsumeRearmVehicle);
             Thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastLoseAmmo.Translate(requiredAmmoCount, Thrower)));
         }
         

@@ -2,6 +2,7 @@
 using System;
 using System.Diagnostics;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Patches;
 
 namespace Uncreated.Warfare.Util;
 
@@ -43,6 +44,7 @@ public static class EffectUtility
         callback(ref parameters);
 
         EffectManager.triggerEffect(parameters);
+        LastEffectSpawnedOnDedicatedServerPatch.LastEffectSpawned = null;
     }
 
     /// <summary>
@@ -73,6 +75,7 @@ public static class EffectUtility
         parameters.reliable = reliable;
 
         EffectManager.triggerEffect(parameters);
+        LastEffectSpawnedOnDedicatedServerPatch.LastEffectSpawned = null;
     }
 
     /// <summary>
@@ -103,6 +106,7 @@ public static class EffectUtility
         parameters.reliable = reliable;
 
         EffectManager.triggerEffect(parameters);
+        LastEffectSpawnedOnDedicatedServerPatch.LastEffectSpawned = null;
     }
 
     /// <summary>
@@ -134,6 +138,7 @@ public static class EffectUtility
         parameters.reliable = reliable;
 
         EffectManager.triggerEffect(parameters);
+        LastEffectSpawnedOnDedicatedServerPatch.LastEffectSpawned = null;
     }
 
     /// <summary>
@@ -164,6 +169,7 @@ public static class EffectUtility
         parameters.reliable = reliable;
 
         EffectManager.triggerEffect(parameters);
+        LastEffectSpawnedOnDedicatedServerPatch.LastEffectSpawned = null;
     }
 
     /// <summary>
@@ -193,6 +199,7 @@ public static class EffectUtility
         callback(ref parameters);
 
         EffectManager.triggerEffect(parameters);
+        LastEffectSpawnedOnDedicatedServerPatch.LastEffectSpawned = null;
     }
 
     /// <summary>
@@ -223,6 +230,7 @@ public static class EffectUtility
         parameters.reliable = reliable;
 
         EffectManager.triggerEffect(parameters);
+        LastEffectSpawnedOnDedicatedServerPatch.LastEffectSpawned = null;
     }
 
     /// <summary>
@@ -253,43 +261,110 @@ public static class EffectUtility
         parameters.reliable = reliable;
 
         EffectManager.triggerEffect(parameters);
+        LastEffectSpawnedOnDedicatedServerPatch.LastEffectSpawned = null;
     }
 
     private static EffectAsset? _debugEffect;
 
+    private static bool CheckDebugEffect([NotNullWhen(true)] out EffectAsset? debugEffect)
+    {
+        _debugEffect ??= Assets.find<EffectAsset>(new Guid("6093290a7ce049b8a418be7fd79e89a0"));
+
+        debugEffect = _debugEffect;
+        return debugEffect != null;
+    }
+
     [Conditional("DEBUG")]
-    public static void TriggerDebugEffect(ITransportConnection connection, Vector3 position, Vector3 direction, Vector3 left, bool clear = true, float scale = 1f)
+    public static void ClearDebugEffect(ITransportConnection? connection = null)
+    {
+        GameThread.AssertCurrent();
+
+        if (!CheckDebugEffect(out EffectAsset? debugEffect))
+            return;
+
+        if (connection == null)
+            EffectManager.ClearEffectByGuid_AllPlayers(debugEffect.GUID);
+        else
+            EffectManager.ClearEffectByGuid(debugEffect.GUID, connection);
+    }
+
+    [Conditional("DEBUG")]
+    public static void TriggerDebugEffect(Vector3 position, Vector3 direction, Vector3 left, bool clear = true, float scale = 1f)
+    {
+        TriggerDebugEffect(null, position, Quaternion.LookRotation(direction, Vector3.Cross(left, direction)), clear);
+    }
+
+    [Conditional("DEBUG")]
+    public static void TriggerDebugEffect(Vector3 position, Quaternion rotation, bool clear = true, float scale = 1f)
+    {
+        TriggerDebugEffect(null, position, rotation, clear, scale);
+    }
+
+    [Conditional("DEBUG")]
+    public static void TriggerDebugEffect(ITransportConnection? connection, Vector3 position, Vector3 direction, Vector3 left, bool clear = true, float scale = 1f)
     {
         TriggerDebugEffect(connection, position, Quaternion.LookRotation(direction, Vector3.Cross(left, direction)), clear);
     }
 
     [Conditional("DEBUG")]
-    public static void TriggerDebugEffect(ITransportConnection connection, Vector3 position, Quaternion rotation, bool clear = true, float scale = 1f)
+    public static void TriggerDebugEffect(ITransportConnection? connection, Vector3 position, Quaternion rotation, bool clear = true, float scale = 1f)
     {
         GameThread.AssertCurrent();
 
-        _debugEffect ??= Assets.find<EffectAsset>(new Guid("6093290a7ce049b8a418be7fd79e89a0"));
-
-        if (_debugEffect == null)
+        if (!CheckDebugEffect(out EffectAsset? debugEffect))
             return;
 
         if (clear)
         {
-            EffectManager.ClearEffectByGuid(_debugEffect.GUID, connection);
+            EffectManager.ClearEffectByGuid(debugEffect.GUID, connection);
         }
 
-        TriggerEffectParameters p = new TriggerEffectParameters(_debugEffect)
+        TriggerEffectParameters p = new TriggerEffectParameters(debugEffect)
         {
             position = position,
             reliable = false
         };
+
         p.SetRotation(rotation);
-        p.SetRelevantPlayer(connection);
+
+        if (connection != null)
+        {
+            p.SetRelevantPlayer(connection);
+        }
+        else
+        {
+            p.relevantDistance = EffectManager.INSANE;
+        }
+
         if (!Mathf.Approximately(scale, 1f))
         {
             p.SetUniformScale(scale);
         }
         EffectManager.triggerEffect(p);
+        LastEffectSpawnedOnDedicatedServerPatch.LastEffectSpawned = null;
+    }
+
+    [Conditional("DEBUG")]
+    public static void TriggerDebugEffectBox(Vector3 center, Vector3 extents, Quaternion rotation, bool clear, float effectScale = 1f)
+    {
+        TriggerDebugEffectBox(null, center, extents, rotation, clear, effectScale);
+    }
+
+    [Conditional("DEBUG")]
+    public static void TriggerDebugEffectBox(ITransportConnection? connection, Vector3 center, Vector3 extents, Quaternion rotation, bool clear, float effectScale = 1f)
+    {
+        GameThread.AssertCurrent();
+
+        if (!CheckDebugEffect(out EffectAsset? debugEffect))
+            return;
+
+        if (clear)
+        {
+            EffectManager.ClearEffectByGuid(debugEffect.GUID, connection);
+        }
+
+        TriggerDebugEffect(center + extents, rotation * Quaternion.Euler(0f, 270f, 180f), clear: false, scale: effectScale);
+        TriggerDebugEffect(center - extents, rotation, clear: false, scale: effectScale);
     }
 
     private static void SetColorIntl(in Color color, ref TriggerEffectParameters parameters)

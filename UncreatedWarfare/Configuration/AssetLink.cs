@@ -1073,7 +1073,16 @@ public static class AssetLink
 
         public override bool Equals(object? obj)
         {
-            return !ReferenceEquals(null, obj) && (ReferenceEquals(this, obj) || Guid.Equals(((IAssetLink<TAsset>)obj).Guid) && Id == ((IAssetLink<TAsset>)obj).Id);
+            // ReSharper disable once CannotApplyEqualityOperatorToType
+            if (obj == this)
+                return true;
+
+            if (obj is not IAssetLink<TAsset> al)
+            {
+                return false;
+            }
+
+            return Guid.Equals(al.Guid) && Id == al.Id;
         }
 
         public override int GetHashCode()

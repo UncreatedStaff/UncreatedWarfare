@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
@@ -43,6 +44,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
     private readonly ITranslationValueFormatter _valueFormatter;
     private readonly IItemDistributionService _itemDistributionService;
     private readonly LoadoutService _loadoutService;
+    private readonly KitCommandTranslations _kitCmdTranslations;
     private readonly CooldownManager _cooldownManager;
     private readonly IKitAccessService _kitAccessService;
     private readonly KitBestowService _kitBestowService;
@@ -59,6 +61,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
     private readonly ChatService _chatService;
     private readonly ILogger<KitRequestService> _logger;
     private readonly KitRequirementManager _kitRequirements;
+    private readonly IKitFavoriteService? _kitFavoriteService;
     private readonly ITeamManager<Team> _teamManager;
     private readonly ZoneStore _zoneStore;
 
@@ -74,6 +77,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         IItemDistributionService itemDistributionService,
         LoadoutService loadoutService,
         TranslationInjection<RequestKitsTranslations> translations,
+        TranslationInjection<KitCommandTranslations> kitCmdTranslations,
         CooldownManager cooldownManager,
         IKitAccessService kitAccessService,
         KitBestowService kitBestowService,
@@ -90,11 +94,13 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         ZoneStore zoneStore,
         ILogger<KitRequestService> logger,
         KitRequirementManager kitRequirements,
-        ITeamManager<Team> teamManager)
+        ITeamManager<Team> teamManager,
+        IKitFavoriteService? kitFavoriteService = null)
     {
         _kitDataStore = kitDataStore;
         _kitDataStore.KitRemoved += OnKitRemoved;
         _loadoutService = loadoutService;
+        _kitCmdTranslations = kitCmdTranslations.Value;
         _cooldownManager = cooldownManager;
         _kitAccessService = kitAccessService;
         _kitBestowService = kitBestowService;
@@ -115,6 +121,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         _zoneStore = zoneStore;
         _logger = logger;
         _kitRequirements = kitRequirements;
+        _kitFavoriteService = kitFavoriteService;
         _teamManager = teamManager;
 
         _requestRequirementVisitor = new KitRequirementVisitor(this);
@@ -237,6 +244,24 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         }
 
         Kit? foundKit = await _lookResolver.GetSignTarget(player, sign, KitInclude.Verifiable | KitInclude.Giveable, token);
+        if (foundKit == null && sign.FavoriteIndex >= 0 && _kitFavoriteService != null)
+        {
+            // favorite current kit if you punch a sign without a kit on it
+            Kit? currentKit = player.Component<KitPlayerComponent>().GetActiveEffectiveKit()?.CachedKit;
+            if (currentKit != null && currentKit.Class > Class.Unarmed)
+            {
+                if (await _kitFavoriteService.AddFavorite(player.Steam64, currentKit.Key, token))
+                {
+                    _chatService.Send(player, _kitCmdTranslations.KitFavorited, currentKit);
+                }
+                else
+                {
+                    _chatService.Send(player, _kitCmdTranslations.KitFavoriteAlreadyFavorited, currentKit);
+                }
+                return false;
+            }
+        }
+
         return await RequestAsync(player, foundKit, resultHandler, token).ConfigureAwait(false);
     }
 
@@ -445,7 +470,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
                             && x.SquadLevel == SquadLevel.Member
                             && x.Season == WarfareModule.Season
                             && !x.Disabled
-                            && x.Class != Class.Unarmed
+                            && x.Class != Class.Unarmed && x.Class != Class.Pilot && x.Class != Class.Crewman
                             && x.FactionId == factionId
                             && (x.CreditCost == 0 || x.Access.Any(a => a.Steam64 == steam64))).Select(x => x.PrimaryKey),
                 token: token
@@ -512,6 +537,9 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
     private async Task<Kit?> TryGetDefaultKit(Team team, KitInclude include, CancellationToken token = default)
     {
         Kit? kit;
+        if (!team.IsValid)
+            return _cachedDefaultKit;
+
         if ((include & KitInclude.Giveable) == KitInclude.Giveable)
         {
             if (_unarmedKitCache.TryGetValue(team, out kit))

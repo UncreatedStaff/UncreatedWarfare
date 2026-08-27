@@ -91,7 +91,7 @@ public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementP
                 continue;
 
             IConfigurationRoot config = new ConfigurationBuilder()
-                .AddYamlFile(_fileProvider, Path.GetRelativePath(_fileProvider.Root, file), false, true)
+                .AddYamlFile(_fileProvider, Path.GetRelativePath(_fileProvider.Root, file), false, _warfare.UseFileWatchers)
                 .Build();
 
             WarfareVehicleInfo? vehicle = config.Get<WarfareVehicleInfo>();
@@ -103,12 +103,15 @@ public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementP
 
             vehicle.Configuration = config;
 
-            IDisposable changeTokenReg = ChangeToken.OnChange(
-                config.GetReloadToken,
-                ReloadVehicleInfoConfiguration,
-                vehicle
-            );
-            _disposableConfigurationRoots.Add(changeTokenReg);
+            if (_warfare.UseFileWatchers)
+            {
+                IDisposable changeTokenReg = ChangeToken.OnChange(
+                    config.GetReloadToken,
+                    ReloadVehicleInfoConfiguration,
+                    vehicle
+                );
+                _disposableConfigurationRoots.Add(changeTokenReg);
+            }
 
             lock (_watchedFiles)
             {
@@ -124,9 +127,10 @@ public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementP
 
         _vehicles.ForEach(v => v.EnsureInitialized());
 
-        IDisposable changeTokenRegistration = ChangeToken.OnChange(() => _fileProvider.Watch("./*.yml"), ReloadUnwatchedFiles);
-
-        _disposableConfigurationRoots.Add(changeTokenRegistration);
+        if (_warfare.UseFileWatchers)
+        {
+            _disposableConfigurationRoots.Add(ChangeToken.OnChange(() => _fileProvider.Watch("./*.yml"), ReloadUnwatchedFiles));
+        }
 
         return UniTask.CompletedTask;
     }
@@ -182,12 +186,15 @@ public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementP
 
                     vehicle.Configuration = config;
 
-                    IDisposable changeTokenReg = ChangeToken.OnChange(
-                        config.GetReloadToken,
-                        ReloadVehicleInfoConfiguration,
-                        vehicle
-                    );
-                    _disposableConfigurationRoots.Add(changeTokenReg);
+                    if (_warfare.UseFileWatchers)
+                    {
+                        IDisposable changeTokenReg = ChangeToken.OnChange(
+                            config.GetReloadToken,
+                            ReloadVehicleInfoConfiguration,
+                            vehicle
+                        );
+                        _disposableConfigurationRoots.Add(changeTokenReg);
+                    }
 
                     if (config is IDisposable disposableConfig2)
                         newDisposables.Add(disposableConfig2);

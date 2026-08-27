@@ -1,4 +1,3 @@
-using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Locations;
@@ -98,4 +97,21 @@ public class FobTranslations : TranslationCollection
     [TranslationData("The title/header of the FOB list UI.")]
     public Translation FobListTitle = new Translation("FOBs", TranslationOptions.TMProUI);
 
+    [TranslationData("Sent as a hint when a player tries to drop a supply crate from way too high in the air.", "Maximum height")]
+    public Translation<float> DropSupplyCrateTooHigh = new Translation<float>("You can't drop supply crates from higher than {0}m off the ground.", TranslationOptions.Hint, arg0Fmt: "F0");
+    
+    [TranslationData("Sent as a hint when a player tries to drop a supply crate in an obstructed area.")]
+    public Translation DropSupplyCrateObstructed = new Translation("Drop location obstructed, try moving.", TranslationOptions.Hint);
+
+    [TranslationData("Sent as a hint when a player tries to drop a supply crate too near another FOB. They can be dropped within the radius of a FOB but not outside that radius.", "Name of the FOB that's too close", "Minimum distance between FOBs (meters)")]
+    public Translation<BunkerFob, float> DropSupplyCrateTooNearFriendlyFob = new Translation<BunkerFob, float>("There is already a FOB nearby ({0}). New FOBs must be built at least {1}m away from an existing FOB.", TranslationOptions.Hint, arg1Fmt: "F0");
+    
+    [TranslationData("Sent as a hint when a player tries to drop a supply crate too near another FOB. They can be dropped within the radius of a FOB but not outside that radius.", "Minimum distance between FOBs (meters)")]
+    public Translation<float> DropSupplyCrateTooNearEnemyFob = new Translation<float>("There's already an enemy FOB nearby. New FOBs must be built at least {0}m away from an existing FOB.", TranslationOptions.Hint, arg0Fmt: "F0");
+    
+    [TranslationData("Sent as a hint when a player tries to drop a supply crate close to main base.", "Minimum distance between FOBs (meters)")]
+    public Translation<float> DropSupplyCrateTooNearMain = new Translation<float>("You're too close to spawn. FOBs must be built at least {0}m away from main base.", TranslationOptions.Hint, arg0Fmt: "F0");
+    
+    [TranslationData("Sent as a hint when a player tries to drop a supply crate in or above the water.")]
+    public Translation DropSupplyCrateUnderwater = new Translation("Supply crates can't be dropped underwater.", TranslationOptions.Hint);
 }

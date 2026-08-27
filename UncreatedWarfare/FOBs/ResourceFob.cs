@@ -4,7 +4,6 @@ using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models.Fobs;
-using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.FOBs.Entities;
@@ -27,12 +26,12 @@ using Uncreated.Warfare.Zones;
 using HealthUpdated = Uncreated.Warfare.StrategyMaps.MapTacks.HealthUpdated;
 using VehicleUpdated = Uncreated.Warfare.StrategyMaps.MapTacks.VehicleUpdated;
 
-namespace Uncreated.Warfare.Fobs;
+namespace Uncreated.Warfare.FOBs;
 
 /// <summary>
 /// Base class for standard FOBs, caches, and any other FOBs that support items.
 /// </summary>
-public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIHandler
+public class ResourceFob : BaseFob, IBuildableFob, IResourceFob, IMapTackUIHandler
 {
     // ReSharper disable PrivateFieldCanBeConvertedToLocalVariable
     private readonly IPlayerService _playerService;
@@ -46,7 +45,6 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
     private readonly Func<WarfarePlayer, float> _getProxyScore;
     private string? _closestShortName, _closestLongName;
     private bool _hasClosestShortName, _hasClosestLongName;
-
 
     // ReSharper restore PrivateFieldCanBeConvertedToLocalVariable
 
@@ -111,6 +109,7 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
         _zoneStore = serviceProvider.GetService<ZoneStore>();
         _vehicleInfoStore = serviceProvider.GetRequiredService<VehicleInfoStore>();
 
+        // ReSharper disable once VirtualMemberCallInConstructor
         FriendlyProximity = new SphereProximity(Position, EffectiveRadius);
 
         _loopTicker = serviceProvider.GetRequiredService<ILoopTickerFactory>().CreateTicker(TimeSpan.FromSeconds(0.25f), true, true);
@@ -166,10 +165,9 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
 
             UpdateVehicleCounts(null);
         };
-
-        NearbySupplyCrates supplyCrates = NearbySupplyCrates.FindNearbyCrates(Position, Team.GroupId, FobManager);
-        ChangeSupplies(SupplyType.Build, supplyCrates.BuildCount, SupplyChangeReason.InitialSupplyFob);
-        ChangeSupplies(SupplyType.Ammo, supplyCrates.AmmoCount, SupplyChangeReason.InitialSupplyFob);
+        
+        BuildCount = 0;
+        AmmoCount = 0;
 
         UpdateIcon();
     }
@@ -262,7 +260,7 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
 
         if (FobManager.Entities
             .OfType<SupplyCrate>()
-            .Any(x => x.Type == SupplyType.Ammo && x.IsWithinRadius(Buildable.Position)))
+            .Any(x => x.Type == CrateType.Ammo && x.IsWithinRadius(Buildable.Position)))
         {
             _tipService.TryGiveTip(player, 0, _tipService.Translations.KitGiveLowAmmo);
         }
@@ -290,26 +288,26 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
         return 0.15f * EffectiveRadius / distanceFromFob;
     }
     public bool IsWithinRadius(Vector3 point) => MathUtility.WithinRange(Position, point, EffectiveRadius);
-    public void ChangeSupplies(SupplyType supplyType, float amount, SupplyChangeReason reason, WarfarePlayer? instigator = null)
-    {
-        if (supplyType == SupplyType.Ammo)
-        {
-            amount = Math.Max(-AmmoCount, amount);
-            AmmoCount += amount;
-        }
-        else if (supplyType == SupplyType.Build)
-        {
-            amount = Math.Max(-BuildCount, amount);
-            BuildCount += amount;
-        }
 
-        NotifySuppliesChanged(supplyType, amount);
+    public void ChangeBuild(float amount, SupplyChangeReason reason, WarfarePlayer? instigator = null) => ChangeSupplies(amount, 0, reason, instigator);
+    public void ChangeAmmo(float amount, SupplyChangeReason reason, WarfarePlayer? instigator = null) => ChangeSupplies(0, amount, reason, instigator);
+    public void ChangeSupplies(float buildAmount, float ammoAmount, SupplyChangeReason reason, WarfarePlayer? instigator = null)
+    {
+        buildAmount = Math.Max(-BuildCount, buildAmount);
+        BuildCount += buildAmount;
+        ammoAmount = Math.Max(-AmmoCount, ammoAmount);
+        AmmoCount += ammoAmount;
+
+        if (buildAmount != 0)
+            NotifySuppliesChanged(SupplyType.Build, buildAmount);
+        if (ammoAmount != 0)
+            NotifySuppliesChanged(SupplyType.Ammo, ammoAmount);
 
         FobSuppliesChanged args = new FobSuppliesChanged
         {
             Fob = this,
-            AmountDelta = amount,
-            SupplyType = supplyType,
+            BuildAmountDelta =  buildAmount,
+            AmmoAmountDelta = ammoAmount,
             ChangeReason = reason,
             Instigator = instigator
         };
@@ -391,8 +389,9 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
         return formatter.Colorize(Name, GetColor(parameters.Team ?? Team.NoTeam), parameters.Options);
     }
 
-    protected virtual void Dispose(bool isDisposing)
+    protected override void Dispose(bool disposing)
     {
+        base.Dispose(disposing);
         NearbyFriendlies.RemoveAllCurrentItems();
         NearbyEnemies.RemoveAllCurrentItems();
         NearbyFriendlies.Dispose();
@@ -401,11 +400,6 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
         _loopTicker.Dispose();
         Icon?.Dispose();
         Icon = null;
-    }
-
-    public void Dispose()
-    {
-        Dispose(true);
     }
 
     bool IDeployable.IsSafeZone => false;
@@ -466,12 +460,12 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
     public virtual int? GetSupplyCount(SupplyType type)
     {
         if (type == SupplyType.Build)
-            return (int)Math.Round(BuildCount);
+            return BuildCount >= 0 ? (int)Math.Ceiling(BuildCount) : null;
     
         if (type == SupplyType.Ammo)
-            return (int)Math.Round(AmmoCount);
+            return AmmoCount >= 0 ? (int)Math.Ceiling(AmmoCount) : null;
 
-        return null;
+        return null;    
     }
 
     public virtual double? GetHealth()
@@ -484,13 +478,11 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
         MapTackAttributes attributes = 0;
         if (IsProxied)
             attributes |= MapTackAttributes.Proxied;
-
-        NearbySupplyCrates.HasNearbySupplyCrates(Position, Team.GroupId, FobManager, out bool hasAmmo, out bool hasBuild);
-
-        if (!hasAmmo || AmmoCount < 5)
+        
+        if (AmmoCount < 5)
             attributes |= MapTackAttributes.LowAmmo;
 
-        if (!hasBuild || BuildCount < 7)
+        if (BuildCount < 7)
             attributes |= MapTackAttributes.LowBuild;
 
         return attributes;

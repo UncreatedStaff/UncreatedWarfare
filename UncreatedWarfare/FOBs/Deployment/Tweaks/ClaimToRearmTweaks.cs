@@ -2,14 +2,12 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Models.Zones;
-using Uncreated.Warfare.Fobs;
-using Uncreated.Warfare.Fobs.SupplyCrates;
+using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
@@ -23,7 +21,7 @@ using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.FOBs.Deployment.Tweaks;
 
-public class ClaimToRearmTweaks :
+internal class ClaimToRearmTweaks :
     IAsyncEventListener<PlayerPunched>,
     IAsyncEventListener<PlayerEnteredZone>,
     IAsyncEventListener<PlayerExitedZone>,
@@ -35,12 +33,10 @@ public class ClaimToRearmTweaks :
     private readonly ChatService _chatService;
     private readonly AmmoTranslations _translations;
     private readonly ZoneStore? _zoneStore;
-    private readonly AssetConfiguration _assetConfiguration;
     private readonly KitSelectionUI? _kitUi;
 
     public ClaimToRearmTweaks(IServiceProvider serviceProvider)
     {
-        _assetConfiguration = serviceProvider.GetRequiredService<AssetConfiguration>();
         _fobManager = serviceProvider.GetRequiredService<FobManager>();
         _kitRequestService = serviceProvider.GetRequiredService<KitRequestService>();
         _rearmService = serviceProvider.GetRequiredService<KitRearmService>();
@@ -58,7 +54,7 @@ public class ClaimToRearmTweaks :
             return UniTask.CompletedTask;
         }
 
-        IAmmoStorage? ammoStorage = TryGetRearmBarricade(e.Player, buildable);
+        IAmmoStorage? ammoStorage = TryGetRearmBarricade(buildable);
         if (ammoStorage == null)
         {
             return UniTask.CompletedTask;
@@ -76,7 +72,7 @@ public class ClaimToRearmTweaks :
     [EventListener(RequireActiveLayout = true, RequiresMainThread = true)]
     UniTask IAsyncEventListener<ClaimBedRequested>.HandleEventAsync(ClaimBedRequested e, IServiceProvider serviceProvider, CancellationToken token)
     {
-        IAmmoStorage? ammoStorage = TryGetRearmBarricade(e.Player, e.Buildable);
+        IAmmoStorage? ammoStorage = TryGetRearmBarricade(e.Buildable);
         if (ammoStorage == null)
             return UniTask.CompletedTask;
 
@@ -94,26 +90,35 @@ public class ClaimToRearmTweaks :
         return OpenKitUIFromSupplyCrate(e.Player, ammoStorage, e.Player.DisconnectToken);
     }
 
-    private IAmmoStorage? TryGetRearmBarricade(WarfarePlayer player, IBuildable buildable)
+    private IAmmoStorage? TryGetRearmBarricade(IBuildable buildable)
     {
         if (!buildable.IsAlive)
             return null;
 
+        // could be a thrown ammo bag
         IAmmoStorage? ammoStorage = ContainerHelper.FindComponent<IAmmoStorage>(buildable.Model);
         if (ammoStorage != null)
             return ammoStorage;
-
+        
+        // could be an ammo supply crate
         SupplyCrate? ammoCrate = _fobManager.Entities.OfType<SupplyCrate>().FirstOrDefault(s =>
-            s.Type == SupplyType.Ammo &&
+            s.Type == CrateType.Ammo &&
+            s.Buildable.Alive &&
+            s.Buildable.Equals(buildable)
+        );
+        if (ammoCrate != null)
+            return AmmoCrate.FromSupplyCrate(ammoCrate);
+        
+        // could be a built FOB ammo crate
+        FobAmmoVendor? fobAmmoVendor = _fobManager.Entities.OfType<FobAmmoVendor>().FirstOrDefault(s =>
             s.Buildable.Alive &&
             s.Buildable.Equals(buildable)
         );
 
-        ammoStorage = ammoCrate != null
-            ? AmmoSupplyCrate.FromSupplyCrate(ammoCrate, _fobManager)
-            : null;
+        if (fobAmmoVendor != null)
+            return fobAmmoVendor;
 
-        return ammoStorage;
+        return null;
     }
 
     private async UniTask RearmKitFromSupplyCrate(WarfarePlayer player, IAmmoStorage ammoStorage, CancellationToken token)
