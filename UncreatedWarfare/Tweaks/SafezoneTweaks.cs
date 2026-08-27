@@ -21,7 +21,7 @@ using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Tweaks;
 
-public class SafezoneTweaks :
+internal class SafezoneTweaks :
     IEventListener<PlayerUseableEquipped>,
     IAsyncEventListener<EquipUseableRequested>,
     IEventListener<PlayerEnteredZone>,

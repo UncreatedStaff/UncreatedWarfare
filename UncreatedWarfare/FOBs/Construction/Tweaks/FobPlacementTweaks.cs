@@ -20,7 +20,7 @@ using RallyPoint = Uncreated.Warfare.FOBs.Rallypoints.RallyPoint;
 
 namespace Uncreated.Warfare.FOBs.Construction.Tweaks;
 
-public class FobPlacementTweaks :
+internal class FobPlacementTweaks :
     IAsyncEventListener<IPlaceBuildableRequestedEvent>
 {
     private readonly AssetConfiguration _assetConfiguration;

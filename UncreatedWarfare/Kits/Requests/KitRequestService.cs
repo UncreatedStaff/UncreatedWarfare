@@ -470,7 +470,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
                             && x.SquadLevel == SquadLevel.Member
                             && x.Season == WarfareModule.Season
                             && !x.Disabled
-                            && x.Class != Class.Unarmed
+                            && x.Class != Class.Unarmed && x.Class != Class.Pilot && x.Class != Class.Crewman
                             && x.FactionId == factionId
                             && (x.CreditCost == 0 || x.Access.Any(a => a.Steam64 == steam64))).Select(x => x.PrimaryKey),
                 token: token

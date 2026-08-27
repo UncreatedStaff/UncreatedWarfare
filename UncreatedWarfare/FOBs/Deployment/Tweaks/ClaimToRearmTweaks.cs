@@ -21,7 +21,7 @@ using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.FOBs.Deployment.Tweaks;
 
-public class ClaimToRearmTweaks :
+internal class ClaimToRearmTweaks :
     IAsyncEventListener<PlayerPunched>,
     IAsyncEventListener<PlayerEnteredZone>,
     IAsyncEventListener<PlayerExitedZone>,

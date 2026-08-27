@@ -8,7 +8,7 @@ using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Players.Tweaks;
 
-public class PlayerChooseSpawnPointTweaks :
+internal class PlayerChooseSpawnPointTweaks :
     IEventListener<PlayerChooseSpawnAfterLogin>,
     IEventListener<PlayerChooseSpawnAfterDeath>
 {

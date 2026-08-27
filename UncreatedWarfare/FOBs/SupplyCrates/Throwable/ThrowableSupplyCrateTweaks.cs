@@ -11,7 +11,7 @@ using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.FOBs.SupplyCrates.Throwable;
 
-public class ThrowableSupplyCrateTweaks : IEventListener<ThrowableSpawned>
+internal class ThrowableSupplyCrateTweaks : IEventListener<ThrowableSpawned>
 {
     public void HandleEvent(ThrowableSpawned e,  IServiceProvider serviceProvider)
     {
