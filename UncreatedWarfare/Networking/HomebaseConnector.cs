@@ -9,6 +9,7 @@ using DanielWillett.ModularRpcs.WebSockets;
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
 using System;
+using System.Text.Json;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Services;
 using UnityEngine.Networking;
@@ -150,7 +151,7 @@ public partial class HomebaseConnector : IHostedService
             return null;
         }
 
-        string? authJwt = null;
+        string? tempAuthToken = null;
 
         if (_authEndpoint != null)
         {
@@ -179,14 +180,24 @@ public partial class HomebaseConnector : IHostedService
 
             await UniTask.SwitchToMainThread(token);
 
-            authJwt = authRequest.downloadHandler.text;
+            try
+            {
+                using JsonDocument doc = JsonDocument.Parse(authRequest.downloadHandler.text);
+                tempAuthToken = doc.RootElement.GetProperty("token").GetString();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to read JSON response.");
+                _logger.LogError(authRequest.downloadHandler.text);
+                return null;
+            }
         }
 
         Uri connectUri = _connectEndpoint;
 
-        if (authJwt != null)
+        if (tempAuthToken != null)
         {
-            connectUri = new Uri(connectUri, "?token=" + Uri.EscapeDataString(authJwt));
+            connectUri = new Uri(connectUri, "?token=" + Uri.EscapeDataString(tempAuthToken));
         }
 
         return connectUri;
