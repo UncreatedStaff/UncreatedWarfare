@@ -580,6 +580,9 @@ public sealed class WarfareModule
         bldr.RegisterType<MapScheduler>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
+        bldr.RegisterType<MapSwitchService>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
 
         bldr.RegisterType<ServerHeartbeatTimer>()
             .AsSelf().AsImplementedInterfaces()
