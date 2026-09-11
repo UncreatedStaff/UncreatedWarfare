@@ -135,19 +135,39 @@ public class ProjectileSolver : ILevelHostedService, IDisposable
         return UniTask.CompletedTask;
     }
 
+    async UniTask ILevelHostedService.UnloadLevelAsync(CancellationToken token)
+    {
+        _isInitialized = false;
+        StopSimulating();
+        _physxScene = default;
+        try
+        {
+            AsyncOperation? op =SceneManager.UnloadSceneAsync(_simScene);
+            if (op != null)
+                await op;
+        }
+        catch (ArgumentException) { }
+    }
+
     private void FixedUpdate()
     {
         // because Physics.autoSimulation is turned off, this continues to simulate the main physics scene.
         _mainPhysxScene.Simulate(Time.fixedDeltaTime);
     }
 
-    public void Dispose()
+    private void StopSimulating()
     {
         if (Interlocked.Exchange(ref _isSetUp, 0) == 0)
             return;
 
         Physics.simulationMode = SimulationMode.FixedUpdate;
         TimeUtility.physicsUpdated -= FixedUpdate;
+    }
+
+    public void Dispose()
+    {
+        _isInitialized = false;
+        StopSimulating();
     }
 
     private IEnumerator Simulate()
@@ -176,7 +196,9 @@ public class ProjectileSolver : ILevelHostedService, IDisposable
 
             DetectComponent c = transform.gameObject.AddComponent<DetectComponent>();
 
+#if PROJECTILE_TRACERS
             c.Logger = _logger;
+#endif
             c.IgnoreTransform = component.Rocket.ignoreTransform;
 
             float fixedDeltaTime = Time.fixedDeltaTime;
@@ -239,7 +261,9 @@ public class ProjectileSolver : ILevelHostedService, IDisposable
 
     private class DetectComponent : MonoBehaviour
     {
+#if PROJECTILE_TRACERS
         public ILogger<ProjectileSolver>? Logger;
+#endif
 
         public Vector3 LastPosition;
         public bool HitOne;

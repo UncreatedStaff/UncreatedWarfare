@@ -19,7 +19,7 @@ namespace Uncreated.Warfare.Zones;
 /// <summary>
 /// Stores a full list of active zones.
 /// </summary>
-public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
+public class ZoneStore : IHostedService, ILevelHostedService, IEarlyLevelHostedService, IDisposable
 {
     private readonly List<IZoneProvider> _zoneProviders;
     private int _init;
@@ -62,38 +62,75 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
 
     async UniTask IHostedService.StartAsync(CancellationToken token)
     {
-        if (Level.isLoaded && _init == 0)
+        // flagData loads first
+        if (LevelNavigation.flagData != null && _init == 0)
         {
             await Initialize(token);
         }
     }
 
+    UniTask IHostedService.StopAsync(CancellationToken token) => UniTask.CompletedTask;
+
+    public async UniTask EarlyLoadLevelAsync(CancellationToken token)
+    {
+        foreach (IEarlyLevelHostedService zoneProvider in _zoneProviders.OfType<IEarlyLevelHostedService>())
+        {
+            await zoneProvider.EarlyLoadLevelAsync(token);
+            await UniTask.SwitchToMainThread(token);
+        }
+
+        if (_init == 0)
+            await Initialize(token);
+    }
+
+    async UniTask ILevelHostedService.LoadLevelAsync(CancellationToken token)
+    {
+        foreach (ILevelHostedService zoneProvider in _zoneProviders.OfType<ILevelHostedService>())
+        {
+            await zoneProvider.LoadLevelAsync(token);
+            await UniTask.SwitchToMainThread(token);
+        }
+
+        if (_init == 0)
+            await Initialize(token);
+    }
+
+    async UniTask ILevelHostedService.UnloadLevelAsync(CancellationToken token)
+    {
+        foreach (ILevelHostedService zoneProvider in _zoneProviders.OfType<ILevelHostedService>())
+        {
+            await zoneProvider.UnloadLevelAsync(token);
+            await UniTask.SwitchToMainThread(token);
+        }
+
+        _init = 0;
+        Zones = ImmutableArray<Zone>.Empty;
+        DisposeProximityZones();
+    }
+
     /// <inheritdoc />
     public void Dispose()
     {
-        if (ProximityZones.IsDefault)
+        foreach (IDisposable disp in _zoneProviders.OfType<IDisposable>())
+        {
+            disp.Dispose();
+        }
+
+        DisposeProximityZones();
+    }
+
+    private void DisposeProximityZones()
+    {
+        ImmutableArray<ZoneProximity> proxZones = ProximityZones;
+        if (proxZones.IsDefault)
             return;
-        
-        foreach (ZoneProximity prox in ProximityZones)
+
+        ProximityZones = ImmutableArray<ZoneProximity>.Empty;
+        foreach (ZoneProximity prox in proxZones)
         {
             if (prox.Proximity is IDisposable disp)
                 disp.Dispose();
         }
-
-        ProximityZones = ImmutableArray<ZoneProximity>.Empty;
-    }
-
-    UniTask IHostedService.StopAsync(CancellationToken token)
-    {
-        return UniTask.CompletedTask;
-    }
-
-    public UniTask EarlyLoadLevelAsync(CancellationToken token)
-    {
-        if (_init == 0)
-            return Initialize(token);
-
-        return UniTask.CompletedTask;
     }
 
     /// <summary>
@@ -115,7 +152,6 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
 
         Zones = zones.DrainToImmutable();
         _logger.LogInformation("Discovered {0} zone(s) with {1} provider(s).", Zones.Length, _zoneProviders.Count);
-        _zoneProviders.Clear();
 
         if (!IsGlobal)
             return;

@@ -9,12 +9,14 @@ public sealed class StrategyMapsConfiguration : BaseAlternateConfigurationFile
 {
     public IReadOnlyList<MapTableInfo> MapTables { get; private set; } = null!;
 
-    public StrategyMapsConfiguration(IServiceProvider serviceProvider) : base(serviceProvider, "StrategyMaps.yml", mapSpecific: false)
+    public StrategyMapsConfiguration(IServiceProvider serviceProvider) : base(serviceProvider, "StrategyMaps.yml", mapSpecific: false) { }
+
+    protected override void HandleLoaded()
     {
-        HandleChange();
+        HandleChange(true);
     }
 
-    protected override void HandleChange()
+    protected override void HandleChange(bool isMapChange)
     {
         List<MapTableInfo> mapTables = GetSection("MapTables").Get<List<MapTableInfo>>() ?? new List<MapTableInfo>(0);
 

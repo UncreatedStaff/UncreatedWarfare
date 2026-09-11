@@ -19,7 +19,7 @@ public class AssetConfiguration : BaseAlternateConfigurationFile
 
     }
 
-    protected override void HandleChange()
+    protected override void HandleChange(bool isMapChange)
     {
         _cache.Clear();
     }

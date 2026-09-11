@@ -13,7 +13,7 @@ public sealed class KitWeaponTextService : BaseAlternateConfigurationFile
     public KitWeaponTextService(IServiceProvider serviceProvider) : base(serviceProvider, Path.Combine("Kits", "Ignored Weapons.yml"), mapSpecific: false)
     {
         _blacklist = new List<IAssetLink<ItemGunAsset>>(2);
-        HandleChange();
+        HandleChange(true);
     }
 
     public bool IsBlacklisted(IAssetLink<Asset> asset)
@@ -32,7 +32,7 @@ public sealed class KitWeaponTextService : BaseAlternateConfigurationFile
         }
     }
 
-    protected override void HandleChange()
+    protected override void HandleChange(bool isMapChange)
     {
         lock (_blacklist)
         {

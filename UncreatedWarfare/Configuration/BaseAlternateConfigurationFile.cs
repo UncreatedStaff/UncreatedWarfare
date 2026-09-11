@@ -66,8 +66,7 @@ public abstract class BaseAlternateConfigurationFile : IConfiguration, IDisposab
         _configuration = ConfigurationHelper.EmptySection;
         UnderlyingConfiguration = _configuration;
 
-        // flagData is the first thing to load when the scene is loaded
-        if (_mapScheduler == null || LevelNavigation.flagData != null)
+        if (_mapScheduler == null)
         {
             TryInit();
         }
@@ -75,6 +74,13 @@ public abstract class BaseAlternateConfigurationFile : IConfiguration, IDisposab
         {
             SceneManager.sceneLoaded += OnSceneLoaded;
             _hasSceneLoaded = 1;
+
+            // level is already loaded
+            // flagData is the first thing to load when the scene is loaded
+            if (LevelNavigation.flagData != null)
+            {
+                TryInit();
+            }
         }
     }
 
@@ -83,16 +89,13 @@ public abstract class BaseAlternateConfigurationFile : IConfiguration, IDisposab
         if (arg0.buildIndex != Level.BUILD_INDEX_GAME)
             return;
 
-        if (Interlocked.Exchange(ref _hasSceneLoaded, 0) == 1)
-        {
-            SceneManager.sceneLoaded -= OnSceneLoaded;
-        }
-        TryInit();
+        // forceReload for map changing
+        TryInit(forceReload: true);
     }
 
-    private bool TryInit()
+    private bool TryInit(bool forceReload = false)
     {
-        if (IsLoaded)
+        if (IsLoaded && !forceReload)
             return true;
 
         // for configs that are either map specific or could have map overrides
@@ -107,10 +110,18 @@ public abstract class BaseAlternateConfigurationFile : IConfiguration, IDisposab
             return false;
         }
 
+        bool isMapChange = false;
+
         lock (this)
         {
             if (IsLoaded)
-                return true;
+            {
+                if (!forceReload)
+                    return true;
+                isMapChange = true;
+            }
+
+            Interlocked.Exchange(ref _reloadToken, null)?.Dispose();
 
             string homeDir = _module.HomeDirectory;
             string path;
@@ -131,6 +142,7 @@ public abstract class BaseAlternateConfigurationFile : IConfiguration, IDisposab
                 throw new FileNotFoundException($"Missing required configuration file for {Accessor.ExceptionFormatter.Format(GetType())}: \"{filePath}\".");
             }
 
+            (Interlocked.Exchange(ref _configuration, ConfigurationHelper.EmptySection) as IDisposable)?.Dispose();
             ConfigurationBuilder builder = new ConfigurationBuilder();
             ConfigurationHelper.AddSourceWithMapOverride(builder, WarfareModule.Singleton.FileProvider, filePath, optional: _optional, reloadOnChange: _reloadable);
             _configuration = builder.Build();
@@ -145,7 +157,7 @@ public abstract class BaseAlternateConfigurationFile : IConfiguration, IDisposab
                         {
                             await UniTask.SwitchToMainThread();
                             WarfareModule.Singleton.GlobalLogger.LogInformation($"Configuration file reloaded: {Path.GetFileName(filePath)}");
-                            HandleChange();
+                            HandleChange(false);
                             OnChange?.Invoke(this);
                         });
                     });
@@ -156,14 +168,18 @@ public abstract class BaseAlternateConfigurationFile : IConfiguration, IDisposab
             IsLoaded = true;
         }
 
-        HandleLoaded();
+        if (isMapChange)
+            HandleChange(true);
+        else
+            HandleLoaded();
         return true;
     }
 
     /// <summary>
     /// Invoked by the base class when a change occurs. No need to call base implementation.
     /// </summary>
-    protected virtual void HandleChange() { }
+    /// <param name="isMapChange"></param>
+    protected virtual void HandleChange(bool isMapChange) { }
 
     /// <summary>
     /// Invoked by the base class when the first load occurs. No need to call base implementation.

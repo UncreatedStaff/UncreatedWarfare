@@ -89,6 +89,12 @@ public class ElectricalGridService : ILevelHostedService, ILayoutHostedService
         return UniTask.CompletedTask;
     }
 
+    UniTask ILevelHostedService.UnloadLevelAsync(CancellationToken token)
+    {
+        Enabled = false;
+        return UniTask.CompletedTask;
+    }
+
     public void CheckPowerForAllBarricades()
     {
         if (RefreshIsConnectedToPower == null)

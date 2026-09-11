@@ -1,5 +1,6 @@
 using Autofac.Builder;
 using DanielWillett.ReflectionTools;
+using Humanizer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileSystemGlobbing;
 using Microsoft.Extensions.FileSystemGlobbing.Abstractions;
@@ -50,7 +51,7 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
     // ILevelHostedService would take so long that the level would be loaded after initialization,
     // then it would finish the OnLevelLoaded callback so hosting would run twice for the first layout.
     private bool _hasLevelLoaded;
-    private bool _isFirstLoadout;
+    private bool _isFirstLoadout, _isFirstLoadoutOnMap;
 
     private readonly string _layoutDir;
 
@@ -107,6 +108,7 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         IsLoading = true;
 
         _isFirstLoadout = true;
+        _isFirstLoadoutOnMap = true;
         _loadoutStartSemaphore = new SemaphoreSlim(0, 1);
 
         _layoutDir = Path.Combine(warfare.HomeDirectory, "Layouts");
@@ -147,6 +149,17 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
 
         _loadoutStartSemaphore.Dispose();
 
+        await UnloadLevel(token);
+
+#if TELEMETRY
+        _activitySource.Dispose();
+#endif
+    }
+
+    public async UniTask UnloadLevel(CancellationToken token)
+    {
+        await _warfare.InvokeLevelUnloaded(token);
+
         if (_warfare.IsLayoutActive())
         {
             Layout layout = _warfare.GetActiveLayout();
@@ -169,9 +182,8 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
             }
         }
 
-#if TELEMETRY
-        _activitySource.Dispose();
-#endif
+        _isFirstLoadoutOnMap = true;
+        _hasLevelLoaded = false;
     }
 
     private void OnSceneLoded(Scene scene, LoadSceneMode mode)
@@ -316,7 +328,7 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         activity?.AddTag("source", new StackTrace(1).ToString());
 #endif
 
-        if (_isFirstLoadout)
+        if (_isFirstLoadout && NextLayout == null)
         {
             NextLayout = TryResolveStartupLayout();
         }
@@ -345,7 +357,7 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
 #endif
 
         // stops players from joining both before the first layout starts and between layouts.
-        if (!_isFirstLoadout)
+        if (!_isFirstLoadoutOnMap)
             await _loadoutStartSemaphore.WaitAsync(token);
         try
         {
@@ -395,7 +407,7 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
                     endActivity?.SetStatus(ActivityStatusCode.Ok);
 #endif
                 }
-                else
+                else if (_isFirstLoadout)
                 {
                     // lock is on by default on startup.
                     playerJoinLockTaken = true;
@@ -435,9 +447,25 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         finally
         {
             _isFirstLoadout = false;
+            _isFirstLoadoutOnMap = false;
             if (!IsLoading)
                 _loadoutStartSemaphore.Release();
         }
+    }
+
+    private static void ParseGamemodeAndLayoutName(ReadOnlySpan<char> input, out ReadOnlySpan<char> gamemodeName, out ReadOnlySpan<char> layoutName)
+    {
+        // not a path, supply a gamemode instead.
+        // ex. "Invasion:Armored Assault I" or just "Invasion"
+        // (GamemodeName[:LayoutName])
+        gamemodeName = input;
+        int separator = gamemodeName.IndexOf(':');
+        layoutName = ReadOnlySpan<char>.Empty;
+        if (separator <= 0 || separator + 1 >= gamemodeName.Length)
+            return;
+
+        layoutName = gamemodeName.Slice(separator + 1);
+        gamemodeName = gamemodeName.Slice(0, separator);
     }
 
     private FileInfo? TryResolveStartupLayout()
@@ -449,74 +477,15 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         }
 
         _logger.LogTrace($"Attempting to resolve startup layout from config: \"{startupLayout}\".");
-
-        string path = Path.Combine(_layoutDir, startupLayout);
-
-        if (File.Exists(path))
-        {
-            if (YamlUtility.CheckMatchesMapFilter(path))
-            {
-                _logger.LogInformation($"Found startup layout {startupLayout}.");
-                return new FileInfo(path);
-            }
-
-            _logger.LogWarning($"Startup layout {startupLayout} not for the current map.");
-            return null;
-        }
-        
-        if (Path.GetExtension(path.AsSpan()).Equals(".yml", StringComparison.OrdinalIgnoreCase))
+        using LayoutInfo? layout = SelectLayoutByName(startupLayout);
+        if (layout == null)
         {
             _logger.LogWarning($"Startup layout {startupLayout} not found.");
             return null;
         }
 
-        List<LayoutInfo?> files = GetBaseLayoutFiles()
-            .Select(x => ReadLayoutInfo(x.FullName, false))
-            .ToList();
-
-        try
-        {
-            // not a path, supply a gamemode instead.
-            // ex. "Invasion:Armored Assault I" or just "Invasion"
-            // (GamemodeName[:LayoutName])
-            ReadOnlySpan<char> gamemodeName = startupLayout;
-            int separator = gamemodeName.IndexOf(':');
-            ReadOnlySpan<char> layoutName = ReadOnlySpan<char>.Empty;
-            if (separator > 0 && separator + 1 < gamemodeName.Length)
-            {
-                layoutName = gamemodeName.Slice(separator + 1);
-                gamemodeName = gamemodeName.Slice(0, separator);
-            }
-
-            foreach (LayoutInfo? file in files)
-            {
-                if (file == null)
-                    continue;
-
-                if (!gamemodeName.Equals(file.Configuration.GamemodeName, StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                if (!layoutName.IsEmpty && !layoutName.Equals(file.Configuration.LayoutName, StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                _logger.LogInformation($"Selected matching startup layout: {Path.GetRelativePath(_layoutDir, file.FilePath)}.");
-                return new FileInfo(file.FilePath);
-            }
-
-            if (layoutName.IsEmpty)
-                _logger.LogWarning($"No matching layouts found for gamemode: {gamemodeName}.");
-            else
-                _logger.LogWarning($"No matching layouts found for gamemode: {gamemodeName} on layout {layoutName}.");
-        }
-        finally
-        {
-            foreach (LayoutInfo? file in files)
-            {
-                file?.Dispose();
-            }
-        }
-
-        return null;
+        _logger.LogInformation($"Found startup layout {startupLayout}: {layout.DisplayName}.");
+        return new FileInfo(layout.FilePath);
     }
 
     /// <summary>
@@ -913,22 +882,27 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         };
     }
 
-    public LayoutInfo? SelectLayoutByName(string layoutName)
+    public LayoutInfo? SelectLayoutByName(string layoutPath, bool thisMapOnly = true)
     {
-        LayoutInfo? layout = ReadLayoutInfo(Path.Combine(
-            _layoutDir,
-            !layoutName.EndsWith(".yml", StringComparison.OrdinalIgnoreCase) ? layoutName + ".yml" : layoutName),
-            false
-        );
-
-        if (layout != null)
-            return layout;
+        string path = Path.Combine(_layoutDir, !layoutPath.EndsWith(".yml", StringComparison.OrdinalIgnoreCase) ? layoutPath + ".yml" : layoutPath);
+        if (!thisMapOnly || YamlUtility.CheckMatchesMapFilter(path))
+        {
+            LayoutInfo? layout = ReadLayoutInfo(path, false);
+            if (layout != null)
+                return layout;
+        }
 
         List<FileInfo> all = GetBaseLayoutFiles();
         FileInfo? single = null;
+        bool foundMultiple = false;
         foreach (FileInfo info in all)
         {
-            if (!info.Name.Equals(layoutName, StringComparison.InvariantCultureIgnoreCase))
+            if (!info.Name.Equals(layoutPath, StringComparison.InvariantCultureIgnoreCase))
+            {
+                continue;
+            }
+
+            if (thisMapOnly && !YamlUtility.CheckMatchesMapFilter(path))
             {
                 continue;
             }
@@ -936,13 +910,50 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
             if (single == null)
                 single = info;
             else
-                return null;
+            {
+                foundMultiple = true;
+                break;
+            }
         }
 
-        if (single == null)
-            return null;
+        if (single != null && !foundMultiple)
+        {
+            return ReadLayoutInfo(single.FullName, false);
+        }
 
-        return ReadLayoutInfo(single.FullName, false);
+        ParseGamemodeAndLayoutName(layoutPath, out ReadOnlySpan<char> gamemodeName, out ReadOnlySpan<char> layoutName);
+
+        foreach (FileInfo info in all)
+        {
+            if (thisMapOnly && !YamlUtility.CheckMatchesMapFilter(path))
+            {
+                continue;
+            }
+
+            LayoutInfo? file = ReadLayoutInfo(info.FullName, false);
+            if (file == null)
+                continue;
+
+            try
+            {
+                if (!gamemodeName.Equals(file.Configuration.GamemodeName, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                if (!layoutName.IsEmpty && !layoutName.Equals(file.Configuration.LayoutName, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                // avoid finally dispose
+                LayoutInfo rtn = file;
+                file = null;
+                return rtn;
+            }
+            finally
+            {
+                file?.Dispose();
+            }
+        }
+
+        return null;
     }
 
     /// <summary>

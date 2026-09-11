@@ -161,11 +161,11 @@ public class CaptureUI : UnturnedUI, IHudUIListener
     /// <inheritdoc />
     public void Restore(WarfarePlayer? player)
     {
-        Layout layout = _module.GetActiveLayout();
-        IFlagRotationService? rot = layout.ServiceProvider.ResolveOptional<IFlagRotationService>();
-        DefaultCaptureUIFlagEvents? uiEvents = layout.ServiceProvider.ResolveOptional<DefaultCaptureUIFlagEvents>();
+        Layout? layout = _module.IsLayoutActive() ? _module.GetActiveLayout() : null;
+        IFlagRotationService? rot = layout?.ServiceProvider.ResolveOptional<IFlagRotationService>();
+        DefaultCaptureUIFlagEvents? uiEvents = layout?.ServiceProvider.ResolveOptional<DefaultCaptureUIFlagEvents>();
 
-        if (layout.ActivePhase is not ActionPhase)
+        if (layout?.ActivePhase is not ActionPhase)
         {
             return;
         }

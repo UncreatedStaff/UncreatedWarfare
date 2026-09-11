@@ -24,7 +24,7 @@ public sealed class DefaultLoadoutItemsConfiguration : BaseAlternateConfiguratio
     {
         _logger = logger;
         _configuration = new IReadOnlyList<IItem>[EnumUtility.GetMaximumValue<Class>() - MinimumClass + 1];
-        HandleChange();
+        HandleChange(true);
     }
 
     /// <summary>
@@ -39,7 +39,7 @@ public sealed class DefaultLoadoutItemsConfiguration : BaseAlternateConfiguratio
         return _configuration[index];
     }
 
-    protected override void HandleChange()
+    protected override void HandleChange(bool isMapChange)
     {
         List<IItem> buffer = new List<IItem>(16);
         Array.Clear(_configuration, 0, _configuration.Length);

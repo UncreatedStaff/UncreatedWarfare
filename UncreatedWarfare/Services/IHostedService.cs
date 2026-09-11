@@ -22,6 +22,11 @@ public interface ILevelHostedService
     /// Executes when the level finishes loading and all assets are loaded but before the first session starts.
     /// </summary>
     UniTask LoadLevelAsync(CancellationToken token);
+
+    /// <summary>
+    /// Executes when the level is unloaded during a map change or game unload.
+    /// </summary>
+    UniTask UnloadLevelAsync(CancellationToken token) => UniTask.CompletedTask;
 }
 
 public interface IEarlyLevelHostedService

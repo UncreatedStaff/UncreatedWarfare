@@ -372,6 +372,12 @@
         <Publicize Include="Assembly-CSharp:SDG.Unturned.AssetsWorker.AssetDefinition" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.Assets.LoadFile" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.Assets.AddAssetsFromOriginToCurrentMapping" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.Assets+AssetMapping" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.Assets.currentAssetMapping" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.Assets.assetOrigins" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.Assets.allMasterBundles" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.Level.instance" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.Level.ReturnToMainMenu" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.NetMessages" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.CommandLogMemoryUsage.OnExecuted" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.ClientAssetIntegrity" />

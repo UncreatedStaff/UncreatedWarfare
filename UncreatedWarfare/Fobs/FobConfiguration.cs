@@ -34,17 +34,20 @@ public sealed class FobConfiguration : BaseAlternateConfigurationFile
     /// <summary>
     /// Home for storing FOB and buildable data.
     /// </summary>
-    public FobConfiguration(IServiceProvider serviceProvider) : base(serviceProvider, "Fobs.yml")
+    public FobConfiguration(IServiceProvider serviceProvider) : base(serviceProvider, "Fobs.yml") { }
+
+    protected override void HandleLoaded()
     {
-        HandleChange();
+        HandleChange(true);
     }
 
+    /// <param name="isMapChange"></param>
     /// <inheritdoc />
     [MemberNotNull(nameof(SupplyCrates))]
     [MemberNotNull(nameof(ThrowableVehicleSupplyCrates))]
     [MemberNotNull(nameof(ThrowableAmmoBags))]
     [MemberNotNull(nameof(Shovelables))]
-    protected override void HandleChange()
+    protected override void HandleChange(bool isMapChange)
     {
         List<SupplyCrateInfo>? supplyCrates = UnderlyingConfiguration.GetSection("SupplyCrates").Get<List<SupplyCrateInfo>>();
         supplyCrates?.ForEach(crate =>

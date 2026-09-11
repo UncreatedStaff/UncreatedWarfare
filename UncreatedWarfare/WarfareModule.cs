@@ -1364,6 +1364,8 @@ public sealed class WarfareModule
 
             await EventDispatcher.WaitForEvents();
 
+            await InvokeLevelUnloaded(token);
+
             Object.Destroy(_gameObjectHost);
             _gameObjectHost = null!;
 
@@ -1708,6 +1710,73 @@ public sealed class WarfareModule
                 RecordActivityException(hostActivity, ex);
 #endif
                 break;
+            }
+        }
+    }
+
+    internal async UniTask InvokeLevelUnloaded(CancellationToken token, bool completeInstantly = false)
+    {
+        if (!IsLayoutActive())
+        {
+            return;
+        }
+
+#if TELEMETRY
+        using Activity? activity = _activitySource.StartActivity("InvokeLevelUnloaded");
+#endif
+        List<ILevelHostedService> hostedServices = GetActiveLayout().ServiceProvider
+            .Resolve<IEnumerable<ILevelHostedService>>()
+            .OrderByDescending(x => x.GetType().GetPriority())
+            .ToList();
+
+        await UniTask.SwitchToMainThread(token);
+
+        _logger.LogDebug("Unhosting {0} services on level unload.", hostedServices.Count);
+        UnhostingTask[] tasks = new UnhostingTask[hostedServices.Count];
+        for (int i = 0; i < hostedServices.Count; i++)
+        {
+            ILevelHostedService hostedService = hostedServices[i];
+#if TELEMETRY
+            using Activity? hostActivity = _activitySource.CreateActivity(
+                $"Unhost {Accessor.ExceptionFormatter.Format(hostedService.GetType())}",
+                ActivityKind.Internal,
+                parentContext: activity?.Context ?? default
+            );
+#endif
+
+            try
+            {
+
+#if TELEMETRY
+                hostActivity?.Start();
+                Activity.Current = hostActivity;
+#endif
+                _logger.LogDebug("Hosting {0} on level unload.", hostedService.GetType());
+                tasks[i] = hostedService.UnloadLevelAsync(token);
+            }
+            catch (Exception ex)
+            {
+                tasks[i] = UniTask.FromException(ex);
+            }
+#if TELEMETRY
+            tasks[i].Activity = hostActivity;
+#endif
+        }
+
+        try
+        {
+            await UniTask.WhenAll(tasks.Select(x => x.Task));
+        }
+        catch
+        {
+            _logger.LogError("Errors encountered while level-unhosting:");
+            FormattingUtility.PrintTaskErrors(_logger, tasks, hostedServices);
+        }
+        finally
+        {
+            for (int i = 0; i < tasks.Length; ++i)
+            {
+                tasks[i].Dispose();
             }
         }
     }

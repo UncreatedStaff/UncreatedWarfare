@@ -1,13 +1,19 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using SDG.Provider;
 using System;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
 using Uncreated.Warfare.Database.Abstractions;
+using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Models.Seasons;
 using Uncreated.Warfare.Networking;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Util;
+using UnityEngine.SceneManagement;
 
 namespace Uncreated.Warfare.Maps;
 
@@ -21,18 +27,30 @@ public class MapSwitchService
     private readonly WarfareModule _module;
     private readonly IPlayerService _playerService;
     private readonly ILogger<MapSwitchService> _logger;
+    private readonly LayoutFactory _layoutFactory;
+
+    private DateTime? _estimatedCompletedTime;
+
+    private const float WorkshopCacheInvalidateSeconds = 60;
 
     /// <summary>
     /// Maximum amount of time to wait for all players to disconnect after sending a relay request.
     /// </summary>
     private static readonly TimeSpan WaitForPlayersToRelayTime = TimeSpan.FromSeconds(2);
 
-    public MapSwitchService(MapScheduler mapScheduler, IGameDataDbContext dbContext, WarfareModule module, IPlayerService playerService, ILogger<MapSwitchService> logger)
+    public MapSwitchService(
+        MapScheduler mapScheduler,
+        IGameDataDbContext dbContext,
+        WarfareModule module,
+        IPlayerService playerService,
+        LayoutFactory layoutFactory,
+        ILogger<MapSwitchService> logger)
     {
         _mapScheduler = mapScheduler;
         _dbContext = dbContext;
         _module = module;
         _playerService = playerService;
+        _layoutFactory = layoutFactory;
         _logger = logger;
 
         if (ConfigDataField == null)
@@ -45,21 +63,46 @@ public class MapSwitchService
             _logger.LogWarning("Provider.LoadGameplayConfig not found.");
     }
 
+    /// <summary>
+    /// Calculates the estimated time that it will take to switch levels from the current time.
+    /// </summary>
+    public TimeSpan? GetEstimatedTimeRemaining()
+    {
+        DateTime? estCompletedTime = _estimatedCompletedTime;
+        if (!estCompletedTime.HasValue)
+            return null;
+
+        TimeSpan remaining = estCompletedTime.Value - DateTime.UtcNow;
+        return remaining.Ticks >= 0 ? remaining : null;
+    }
+
+    /// <summary>
+    /// Switches the server's map to another map given it's data configured in the 'maps' table in the database.
+    /// </summary>
+    /// <exception cref="ArgumentException">The map isn't installed, even after a workshop update.</exception>
     public async UniTask SwitchMapAsync(MapData map, CancellationToken token = default)
     {
+        _estimatedCompletedTime = null;
+
+        TimeSpan extraTimeToComplete = TimeSpan.FromSeconds(2d);
+
         string currentMapName = Level.info.name;
         MapData? currentMap = await _dbContext.Maps
             .AsNoTracking()
             .Include(x => x.Dependencies)
+            .OrderBy(x => x.Id)
             .FirstOrDefaultAsync(x => x.DisplayName == currentMapName, token);
+
+        using IDisposable? hideHud = _module.ServiceProvider.ResolveOptional<HudManager>()?.HideHud();
 
         await UniTask.SwitchToMainThread(token);
 
         LevelInfo? mapInfo = Level.getLevel(map.DisplayName);
+        UnloadInfo? unloadInfo = null;
         if (mapInfo == null)
         {
-            await TryInstallWorkshopAndLoadItems(currentMap, map, token);
-            await UniTask.SwitchToMainThread(token);
+            unloadInfo = await TryInstallWorkshopAndLoadItems(currentMap, map, token);
+            await UniTask.SwitchToMainThread(CancellationToken.None);
 
             mapInfo = Level.getLevel(map.DisplayName);
             if (mapInfo == null)
@@ -68,13 +111,38 @@ public class MapSwitchService
             }
         }
 
-        await _playerService.TakePlayerConnectionLock(token);
+        await _layoutFactory.UnloadLevel(CancellationToken.None);
+
+        await _playerService.TakePlayerConnectionLock(CancellationToken.None);
         try
         {
-            await UniTask.SwitchToMainThread(token);
-            token.ThrowIfCancellationRequested();
+            await UniTask.SwitchToMainThread();
 
-            await SwitchMapIntl(mapInfo, map);
+            if (_playerService.OnlinePlayers.Count > 0)
+            {
+                // wait at least 60 seconds since the most recently joined player joined the server so their workshop query invalidates
+                WarfarePlayer mostRecentJoiner = _playerService.OnlinePlayers.Aggregate((x, next) => x.JoinTime > next.JoinTime ? x : next);
+                DateTime now = DateTime.UtcNow;
+                TimeSpan timeSinceMostRecentPlayerJoined = now - mostRecentJoiner.JoinTime;
+                _logger.LogTrace($"Time since {mostRecentJoiner} joined: {timeSinceMostRecentPlayerJoined}.");
+                if (timeSinceMostRecentPlayerJoined.TotalSeconds < WorkshopCacheInvalidateSeconds)
+                {
+                    TimeSpan delay = TimeSpan.FromSeconds(WorkshopCacheInvalidateSeconds) - timeSinceMostRecentPlayerJoined;
+                    _logger.LogInformation($"Waiting {delay} to invalidate {mostRecentJoiner}'s workshop cache.");
+                    _estimatedCompletedTime = now.Add(delay + extraTimeToComplete);
+                    await UniTask.Delay(delay, cancellationToken: CancellationToken.None);
+                    await UniTask.SwitchToMainThread();
+                }
+            }
+
+            foreach (WarfarePlayer player in _playerService.OnlinePlayers)
+            {
+                // todo
+            }
+
+            _estimatedCompletedTime ??= DateTime.UtcNow.Add(extraTimeToComplete);
+
+            await SwitchMapIntl(mapInfo, unloadInfo, map);
 
             await UniTask.SwitchToMainThread();
 
@@ -83,13 +151,23 @@ public class MapSwitchService
         }
         finally
         {
+            _estimatedCompletedTime = null;
             _playerService.ReleasePlayerConnectionLock();
         }
     }
 
-    private async Task TryInstallWorkshopAndLoadItems(MapData? currentMap, MapData map, CancellationToken token)
+    private int _hasInstalledEvent;
+    private readonly List<TaskCompletionSource<object?>> _installationWaiters = new List<TaskCompletionSource<object?>>(1);
+
+    private async Task<UnloadInfo> TryInstallWorkshopAndLoadItems(MapData? currentMap, MapData map, CancellationToken token)
     {
+        token.ThrowIfCancellationRequested();
+
         List<ulong> workshopItemsToInstall = map.Dependencies.Where(x => !x.IsRemoved).Select(x => x.WorkshopId).ToList();
+        
+        if (map.WorkshopId.HasValue)
+            workshopItemsToInstall.Insert(0, map.WorkshopId.Value);
+
         List<ulong> workshopItemsToRemove = map.Dependencies.Where(x => x.IsRemoved).Select(x => x.WorkshopId).ToList();
 
         if (currentMap != null)
@@ -100,11 +178,20 @@ public class MapSwitchService
             workshopItemsToRemove.AddRange(currentMap.Dependencies.Where(x => !x.IsRemoved).Select(x => x.WorkshopId));
         }
 
+        workshopItemsToRemove.RemoveAll(workshopItemsToInstall.Contains);
         workshopItemsToRemove.RemoveAll(x => !DedicatedUGC.ugc.Exists(ugc => ugc.publishedFileID.m_PublishedFileId == x));
+
         workshopItemsToInstall.RemoveAll(x => DedicatedUGC.ugc.Exists(ugc => ugc.publishedFileID.m_PublishedFileId == x));
 
-        workshopItemsToRemove.RemoveAll(workshopItemsToInstall.Contains);
+        await UniTask.SwitchToMainThread(token);
 
+        UnloadInfo unloadInfo = new UnloadInfo(this)
+        {
+            BundlesToUnload = new List<MasterBundleConfig>(4),
+            OriginsToUnload = new List<AssetOrigin>(4)
+        };
+
+        bool anyWorkshopChanges = false;
         foreach (ulong item in workshopItemsToRemove)
         {
             int index = DedicatedUGC.ugc.FindIndex(x => x.publishedFileID.m_PublishedFileId == item);
@@ -115,15 +202,105 @@ public class MapSwitchService
             }
 
             SteamContent ugc = DedicatedUGC.ugc[index];
+            anyWorkshopChanges |= WorkshopUtility.RemoveModIdFromServerMenu(new PublishedFileId_t(item), advertise: false);
             DedicatedUGC.ugc.RemoveAt(index);
+            _logger.LogTrace($"Removed UGC item: {ugc.publishedFileID.m_PublishedFileId}.");
+
+            AssetOrigin origin = TempSteamworksWorkshop.FindOrAddOrigin(item);
+            unloadInfo.OriginsToUnload.Add(origin);
+            _logger.LogTrace($" + Discovered {origin.GetAssets().Count} asset(s) in {origin.name}.");
+
+            string bundlePath = ugc.path;
+            if (ugc.type == ESteamUGCType.MAP && WorkshopTool.findMapBundlesPath(ugc.path, out string mapBundlePath))
+            {
+                bundlePath = mapBundlePath;
+            }
+
+            if (Path.AltDirectorySeparatorChar != Path.DirectorySeparatorChar)
+            {
+                bundlePath = bundlePath.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+            }
+
+            for (int i = 0; i < Assets.allMasterBundles.Count; ++i)
+            {
+                MasterBundleConfig masterBundle = Assets.allMasterBundles[i];
+
+                char s;
+                // not within mod folder
+                if (!masterBundle.directoryPath.StartsWith(bundlePath, StringComparison.Ordinal)
+                    || (masterBundle.directoryPath.Length > bundlePath.Length &&
+                        (s = masterBundle.directoryPath[bundlePath.Length]) != Path.DirectorySeparatorChar &&
+                        s != Path.AltDirectorySeparatorChar))
+                {
+                    continue;
+                }
+
+                _logger.LogTrace($" + Discovered {masterBundle.assetBundleName} in {origin.name}.");
+                unloadInfo.BundlesToUnload.Add(masterBundle);
+            }
         }
 
         foreach (ulong item in workshopItemsToInstall)
         {
             DedicatedUGC.registerItemInstallation(item);
+            anyWorkshopChanges |= WorkshopUtility.AddModIdToServerMenu(new PublishedFileId_t(item), advertise: false);
+            _logger.LogTrace($"Registered UGC item: {item}.");
+        }
+        
+        if (anyWorkshopChanges)
+        {
+            WorkshopUtility.UpdateGameServerAdvertisement();
         }
 
-        DedicatedUGC.beginInstallingItems(false);
+        TaskCompletionSource<object?> waitForInstalled = new TaskCompletionSource<object?>(state: null);
+        if (Interlocked.Increment(ref _hasInstalledEvent) == 1)
+        {
+            DedicatedUGC.installed += OnFinishedInstalling;
+        }
+
+        await using CancellationTokenRegistration reg = token.Register(() =>
+        {
+            waitForInstalled.TrySetCanceled(token);
+        });
+
+        lock (_installationWaiters)
+        {
+            _installationWaiters.Add(waitForInstalled);
+        }
+
+        try
+        {
+            _logger.LogTrace("Installing new UGC items...");
+            DedicatedUGC.beginInstallingItems(false);
+
+            await waitForInstalled.Task;
+        }
+        finally
+        {
+            lock (_installationWaiters)
+            {
+                _installationWaiters.Remove(waitForInstalled);
+            }
+
+            if (Interlocked.Decrement(ref _hasInstalledEvent) == 0)
+            {
+                DedicatedUGC.installed -= OnFinishedInstalling;
+            }
+        }
+
+        _logger.LogTrace("Done installing new UGC items for map change.");
+        return unloadInfo;
+    }
+
+    private void OnFinishedInstalling()
+    {
+        lock (_installationWaiters)
+        {
+            foreach (TaskCompletionSource<object?> tcs in _installationWaiters.ToArray())
+            {
+                tcs.TrySetResult(null);
+            }
+        }
     }
 
     private static void RejectPending()
@@ -139,27 +316,56 @@ public class MapSwitchService
         }
     }
 
-    private async UniTask SwitchMapIntl(LevelInfo mapInfo, MapData map)
+    private class UnloadInfo(MapSwitchService mapSwitchService)
+    {
+        public required List<AssetOrigin> OriginsToUnload;
+        public required List<MasterBundleConfig> BundlesToUnload;
+
+        public async UniTask ApplyUnload(CancellationToken token = default)
+        {
+            await UniTask.SwitchToMainThread(token);
+
+            foreach (AssetOrigin origin in OriginsToUnload)
+            {
+                Assets.assetOrigins.Remove(origin);
+
+                IReadOnlyList<Asset> assetList = origin.GetAssets();
+                foreach (Asset asset in assetList)
+                {
+                    Assets.AssetMapping mapping = Assets.currentAssetMapping;
+
+                    EAssetType category = asset.assetCategory;
+                    if (category != EAssetType.NONE && asset.id != 0)
+                    {
+                        ((IDictionary<ushort, Asset>)mapping.legacyAssetsTable[category]).Remove(new KeyValuePair<ushort, Asset>(asset.id, asset));
+                    }
+
+                    ((IDictionary<Guid, Asset>)mapping.assetDictionary).Remove(new KeyValuePair<Guid, Asset>(asset.GUID, asset));
+                    mapping.assetList.Remove(asset);
+                }
+
+                mapSwitchService._logger.LogTrace($"Unloaded {assetList.Count} asset(s) from {origin.name}.");
+            }
+
+            foreach (MasterBundleConfig config in BundlesToUnload)
+            {
+                Assets.allMasterBundles.Remove(config);
+                config.unload();
+                mapSwitchService._logger.LogTrace($"Unloaded {config.assetBundleName}.");
+            }
+
+            await Resources.UnloadUnusedAssets();
+
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, true, true);
+        }
+    }
+
+    private async UniTask SwitchMapIntl(LevelInfo mapInfo, UnloadInfo? unloadInfo, MapData map)
     {
         _logger.LogInformation($"Switching map to {mapInfo.getLocalizedName()}...");
 
-        // advertise the map's mod on the server menu and remove the old map
-        ulong modId = map.WorkshopId ?? 0;
-        bool changedMods = false;
-        if (modId == 0 || (changedMods = WorkshopUtility.AddModIdToServerMenu(new PublishedFileId_t(modId), advertise: false)))
-        {
-            ulong oldModId = _mapScheduler.Current?.WorkshopId ?? 0;
-            if (oldModId != 0)
-            {
-                WorkshopUtility.RemoveModIdFromServerMenu(new PublishedFileId_t(oldModId));
-            }
-            else if (changedMods)
-            {
-                WorkshopUtility.UpdateGameServerAdvertisement();
-            }
-        }
-
         SteamGameServer.SetMapName(mapInfo.name);
+        Provider.map = map.DisplayName;
 
         // reject any players that are trying to join
         _logger.LogInformation("Relaying players...");
@@ -212,43 +418,90 @@ public class MapSwitchService
         _logger.LogDebug("Exiting level...");
         Level.exit();
 
-        while (Level.isExiting)
+        // unity requires that at least one scene is always loaded.
+        Scene tempScene = SceneManager.CreateScene("Uncreated.EmptyTempScene");
+        try
         {
-            await UniTask.NextFrame();
+            AsyncOperation? op = SceneManager.UnloadSceneAsync(Level.BUILD_INDEX_GAME);
+            if (op != null)
+            {
+                await op;
+                await UniTask.SwitchToMainThread();
+            }
+            else
+            {
+                _logger.LogWarning("Failed to unload game scene. We'll see what happens ig.");
+            }
+
+            _mapScheduler.NotifyMapSwitched(map);
+
+            if (LevelOnSceneLoaded != null)
+            {
+                Scene scene = SceneManager.GetSceneByBuildIndex(Level.BUILD_INDEX_MENU);
+                object? instance = LevelOnSceneLoaded.IsStatic ? null : Level.instance;
+                _logger.LogTrace("Invoking onSceneLoaded(MENU)...");
+                LevelOnSceneLoaded.Invoke(instance, [ scene, LoadSceneMode.Single ]);
+            }
+            else
+            {
+                _logger.LogWarning("Level.onSceneLoaded not found.");
+            }
+
+            _logger.LogDebug("Unloaded game scene.");
+
+            NetIdRegistry.Clear();
+
+            if (unloadInfo != null)
+            {
+                _logger.LogTrace("Unloading last map's assets...");
+                await unloadInfo.ApplyUnload();
+                await UniTask.SwitchToMainThread();
+            }
+
+            _logger.LogDebug("Level exited.");
+
+            // re-initialize config in case level has overrides
+            ConfigData? config = null;
+            if (ConfigDataField != null && ModeConfigDataField != null)
+            {
+                config = ConfigData.CreateDefault(false);
+                ConfigDataField.SetValue(null, config);
+            }
+
+            if (ModeConfigDataOverridesField != null && ModeConfigDataOverridesField.GetValue(null) is IDictionary dict)
+            {
+                dict.Clear();
+            }
+
+            if (LoadGameplayConfigMethod != null)
+            {
+                LoadGameplayConfigMethod.Invoke(null, [false]);
+            }
+
+            if (config != null && ModeConfigDataField != null)
+            {
+                ModeConfigDataField.SetValue(null, config.getModeConfig(Provider.mode));
+            }
+
+            _logger.LogDebug($"Loading {mapInfo.getLocalizedName()}...");
+            Level.load(mapInfo, true);
+            Provider.applyLevelModeConfigOverrides();
+
+            while (!Level.isLoaded)
+            {
+                await UniTask.NextFrame();
+            }
         }
-
-        _logger.LogDebug("Level exited.");
-
-        // re-initialize config in case level has overrides
-        ConfigData? config = null;
-        if (ConfigDataField != null && ModeConfigDataField != null)
+        finally
         {
-            config = ConfigData.CreateDefault(false);
-            ConfigDataField.SetValue(null, config);
-        }
-
-        if (ModeConfigDataOverridesField != null && ModeConfigDataOverridesField.GetValue(null) is IDictionary dict)
-        {
-            dict.Clear();
-        }
-
-        if (LoadGameplayConfigMethod != null)
-        {
-            LoadGameplayConfigMethod.Invoke(null, [ false ]);
-        }
-
-        if (config != null && ModeConfigDataField != null)
-        {
-            ModeConfigDataField.SetValue(null, config.getModeConfig(Provider.mode));
-        }
-
-        _logger.LogDebug($"Loading {mapInfo.getLocalizedName()}...");
-        Level.load(mapInfo, true);
-        Provider.applyLevelModeConfigOverrides();
-        
-        while (Level.isLoading)
-        {
-            await UniTask.NextFrame();
+            await UniTask.SwitchToMainThread();
+            try
+            {
+                AsyncOperation? op = SceneManager.UnloadSceneAsync(tempScene);
+                if (op != null)
+                    await op;
+            }
+            catch (ArgumentException) { }
         }
 
         _logger.LogDebug($"{mapInfo.getLocalizedName()} loaded.");
@@ -265,6 +518,15 @@ public class MapSwitchService
             null,
             CallingConventions.Any,
             [ typeof(bool) ],
+            null
+        );
+    private static readonly MethodInfo? LevelOnSceneLoaded =
+        typeof(Level).GetMethod(
+            "onSceneLoaded",
+            BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public,
+            null,
+            CallingConventions.Any,
+            [typeof(Scene), typeof(LoadSceneMode)],
             null
         );
 }

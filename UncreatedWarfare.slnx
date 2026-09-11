@@ -14,7 +14,7 @@
     <BuildType Project="Release" />
     <Platform Project="x64" />
     <Properties Name="DebuggerProjectSystem">
-      <Property Name="Arguments" Value="-batchmode -nographics +insecureserver/UncreatedSeason4" />
+      <Property Name="Arguments" Value="-batchmode -nographics -LogWorkshopAssets +insecureserver/UncreatedSeason4" />
       <Property Name="AttachLaunchAction" Value="No" />
       <Property Name="Environment" Value="Default" />
       <Property Name="Executable" Value="C:\SteamCMD\steamapps\common\U3DS\Unturned.exe" />

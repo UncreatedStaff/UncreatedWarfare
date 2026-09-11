@@ -69,8 +69,8 @@ public class KitRearmService : BaseAlternateConfigurationFile // WARNING: not re
         _magazineCosts ??= new float[(int)EnumUtility.GetMaximumValue<FirearmClass>() + 1];
     }
 
-    protected override void HandleLoaded() => HandleChange();
-    protected override void HandleChange()
+    protected override void HandleLoaded() => HandleChange(true);
+    protected override void HandleChange(bool isMapChange)
     {
         IConfigurationSection magazines = GetSection("Magazines");
 

@@ -1,9 +1,7 @@
-using DanielWillett.ReflectionTools;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using Uncreated.Warfare.Database;
@@ -98,6 +96,11 @@ public class MapScheduler : IAsyncEventListener<ServerWorkshopLoading>
         HasSelectedMap = true;
         Current = map;
         ApplyMapSetting(e, dbContext);
+    }
+
+    internal void NotifyMapSwitched(MapData mapData)
+    {
+        Current = mapData;
     }
 
     internal void ApplyMapSetting(ServerWorkshopLoading e, ISeasonsDbContext dbContext)

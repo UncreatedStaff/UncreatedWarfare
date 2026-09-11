@@ -12,11 +12,15 @@ public sealed class SquadConfiguration : BaseAlternateConfigurationFile
     public SquadConfiguration(IServiceProvider serviceProvider)
         : base(serviceProvider, "Squads.yml")
     {
-        HandleChange();
+
     }
-    
-    /// <inheritdoc />
-    protected override void HandleChange()
+
+    protected override void HandleLoaded()
+    {
+        HandleChange(true);
+    }
+
+    protected override void HandleChange(bool isMapChange)
     {
         KitClassesAllowedPerXTeammates = UnderlyingConfiguration.GetSection("KitClassesAllowedPerXTeammates").Get<Dictionary<Class, int>>() ?? new Dictionary<Class, int>();
     }

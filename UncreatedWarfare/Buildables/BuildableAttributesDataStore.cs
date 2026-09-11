@@ -2,7 +2,6 @@ using DanielWillett.ReflectionTools;
 using DanielWillett.SpeedBytes;
 using DanielWillett.SpeedBytes.Unity;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Uncreated.Warfare.Events;
@@ -161,6 +160,14 @@ public class BuildableAttributesDataStore : IHostedService, ILevelHostedService,
         if (toRemove.Count > 0)
             WriteToSave();
 
+        return UniTask.CompletedTask;
+    }
+
+    UniTask ILevelHostedService.UnloadLevelAsync(CancellationToken token)
+    {
+        // saved by SaveManager.onPreSave already
+        _barricadeAttributes.Clear();
+        _structureAttributes.Clear();
         return UniTask.CompletedTask;
     }
 

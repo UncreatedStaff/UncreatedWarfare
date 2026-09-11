@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Linq;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Maps;
@@ -25,12 +27,13 @@ internal sealed class DebugSwapMapCommand : IExecutableCommand
     public async UniTask ExecuteAsync(CancellationToken token)
     {
         if (!Context.HasArgs(1))
-            throw Context.SendCorrectUsage("/wdev map <name... >");
+            throw Context.SendCorrectUsage("/wdev map <name... (case sensitive)>");
 
         string? levelName = Context.GetRange(0);
         MapData? mapData = await _dbContext.Maps
             .AsNoTracking()
             .Include(x => x.Dependencies)
+            .OrderBy(x => x.Id)
             .FirstOrDefaultAsync(x => x.DisplayName == levelName, token);
 
         await UniTask.SwitchToMainThread(token);
@@ -41,7 +44,23 @@ internal sealed class DebugSwapMapCommand : IExecutableCommand
         }
 
         Context.ReplyString($"Switching to {mapData.DisplayName}...");
-        // the token will be cancelled when the player disconnects during the switching process, so don't use it
-        await _mapSwitchService.SwitchMapAsync(mapData, _module.UnloadToken);
+
+        // initialize the cached logger before the service scope is disposed
+        _ = Context.Logger;
+
+        _ = UniTask.Create(mapData, async mapData =>
+        {
+            try
+            {
+                // the token will be cancelled when the player disconnects during the switching process, so don't use it
+                await _mapSwitchService.SwitchMapAsync(mapData, _module.UnloadToken);
+
+                Context.Logger.LogInformation($"Finished switching maps to {mapData.DisplayName}.");
+            }
+            catch (Exception ex)
+            {
+                Context.Logger.LogError(ex, "Error switching maps.");
+            }
+        });
     }
 }

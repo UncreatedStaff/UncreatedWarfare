@@ -42,10 +42,10 @@ public sealed class CooldownManager : BaseAlternateConfigurationFile, ILayoutHos
 
     protected override void HandleLoaded()
     {
-        HandleChange();
+        HandleChange(true);
     }
 
-    protected override void HandleChange()
+    protected override void HandleChange(bool isMapChange)
     {
         List<CooldownTypeConfiguration> configs = new List<CooldownTypeConfiguration>();
         foreach (IConfigurationSection section in UnderlyingConfiguration.GetChildren())

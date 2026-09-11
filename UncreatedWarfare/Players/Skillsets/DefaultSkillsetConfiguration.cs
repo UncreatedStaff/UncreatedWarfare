@@ -16,19 +16,20 @@ public sealed class DefaultSkillsetConfiguration : BaseAlternateConfigurationFil
     /// <summary>
     /// List of skillsets that should be applied as a base to all kits.
     /// </summary>
-    public ImmutableArray<Skillset> DefaultSkillsets { get; private set; }
+    public ImmutableArray<Skillset> DefaultSkillsets { get; private set; } = ImmutableArray<Skillset>.Empty;
 
     public DefaultSkillsetConfiguration(IServiceProvider serviceProvider, ILogger<DefaultSkillsetConfiguration> logger)
         : base(serviceProvider, "Skills.yml", optional: true)
     {
         _logger = logger;
-        DefaultSkillsets = ImmutableArray<Skillset>.Empty;
-
-        if (FilePath != null)
-            HandleChange();
     }
 
-    protected override void HandleChange()
+    protected override void HandleLoaded()
+    {
+        HandleChange(true);
+    }
+
+    protected override void HandleChange(bool isMapChange)
     {
         ImmutableArray<Skillset>.Builder bldr = ImmutableArray.CreateBuilder<Skillset>();
         foreach (IConfigurationSection skill in GetChildren())

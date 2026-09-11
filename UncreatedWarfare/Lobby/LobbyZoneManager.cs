@@ -26,7 +26,6 @@ namespace Uncreated.Warfare.Lobby;
 /// Handles visual effects in the lobby.
 /// </summary>
 public class LobbyZoneManager :
-    IHostedService,
     ILevelHostedService,
     IEventListener<QuestObjectInteracted>,
     ILayoutStartingListener,
@@ -122,7 +121,7 @@ public class LobbyZoneManager :
 
     UniTask ILevelHostedService.LoadLevelAsync(CancellationToken token)
     {
-        _optionsUi = _module.ServiceProvider.Resolve<OptionsUI>();
+        _optionsUi ??= _module.ServiceProvider.Resolve<OptionsUI>();
 
         // find team flag objects
         List<FlagInfo> flags = new List<FlagInfo>(2);
@@ -201,6 +200,34 @@ public class LobbyZoneManager :
         TimeUtility.physicsUpdated += OnFixedUpdate;
 
         return UniTask.CompletedTask;
+    }
+
+    UniTask ILevelHostedService.UnloadLevelAsync(CancellationToken token)
+    {
+        TeamFlags = null;
+        _behavior.Teams = null;
+
+        LevelDispose();
+
+        return UniTask.CompletedTask;
+    }
+
+    private void LevelDispose()
+    {
+        TimeUtility.physicsUpdated -= OnFixedUpdate;
+
+        _lobbyZone = null;
+
+        if (_zoneCollider == null)
+            return;
+
+        _zoneCollider.OnObjectEntered -= OnObjectEnteredLobby;
+        _zoneCollider.OnObjectExited -= OnObjectExitedLobby;
+
+        if (_zoneCollider is IDisposable d)
+            d.Dispose();
+
+        _zoneCollider = null;
     }
 
     /// <summary>
@@ -582,33 +609,11 @@ public class LobbyZoneManager :
         await UniTask.WhenAll(tasks);
     }
 
-    UniTask IHostedService.StartAsync(CancellationToken token)
-    {
-        return UniTask.CompletedTask;
-    }
-
-    UniTask IHostedService.StopAsync(CancellationToken token)
-    {
-        TimeUtility.physicsUpdated -= OnFixedUpdate;
-
-        if (_zoneCollider != null)
-        {
-            _zoneCollider.OnObjectEntered -= OnObjectEnteredLobby;
-            _zoneCollider.OnObjectExited -= OnObjectExitedLobby;
-
-            if (_zoneCollider is IDisposable d)
-                d.Dispose();
-
-            _zoneCollider = null!;
-        }
-
-        return UniTask.CompletedTask;
-    }
-
     /// <inheritdoc />
     public void Dispose()
     {
         _layoutFactory.LoadingStateUpdated -= LoadingStateUpdated;
+        LevelDispose();
     }
 
     public struct FlagInfo
