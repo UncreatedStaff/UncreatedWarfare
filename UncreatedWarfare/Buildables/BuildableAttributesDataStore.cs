@@ -7,6 +7,7 @@ using System.Linq;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Buildables;
+using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
@@ -22,22 +23,29 @@ public class BuildableAttributesDataStore : IHostedService, ILevelHostedService,
     private static int _hasSaveSub;
 
     private readonly ILogger<BuildableAttributesDataStore> _logger;
+    private readonly MapScheduler _mapScheduler;
     private readonly Dictionary<uint, BuildableAttributes> _barricadeAttributes = new Dictionary<uint, BuildableAttributes>();
     private readonly Dictionary<uint, BuildableAttributes> _structureAttributes = new Dictionary<uint, BuildableAttributes>();
 
-    public BuildableAttributesDataStore(ILogger<BuildableAttributesDataStore> logger)
+    public BuildableAttributesDataStore(ILogger<BuildableAttributesDataStore> logger, MapScheduler mapScheduler)
     {
         _logger = logger;
+        _mapScheduler = mapScheduler;
     }
 
-    private static string GetFolderPath()
+    private string GetFolderPath()
     {
+        if (!_mapScheduler.HasSelectedMap)
+        {
+            throw new InvalidOperationException("Map not selected.");
+        }
+
         return Path.Combine(
             UnturnedPaths.RootDirectory.FullName,
             ServerSavedata.directoryName,
             Provider.serverID,
             "Level",
-            Provider.map,
+            _mapScheduler.Current.DisplayName,
             "Buildable Attributes.dat"
         );
     }

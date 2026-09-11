@@ -314,6 +314,9 @@ public sealed class WarfareModule
     }
 #endif
 
+    /// <summary>
+    /// Joining via connection code is only enabled in debug builds.
+    /// </summary>
     internal bool CanUseConnectionCode { get; private set; }
 
     [MethodImpl(MethodImplOptions.NoInlining)]

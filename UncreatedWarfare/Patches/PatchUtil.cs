@@ -2,9 +2,7 @@ using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Emit;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -146,5 +144,60 @@ internal static class PatchUtil
 
             start.WithStartBlocksFrom(instr);
         }
+    }
+
+    public static bool TryGetLdcI4Value(CodeInstruction instruction, out int value)
+    {
+        if (instruction.opcode == OpCodes.Ldc_I4)
+        {
+            if (instruction.operand is int v)
+            {
+                value = v;
+                return true;
+            }
+
+            value = 0;
+            return false;
+        }
+
+        if (instruction.opcode == OpCodes.Ldc_I4_S)
+        {
+            if (instruction.operand is sbyte v)
+            {
+                value = v;
+                return true;
+            }
+
+            value = 0;
+            return false;
+        }
+
+        if (instruction.opcode == OpCodes.Ldc_I4_0)
+            value = 0;
+        else if (instruction.opcode == OpCodes.Ldc_I4_M1)
+            value = -1;
+        else if (instruction.opcode == OpCodes.Ldc_I4_1)
+            value = 1;
+        else if (instruction.opcode == OpCodes.Ldc_I4_2)
+            value = 2;
+        else if (instruction.opcode == OpCodes.Ldc_I4_3)
+            value = 3;
+        else if (instruction.opcode == OpCodes.Ldc_I4_4)
+            value = 4;
+        else if (instruction.opcode == OpCodes.Ldc_I4_5)
+            value = 5;
+        else if (instruction.opcode == OpCodes.Ldc_I4_6)
+            value = 6;
+        else if (instruction.opcode == OpCodes.Ldc_I4_7)
+            value = 7;
+        else if (instruction.opcode == OpCodes.Ldc_I4_8)
+            value = 8;
+        else
+        {
+            value = 0;
+            return false;
+        }
+
+        return true;
     }
 }

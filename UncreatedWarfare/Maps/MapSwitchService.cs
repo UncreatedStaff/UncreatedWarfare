@@ -9,7 +9,9 @@ using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Models.Seasons;
 using Uncreated.Warfare.Networking;
+using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Util;
@@ -31,7 +33,8 @@ public class MapSwitchService
 
     private DateTime? _estimatedCompletedTime;
 
-    private const float WorkshopCacheInvalidateSeconds = 60;
+    internal const float WorkshopCacheInvalidateSeconds = 60;
+    internal const float WorkshopCachePaddingSeconds = 2;
 
     /// <summary>
     /// Maximum amount of time to wait for all players to disconnect after sending a relay request.
@@ -61,6 +64,10 @@ public class MapSwitchService
             _logger.LogWarning("Provider._modeConfigDataOverrides not found.");
         if (LoadGameplayConfigMethod == null)
             _logger.LogWarning("Provider.LoadGameplayConfig not found.");
+        if (LevelOnSceneLoaded == null)
+            _logger.LogWarning("Level.onSceneLoaded not found.");
+        if (ProviderResetChannels == null)
+            _logger.LogWarning("Provider.resetChannels not found.");
     }
 
     /// <summary>
@@ -97,8 +104,10 @@ public class MapSwitchService
 
         await UniTask.SwitchToMainThread(token);
 
-        LevelInfo? mapInfo = Level.getLevel(map.DisplayName);
+        // list of assets and bundles to unload
         UnloadInfo? unloadInfo = null;
+
+        LevelInfo? mapInfo = Level.getLevel(map.DisplayName);
         if (mapInfo == null)
         {
             unloadInfo = await TryInstallWorkshopAndLoadItems(currentMap, map, token);
@@ -118,26 +127,30 @@ public class MapSwitchService
         {
             await UniTask.SwitchToMainThread();
 
+            // so workshop queries send the new map name
+            _logger.LogInformation($"Switching map to {mapInfo.getLocalizedName()}...");
+
+            SteamGameServer.SetMapName(mapInfo.name);   // steam server listing
+            Provider.map = map.DisplayName;             // workshop files query
+
+            foreach (WarfarePlayer player in _playerService.OnlinePlayers)
+            {
+                player.FreezeMovement();
+            }
+
             if (_playerService.OnlinePlayers.Count > 0)
             {
-                // wait at least 60 seconds since the most recently joined player joined the server so their workshop query invalidates
-                WarfarePlayer mostRecentJoiner = _playerService.OnlinePlayers.Aggregate((x, next) => x.JoinTime > next.JoinTime ? x : next);
+                // wait at least 60 seconds since the most recent workshop query so the client-side workshop item cache becomes outdated
+                TimeSpan timeSinceLastQuery = GetWorkshopFilesLastSentRecorder.GetTimeSinceOnlinePlayerQueried(_playerService);
                 DateTime now = DateTime.UtcNow;
-                TimeSpan timeSinceMostRecentPlayerJoined = now - mostRecentJoiner.JoinTime;
-                _logger.LogTrace($"Time since {mostRecentJoiner} joined: {timeSinceMostRecentPlayerJoined}.");
-                if (timeSinceMostRecentPlayerJoined.TotalSeconds < WorkshopCacheInvalidateSeconds)
+                TimeSpan delay = TimeSpan.FromSeconds(WorkshopCacheInvalidateSeconds) - timeSinceLastQuery;
+                if (delay.Ticks > 0)
                 {
-                    TimeSpan delay = TimeSpan.FromSeconds(WorkshopCacheInvalidateSeconds) - timeSinceMostRecentPlayerJoined;
-                    _logger.LogInformation($"Waiting {delay} to invalidate {mostRecentJoiner}'s workshop cache.");
+                    _logger.LogInformation($"Waiting {delay} to invalidate the client workshop cache.");
                     _estimatedCompletedTime = now.Add(delay + extraTimeToComplete);
                     await UniTask.Delay(delay, cancellationToken: CancellationToken.None);
                     await UniTask.SwitchToMainThread();
                 }
-            }
-
-            foreach (WarfarePlayer player in _playerService.OnlinePlayers)
-            {
-                // todo
             }
 
             _estimatedCompletedTime ??= DateTime.UtcNow.Add(extraTimeToComplete);
@@ -362,11 +375,6 @@ public class MapSwitchService
 
     private async UniTask SwitchMapIntl(LevelInfo mapInfo, UnloadInfo? unloadInfo, MapData map)
     {
-        _logger.LogInformation($"Switching map to {mapInfo.getLocalizedName()}...");
-
-        SteamGameServer.SetMapName(mapInfo.name);
-        Provider.map = map.DisplayName;
-
         // reject any players that are trying to join
         _logger.LogInformation("Relaying players...");
         RejectPending();
@@ -407,6 +415,7 @@ public class MapSwitchService
             }
         }
 
+        // kick players that failed to relay somehow
         for (int pInd = Provider.clients.Count - 1; pInd >= 0; --pInd)
         {
             SteamPlayer player = Provider.clients[pInd];
@@ -418,23 +427,19 @@ public class MapSwitchService
         _logger.LogDebug("Exiting level...");
         Level.exit();
 
-        // unity requires that at least one scene is always loaded.
+        // unity requires that at least one scene is always loaded, so load an empty scene so it's happy.
         Scene tempScene = SceneManager.CreateScene("Uncreated.EmptyTempScene");
         try
         {
-            AsyncOperation? op = SceneManager.UnloadSceneAsync(Level.BUILD_INDEX_GAME);
-            if (op != null)
-            {
-                await op;
-                await UniTask.SwitchToMainThread();
-            }
-            else
-            {
-                _logger.LogWarning("Failed to unload game scene. We'll see what happens ig.");
-            }
+            // unload game scene to destroy everything
+            Scene gameScene = SceneManager.GetSceneByBuildIndex(Level.BUILD_INDEX_GAME);
+            await TryUnloadScene(gameScene, errorLog: "Failed to unload game scene. We'll see what happens ig.");
+            await UniTask.SwitchToMainThread();
 
+            // update MapScheduler.Current
             _mapScheduler.NotifyMapSwitched(map);
 
+            // invoke onSceneLoaded(Level.BUILD_INDEX_MENU) to trigger the 'on exit' events
             if (LevelOnSceneLoaded != null)
             {
                 Scene scene = SceneManager.GetSceneByBuildIndex(Level.BUILD_INDEX_MENU);
@@ -449,8 +454,18 @@ public class MapSwitchService
 
             _logger.LogDebug("Unloaded game scene.");
 
-            NetIdRegistry.Clear();
+            // clears the NetIdRegistry, among other things
+            if (ProviderResetChannels != null)
+            {
+                ProviderResetChannels.Invoke(null, Array.Empty<object>());
+            }
+            else
+            {
+                _logger.LogWarning("Provider.resetChannels not found.");
+                NetIdRegistry.Clear();
+            }
 
+            // unload assets and bundles defined in previous map
             if (unloadInfo != null)
             {
                 _logger.LogTrace("Unloading last map's assets...");
@@ -460,28 +475,8 @@ public class MapSwitchService
 
             _logger.LogDebug("Level exited.");
 
-            // re-initialize config in case level has overrides
-            ConfigData? config = null;
-            if (ConfigDataField != null && ModeConfigDataField != null)
-            {
-                config = ConfigData.CreateDefault(false);
-                ConfigDataField.SetValue(null, config);
-            }
-
-            if (ModeConfigDataOverridesField != null && ModeConfigDataOverridesField.GetValue(null) is IDictionary dict)
-            {
-                dict.Clear();
-            }
-
-            if (LoadGameplayConfigMethod != null)
-            {
-                LoadGameplayConfigMethod.Invoke(null, [false]);
-            }
-
-            if (config != null && ModeConfigDataField != null)
-            {
-                ModeConfigDataField.SetValue(null, config.getModeConfig(Provider.mode));
-            }
+            // re-initialize config in case level has config overrides
+            ReloadConfigData();
 
             _logger.LogDebug($"Loading {mapInfo.getLocalizedName()}...");
             Level.load(mapInfo, true);
@@ -495,16 +490,51 @@ public class MapSwitchService
         finally
         {
             await UniTask.SwitchToMainThread();
-            try
-            {
-                AsyncOperation? op = SceneManager.UnloadSceneAsync(tempScene);
-                if (op != null)
-                    await op;
-            }
-            catch (ArgumentException) { }
+            await TryUnloadScene(tempScene);
         }
 
         _logger.LogDebug($"{mapInfo.getLocalizedName()} loaded.");
+    }
+
+    private static void ReloadConfigData()
+    {
+        ConfigData? config = null;
+        if (ConfigDataField != null && ModeConfigDataField != null)
+        {
+            config = ConfigData.CreateDefault(false);
+            ConfigDataField.SetValue(null, config);
+        }
+
+        if (ModeConfigDataOverridesField != null && ModeConfigDataOverridesField.GetValue(null) is IDictionary dict)
+        {
+            dict.Clear();
+        }
+
+        if (LoadGameplayConfigMethod != null)
+        {
+            LoadGameplayConfigMethod.Invoke(null, [false]);
+        }
+
+        if (config != null && ModeConfigDataField != null)
+        {
+            ModeConfigDataField.SetValue(null, config.getModeConfig(Provider.mode));
+        }
+    }
+
+    private async UniTask TryUnloadScene(Scene scene, string? errorLog = null)
+    {
+        if (!scene.IsValid())
+            return;
+
+        try
+        {
+            AsyncOperation? op = SceneManager.UnloadSceneAsync(scene);
+            if (op != null)
+                await op;
+            else if (errorLog != null)
+                _logger.LogWarning(errorLog);
+        }
+        catch (ArgumentException) { }
     }
 
     private static readonly FieldInfo? ConfigDataField = typeof(Provider).GetField("_configData", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
@@ -527,6 +557,16 @@ public class MapSwitchService
             null,
             CallingConventions.Any,
             [typeof(Scene), typeof(LoadSceneMode)],
+            null
+        );
+
+    private static readonly MethodInfo? ProviderResetChannels =
+        typeof(Provider).GetMethod(
+            "resetChannels",
+            BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public,
+            null,
+            CallingConventions.Any,
+            Type.EmptyTypes,
             null
         );
 }

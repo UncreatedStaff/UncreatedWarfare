@@ -125,9 +125,9 @@ public abstract class BaseAlternateConfigurationFile : IConfiguration, IDisposab
 
             string homeDir = _module.HomeDirectory;
             string path;
-            if (_mapSpecific is true)
+            if (_mapSpecific is true && _mapScheduler != null)
             {
-                string mapName = ConfigurationHelper.CleanFileName(Provider.map);
+                string mapName = ConfigurationHelper.CleanFileName(_mapScheduler.Current!.DisplayName);
                 path = Path.Combine(homeDir, "Maps", mapName);
             }
             else
