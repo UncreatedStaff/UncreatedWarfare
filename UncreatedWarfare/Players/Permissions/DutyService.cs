@@ -328,10 +328,8 @@ public partial class DutyService : IAsyncEventListener<PlayerLeft>, IEventListen
 
             if (player.UnturnedPlayer.movement != null)
             {
-                if (player.UnturnedPlayer.movement.pluginSpeedMultiplier != 1f)
-                    player.UnturnedPlayer.movement.sendPluginSpeedMultiplier(1f);
-                if (player.UnturnedPlayer.movement.pluginJumpMultiplier != 1f)
-                    player.UnturnedPlayer.movement.sendPluginJumpMultiplier(1f);
+                player.ResetSpeedMultiplier();
+                player.ResetJumpMultiplier();
             }
 
             if (player.UnturnedPlayer.interact != null)

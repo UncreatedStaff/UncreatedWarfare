@@ -65,8 +65,6 @@ public static class CartographyUtility
 
     internal static void Init(int level)
     {
-        Level.onPrePreLevelLoaded -= Init;
-
         CartographyVolume? cartoVolume = CartographyVolumeManager.Get().GetMainVolume();
 
         if (cartoVolume == null)

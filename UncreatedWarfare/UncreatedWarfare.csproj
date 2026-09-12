@@ -376,6 +376,8 @@
         <Publicize Include="Assembly-CSharp:SDG.Unturned.Assets.currentAssetMapping" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.Assets.assetOrigins" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.Assets.allMasterBundles" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.Assets.ApplyServerAssetMapping" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.PhysicsMaterialNetTable.ServerPopulateTable" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.Level.instance" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.Level.ReturnToMainMenu" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.NetMessages" />
@@ -394,6 +396,7 @@
         <Publicize Include="Assembly-CSharp:SDG.Unturned.StructureManager.YAW_BIT_COUNT" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.Provider+ServerRequiredWorkshopFile" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.Provider.ServerRequiredWorkshopFile.fileId" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.DedicatedUGC.itemsQueried" />
 
     </ItemGroup>
 

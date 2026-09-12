@@ -6,6 +6,8 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using Uncreated.Warfare.Database.Abstractions;
+using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Models.Seasons;
 using Uncreated.Warfare.Networking;
@@ -22,7 +24,7 @@ namespace Uncreated.Warfare.Maps;
 /// <summary>
 /// Responsible for switching the map without restarting the server.
 /// </summary>
-public class MapSwitchService
+public class MapSwitchService : IEventListener<PlayerJoined>
 {
     private readonly MapScheduler _mapScheduler;
     private readonly IGameDataDbContext _dbContext;
@@ -102,22 +104,15 @@ public class MapSwitchService
 
         using IDisposable? hideHud = _module.ServiceProvider.ResolveOptional<HudManager>()?.HideHud();
 
-        await UniTask.SwitchToMainThread(token);
-
         // list of assets and bundles to unload
-        UnloadInfo? unloadInfo = null;
+        UnloadInfo unloadInfo = await TryInstallWorkshopAndLoadItems(currentMap, map, token);
+
+        await UniTask.SwitchToMainThread(CancellationToken.None);
 
         LevelInfo? mapInfo = Level.getLevel(map.DisplayName);
         if (mapInfo == null)
         {
-            unloadInfo = await TryInstallWorkshopAndLoadItems(currentMap, map, token);
-            await UniTask.SwitchToMainThread(CancellationToken.None);
-
-            mapInfo = Level.getLevel(map.DisplayName);
-            if (mapInfo == null)
-            {
-                throw new ArgumentException($"Map isn't installed: {map.DisplayName}.");
-            }
+            throw new ArgumentException($"Map isn't installed: {map.DisplayName}.");
         }
 
         await _layoutFactory.UnloadLevel(CancellationToken.None);
@@ -126,6 +121,15 @@ public class MapSwitchService
         try
         {
             await UniTask.SwitchToMainThread();
+
+            // needs a very large queue to accept that many players at once
+            byte oldQueueSize = Provider.queueSize;
+            byte newQueueSize = Math.Max(oldQueueSize, (byte)Math.Min(byte.MaxValue, _module.TrueMaxPlayers + (_originalQueueSize == 0 ? Provider.queueSize : _originalQueueSize)));
+            Provider.queueSize = newQueueSize;
+            _logger.LogTrace($"Updated queue size to {newQueueSize} from {oldQueueSize}.");
+
+            if (_originalQueueSize == 0)
+                _originalQueueSize = oldQueueSize;
 
             // so workshop queries send the new map name
             _logger.LogInformation($"Switching map to {mapInfo.getLocalizedName()}...");
@@ -217,6 +221,7 @@ public class MapSwitchService
             SteamContent ugc = DedicatedUGC.ugc[index];
             anyWorkshopChanges |= WorkshopUtility.RemoveModIdFromServerMenu(new PublishedFileId_t(item), advertise: false);
             DedicatedUGC.ugc.RemoveAt(index);
+            DedicatedUGC.itemsQueried.Remove(item); // required to allow redownloads of the same mod twice (Gulf -> Yellowknife -> Gulf)
             _logger.LogTrace($"Removed UGC item: {ugc.publishedFileID.m_PublishedFileId}.");
 
             AssetOrigin origin = TempSteamworksWorkshop.FindOrAddOrigin(item);
@@ -287,6 +292,7 @@ public class MapSwitchService
             DedicatedUGC.beginInstallingItems(false);
 
             await waitForInstalled.Task;
+            await UniTask.SwitchToMainThread();
         }
         finally
         {
@@ -373,6 +379,9 @@ public class MapSwitchService
         }
     }
 
+    private byte _originalQueueSize;
+    private DateTime _lastRelayAll;
+
     private async UniTask SwitchMapIntl(LevelInfo mapInfo, UnloadInfo? unloadInfo, MapData map)
     {
         // reject any players that are trying to join
@@ -397,6 +406,7 @@ public class MapSwitchService
             sendRelayToServer = p => p.sendRelayToServer(packed, Provider.port, string.Empty, shouldShowMenu);
         }
 
+        _lastRelayAll = DateTime.UtcNow;
         foreach (SteamPlayer player in Provider.clients)
         {
             sendRelayToServer(player.player);
@@ -478,6 +488,17 @@ public class MapSwitchService
             // re-initialize config in case level has config overrides
             ReloadConfigData();
 
+            _logger.LogTrace("Applying new assets...");
+
+            // adds new assets to the current asset mapping
+            Assets.ApplyServerAssetMapping(mapInfo, DedicatedUGC.ugc.Select(x => x.publishedFileID).ToList());
+
+            // add new assets to physics material table
+            PhysicsMaterialNetTable.ServerPopulateTable();
+
+            // re-calculate hashes for all masterbundles, since the new masterbundles won't have a hash
+            Assets.initializeMasterBundleValidation();
+
             _logger.LogDebug($"Loading {mapInfo.getLocalizedName()}...");
             Level.load(mapInfo, true);
             Provider.applyLevelModeConfigOverrides();
@@ -535,6 +556,21 @@ public class MapSwitchService
                 _logger.LogWarning(errorLog);
         }
         catch (ArgumentException) { }
+    }
+
+    void IEventListener<PlayerJoined>.HandleEvent(PlayerJoined e, IServiceProvider serviceProvider)
+    {
+        if (_originalQueueSize == 0)
+            return;
+
+        // revert queue size back to original size once the pending array is empty enough
+        // wait 30 seconds to give players time to actually start joining
+        if (Provider.pending.Count > 0 || (DateTime.UtcNow - _lastRelayAll).TotalSeconds < 5)
+            return;
+
+        Provider.queueSize = _originalQueueSize;
+        _logger.LogTrace($"Reverted queue size to {_originalQueueSize}.");
+        _originalQueueSize = 0;
     }
 
     private static readonly FieldInfo? ConfigDataField = typeof(Provider).GetField("_configData", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);

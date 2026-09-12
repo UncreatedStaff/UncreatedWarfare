@@ -212,6 +212,11 @@ public sealed class WarfareModule
 
     public bool UseFileWatchers { get; private set; }
 
+    /// <summary>
+    /// The maximum number of players that can join the server. <see cref="Provider.maxPlayers"/> can vary due to server list optimization.
+    /// </summary>
+    public byte TrueMaxPlayers { get; private set; }
+
 #nullable restore
 
     internal void Initialize()
@@ -365,6 +370,8 @@ public sealed class WarfareModule
 #else
         CanUseConnectionCode = true;
 #endif
+
+        TrueMaxPlayers = Provider.maxPlayers;
 
         Provider.modeConfigData.Players.Lose_Items_PvP = 0;
         Provider.modeConfigData.Players.Lose_Items_PvE = 0;
@@ -1386,6 +1393,7 @@ public sealed class WarfareModule
         await UniTask.SwitchToMainThread(CancellationToken.None);
         UnloadModule();
         Provider.shutdown();
+        Level.onPrePreLevelLoaded -= CartographyUtility.Init;
 
         while (true)
         {
@@ -1754,7 +1762,7 @@ public sealed class WarfareModule
                 hostActivity?.Start();
                 Activity.Current = hostActivity;
 #endif
-                _logger.LogDebug("Hosting {0} on level unload.", hostedService.GetType());
+                _logger.LogDebug("Unhosting {0} on level unload.", hostedService.GetType());
                 tasks[i] = hostedService.UnloadLevelAsync(token);
             }
             catch (Exception ex)
