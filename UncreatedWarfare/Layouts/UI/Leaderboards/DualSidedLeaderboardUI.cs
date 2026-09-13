@@ -15,6 +15,8 @@ using Uncreated.Warfare.Interaction.UI;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Maps;
+using Uncreated.Warfare.Models.Seasons;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Extensions;
@@ -37,6 +39,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
     [Ignore] private List<ValuablePlayerMatch>? _valuablePlayers;
     [Ignore] private double[]? _globalStatSums;
     [Ignore] private TopSquadInfo[]? _topSquads;
+    [Ignore] private readonly MapSwitchService? _mapSwitchService;
 
     [Ignore] private DateTime _startTimestamp;
 
@@ -57,6 +60,8 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
     [Ignore] internal bool DefaultSortMode;
 
     [Ignore] private bool _doVote;
+    [Ignore] private MapData? _titleMap;
+    [Ignore] private bool _titleIsShuttingDown;
 
     public readonly UnturnedUIElement TopSquadsParent = new UnturnedUIElement("GameInfo/Squads");
     public readonly TopSquad[] TopSquads = ElementPatterns.CreateArray<TopSquad>("GameInfo/Squads/Squad_T{0}", 1, to: 2);
@@ -95,7 +100,8 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         PointsService pointsService,
         ITranslationService translationService,
         IConfiguration config,
-        WarfareLifetimeComponent appLifetime)
+        WarfareLifetimeComponent appLifetime,
+        MapSwitchService? mapSwitchService = null)
         : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:DualSidedLeaderboardUI"), staticKey: true, debugLogging: false)
     {
         _createData = CreateData;
@@ -107,6 +113,8 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         _translationService = translationService;
         _appLifetime = appLifetime;
         _layoutFactory = layoutFactory;
+
+        _mapSwitchService = mapSwitchService;
 
         _doVote = !config.GetValue<bool>("tests:disable_vote");
 
@@ -207,6 +215,8 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         }
 
         SendToAllPlayers();
+        _titleMap = _mapSwitchService?.SwitchingToMap;
+        _titleIsShuttingDown = _appLifetime.QueuedShutdownType == ShutdownMode.OnLayoutEnd;
         foreach (LanguageSet set in _translationService.SetOf.AllPlayers())
         {
             SendToPlayers(set);
@@ -255,6 +265,21 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         }
     }
 
+    private string GetLayoutName()
+    {
+        string layoutName = _layout.LayoutInfo.DisplayName;
+        if (_appLifetime.QueuedShutdownType == ShutdownMode.OnLayoutEnd)
+        {
+            layoutName = $"{layoutName} - Shutting down:";
+        }
+        else if (_mapSwitchService?.SwitchingToMap is { } map)
+        {
+            layoutName = $"{layoutName} - Loading {map.DisplayName}:";
+        }
+
+        return layoutName;
+    }
+
     private void SendToPlayers(LanguageSet set)
     {
         Team? winningTeam = null;
@@ -263,11 +288,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
             winningTeam = teamBox as Team;
         }
 
-        string layoutName = _layout.LayoutInfo.DisplayName;
-        if (_appLifetime.QueuedShutdownType == ShutdownMode.OnLayoutEnd)
-        {
-            layoutName += " - Shutting down:";
-        }
+        string layoutName = GetLayoutName();
 
         while (set.MoveNext())
         {
@@ -725,7 +746,34 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 
     public void UpdateCountdown(TimeSpan timeLeft)
     {
-        string countdown = FormattingUtility.ToCountdownString(timeLeft, false);
+        bool needsLayoutNameUpdate = false;
+
+        bool isShuttingDown = _appLifetime.QueuedShutdownType == ShutdownMode.OnLayoutEnd;
+        if (isShuttingDown != _titleIsShuttingDown)
+        {
+            needsLayoutNameUpdate = true;
+            _titleIsShuttingDown = isShuttingDown;
+        }
+        else
+        {
+            MapData? map = _mapSwitchService?.SwitchingToMap;
+            if (_titleMap != map)
+            {
+                needsLayoutNameUpdate = true;
+                _titleMap = map;
+            }
+        }
+
+        if (needsLayoutNameUpdate)
+        {
+            string layoutName = GetLayoutName();
+            foreach (WarfarePlayer player in _playerService.OnlinePlayers)
+            {
+                LayoutName.SetText(player.Connection, layoutName);
+            }
+        }
+
+        string countdown = timeLeft == Timeout.InfiniteTimeSpan ? "..." : FormattingUtility.ToCountdownString(timeLeft, false);
         foreach (WarfarePlayer player in _playerService.OnlinePlayers)
         {
             Countdown.SetText(player.Connection, countdown);

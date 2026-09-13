@@ -77,4 +77,7 @@ public class CommonTranslations : TranslationCollection
 
     [TranslationData("Copy text popup default header.")]
     public readonly Translation PopupCopyText = new Translation("Copy Text", TranslationOptions.TMProUI);
+
+    [TranslationData("Map scheduler has queued a new map to start after this game ends.")]
+    public readonly Translation<string> MapScheduledBroadcast = new Translation<string>("<#ffb3cc>After this game, the map will change to <#ff3377>{0}</color>.");
 }

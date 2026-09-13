@@ -160,6 +160,15 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
     {
         await _warfare.InvokeLevelUnloaded(token);
 
+        // reset NextLayout if it was for the previous map
+        if (NextLayout != null)
+        {
+            if (!YamlUtility.CheckMatchesMapFilter(NextLayout.FullName, Provider.map /* new map */))
+            {
+                NextLayout = null;
+            }
+        }
+
         if (_warfare.IsLayoutActive())
         {
             Layout layout = _warfare.GetActiveLayout();
@@ -1154,8 +1163,10 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
     /// <summary>
     /// Get all base config files in the layout folder.
     /// </summary>
-    public List<FileInfo> GetBaseLayoutFiles()
+    public List<FileInfo> GetBaseLayoutFiles(string? forMap = null)
     {
+        forMap ??= Provider.map;
+
         DirectoryInfo layoutDirectory = new DirectoryInfo(_layoutDir);
 
         // get all folders or yaml files.
@@ -1170,7 +1181,7 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
             switch (layout)
             {
                 case FileInfo { Length: > 0 } yamlFile:
-                    if (YamlUtility.CheckMatchesMapFilter(yamlFile.FullName))
+                    if (YamlUtility.CheckMatchesMapFilter(yamlFile.FullName, forMap))
                         baseLayoutConfigs.Add(yamlFile);
 
                     break;
@@ -1187,7 +1198,7 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
                     for (int i = 0; i < files.Length; ++i)
                     {
                         FileInfo file = files[i];
-                        if (!YamlUtility.CheckMatchesMapFilter(file.FullName))
+                        if (!YamlUtility.CheckMatchesMapFilter(file.FullName, forMap))
                             continue;
 
                         if (baseFile != null && file.FullName.StartsWith(baseFile, StringComparison.Ordinal) && file.FullName.Length > baseFile.Length + 5 && file.FullName[baseFile.Length] == '.')

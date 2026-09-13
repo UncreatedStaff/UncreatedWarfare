@@ -33,6 +33,8 @@ public class MapSwitchService : IEventListener<PlayerJoined>
     private readonly ILogger<MapSwitchService> _logger;
     private readonly LayoutFactory _layoutFactory;
 
+    public MapData? SwitchingToMap => _switchingToMap;
+
     private DateTime? _estimatedCompletedTime;
 
     internal const float WorkshopCacheInvalidateSeconds = 60;
@@ -89,87 +91,108 @@ public class MapSwitchService : IEventListener<PlayerJoined>
     /// Switches the server's map to another map given it's data configured in the 'maps' table in the database.
     /// </summary>
     /// <exception cref="ArgumentException">The map isn't installed, even after a workshop update.</exception>
-    public async UniTask SwitchMapAsync(MapData map, CancellationToken token = default)
+    public async UniTask SwitchMapAsync(MapData map, MapSwitchParameters parameters, CancellationToken token = default)
     {
+        TimeSpan extraTimeToComplete = TimeSpan.FromSeconds(0.5d);
+
         _estimatedCompletedTime = null;
 
-        TimeSpan extraTimeToComplete = TimeSpan.FromSeconds(2d);
-
-        string currentMapName = Level.info.name;
-        MapData? currentMap = await _dbContext.Maps
-            .AsNoTracking()
-            .Include(x => x.Dependencies)
-            .OrderBy(x => x.Id)
-            .FirstOrDefaultAsync(x => x.DisplayName == currentMapName, token);
-
-        using IDisposable? hideHud = _module.ServiceProvider.ResolveOptional<HudManager>()?.HideHud();
-
-        // list of assets and bundles to unload
-        UnloadInfo unloadInfo = await TryInstallWorkshopAndLoadItems(currentMap, map, token);
-
-        await UniTask.SwitchToMainThread(CancellationToken.None);
-
-        LevelInfo? mapInfo = Level.getLevel(map.DisplayName);
-        if (mapInfo == null)
+        _switchingToMap = map;
+        if (parameters.MinimumWaitTime > TimeSpan.FromSeconds(5))
         {
-            throw new ArgumentException($"Map isn't installed: {map.DisplayName}.");
+            _estimatedCompletedTime = DateTime.UtcNow.Add(parameters.MinimumWaitTime + extraTimeToComplete);
         }
-
-        await _layoutFactory.UnloadLevel(CancellationToken.None);
-
-        await _playerService.TakePlayerConnectionLock(CancellationToken.None);
         try
         {
-            await UniTask.SwitchToMainThread();
+            string currentMapName = Level.info.name;
+            MapData? currentMap = await _dbContext.Maps
+                .AsNoTracking()
+                .Include(x => x.Dependencies)
+                .OrderBy(x => x.Id)
+                .FirstOrDefaultAsync(x => x.DisplayName == currentMapName, token);
 
-            // needs a very large queue to accept that many players at once
-            byte oldQueueSize = Provider.queueSize;
-            byte newQueueSize = Math.Max(oldQueueSize, (byte)Math.Min(byte.MaxValue, _module.TrueMaxPlayers + (_originalQueueSize == 0 ? Provider.queueSize : _originalQueueSize)));
-            Provider.queueSize = newQueueSize;
-            _logger.LogTrace($"Updated queue size to {newQueueSize} from {oldQueueSize}.");
+            using IDisposable? hideHud = _module.ServiceProvider.ResolveOptional<HudManager>()?.HideHud();
 
-            if (_originalQueueSize == 0)
-                _originalQueueSize = oldQueueSize;
+            // list of assets and bundles to unload
+            UnloadInfo unloadInfo = await TryInstallWorkshopAndLoadItems(currentMap, map, token);
 
-            // so workshop queries send the new map name
-            _logger.LogInformation($"Switching map to {mapInfo.getLocalizedName()}...");
+            await UniTask.SwitchToMainThread(CancellationToken.None);
 
-            SteamGameServer.SetMapName(mapInfo.name);   // steam server listing
-            Provider.map = map.DisplayName;             // workshop files query
-
-            foreach (WarfarePlayer player in _playerService.OnlinePlayers)
+            LevelInfo? mapInfo = Level.getLevel(map.DisplayName);
+            if (mapInfo == null)
             {
-                player.FreezeMovement();
+                throw new ArgumentException($"Map isn't installed: {map.DisplayName}.");
             }
 
-            if (_playerService.OnlinePlayers.Count > 0)
+            await _playerService.TakePlayerConnectionLock(CancellationToken.None);
+            try
             {
-                // wait at least 60 seconds since the most recent workshop query so the client-side workshop item cache becomes outdated
-                TimeSpan timeSinceLastQuery = GetWorkshopFilesLastSentRecorder.GetTimeSinceOnlinePlayerQueried(_playerService);
-                DateTime now = DateTime.UtcNow;
-                TimeSpan delay = TimeSpan.FromSeconds(WorkshopCacheInvalidateSeconds) - timeSinceLastQuery;
-                if (delay.Ticks > 0)
+                await UniTask.SwitchToMainThread();
+
+                // needs a very large queue to accept that many players at once
+                byte oldQueueSize = Provider.queueSize;
+                byte newQueueSize = Math.Max(oldQueueSize, (byte)Math.Min(byte.MaxValue, _module.TrueMaxPlayers + (_originalQueueSize == 0 ? Provider.queueSize : _originalQueueSize)));
+                Provider.queueSize = newQueueSize;
+                _logger.LogTrace($"Updated queue size to {newQueueSize} from {oldQueueSize}.");
+
+                if (_originalQueueSize == 0)
+                    _originalQueueSize = oldQueueSize;
+
+                // so workshop queries send the new map name
+                _logger.LogInformation($"Switching map to {mapInfo.getLocalizedName()}...");
+
+                SteamGameServer.SetMapName(mapInfo.name);   // steam server listing
+                Provider.map = map.DisplayName;             // workshop files query
+
+                foreach (WarfarePlayer player in _playerService.OnlinePlayers)
                 {
-                    _logger.LogInformation($"Waiting {delay} to invalidate the client workshop cache.");
-                    _estimatedCompletedTime = now.Add(delay + extraTimeToComplete);
-                    await UniTask.Delay(delay, cancellationToken: CancellationToken.None);
+                    player.FreezeMovement();
+                }
+
+                if (_playerService.OnlinePlayers.Count > 0)
+                {
+                    // wait at least 60 seconds since the most recent workshop query so the client-side workshop item cache becomes outdated
+                    TimeSpan timeSinceLastQuery = GetWorkshopFilesLastSentRecorder.GetTimeSinceOnlinePlayerQueried(_playerService);
+                    TimeSpan delay = TimeSpan.FromSeconds(WorkshopCacheInvalidateSeconds) - timeSinceLastQuery;
+                    if (delay < parameters.MinimumWaitTime)
+                        delay = parameters.MinimumWaitTime;
+
+                    if (delay.Ticks > 0)
+                    {
+                        _logger.LogInformation($"Waiting {delay} to invalidate the client workshop cache.");
+                        _estimatedCompletedTime = DateTime.UtcNow.Add(delay + extraTimeToComplete);
+                        await UniTask.Delay(delay, cancellationToken: CancellationToken.None);
+                        await UniTask.SwitchToMainThread();
+                    }
+                }
+                else if (parameters.MinimumWaitTime > TimeSpan.Zero)
+                {
+                    _logger.LogInformation($"Waiting {parameters.MinimumWaitTime} for minimum wait time.");
+                    _estimatedCompletedTime = DateTime.UtcNow.Add(parameters.MinimumWaitTime + extraTimeToComplete);
+                    await UniTask.Delay(parameters.MinimumWaitTime, cancellationToken: CancellationToken.None);
                     await UniTask.SwitchToMainThread();
                 }
+
+                _estimatedCompletedTime ??= DateTime.UtcNow.Add(extraTimeToComplete);
+
+                await _layoutFactory.UnloadLevel(CancellationToken.None);
+
+                await SwitchMapIntl(mapInfo, unloadInfo, map);
+
+                await UniTask.SwitchToMainThread();
+
+                // reject any players that tried to join mid-rotate
+                RejectPending();
             }
-
-            _estimatedCompletedTime ??= DateTime.UtcNow.Add(extraTimeToComplete);
-
-            await SwitchMapIntl(mapInfo, unloadInfo, map);
-
-            await UniTask.SwitchToMainThread();
-
-            // reject any players that tried to join mid-rotate
-            RejectPending();
+            finally
+            {
+                _estimatedCompletedTime = null;
+                _playerService.ReleasePlayerConnectionLock();
+            }
         }
         finally
         {
-            _estimatedCompletedTime = null;
-            _playerService.ReleasePlayerConnectionLock();
+            Interlocked.CompareExchange(ref _switchingToMap, null, map);
         }
     }
 
@@ -381,6 +404,7 @@ public class MapSwitchService : IEventListener<PlayerJoined>
 
     private byte _originalQueueSize;
     private DateTime _lastRelayAll;
+    private MapData? _switchingToMap;
 
     private async UniTask SwitchMapIntl(LevelInfo mapInfo, UnloadInfo? unloadInfo, MapData map)
     {
@@ -605,4 +629,16 @@ public class MapSwitchService : IEventListener<PlayerJoined>
             Type.EmptyTypes,
             null
         );
+}
+
+/// <summary>
+/// Options for switching maps.
+/// </summary>
+/// <param name="MinimumWaitTime">Ensures that map switching waits at least this long to stop.</param>
+public sealed record MapSwitchParameters(TimeSpan MinimumWaitTime)
+{
+    /// <summary>
+    /// Default map switching parameters.
+    /// </summary>
+    public static MapSwitchParameters Default { get; } = new MapSwitchParameters(MinimumWaitTime: TimeSpan.Zero);
 }

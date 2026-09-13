@@ -36,7 +36,7 @@ partial class DualSidedLeaderboardUI
 
     private LayoutInfo[] ComputeCandidateLayouts()
     {
-        List<LayoutInfo> layouts = _layoutFactory.GetBaseLayoutFiles()
+        List<LayoutInfo> layouts = _layoutFactory.GetBaseLayoutFiles(_mapSwitchService?.SwitchingToMap?.DisplayName)
             .Select(x => _layoutFactory.ReadLayoutInfo(x.FullName, false)!)
             .ToList();
 

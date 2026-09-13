@@ -9,7 +9,9 @@ using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Layouts.UI.Leaderboards;
+using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Models.Seasons;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
@@ -30,6 +32,8 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
     private readonly IPlayerService _playerService;
     private readonly ILeaderboardUI _leaderboardUi;
     private readonly HudManager _hudManager;
+    private readonly MapSwitchService? _mapSwitchService;
+    private readonly MapScheduler? _mapScheduler;
     private readonly List<LeaderboardPlayer>[] _players;
     private IDisposable? _statsFile;
     private IDisposable? _hudHideHandle;
@@ -53,6 +57,9 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
         _hudManager = serviceProvider.GetRequiredService<HudManager>();
 
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
+
+        _mapSwitchService = serviceProvider.GetService<MapSwitchService>();
+        _mapScheduler = serviceProvider.GetService<MapScheduler>();
 
         _players = new List<LeaderboardPlayer>[TeamManager.AllTeams.Count];
     }
@@ -179,6 +186,21 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
         if (Duration.Ticks <= 0)
             Duration = TimeSpan.FromSeconds(30d);
 
+        if (_mapSwitchService != null && _mapScheduler != null && _mapScheduler.TryGetPendingMap(out MapData newMap))
+        {
+            _ = UniTask.Create((newMap, token), async args =>
+            {
+                try
+                {
+                    await _mapSwitchService.SwitchMapAsync(args.newMap, MapSwitchParameters.Default with { MinimumWaitTime = Duration }, args.token);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Error switching maps.");
+                }
+            });
+        }
+
         _hudHideHandle = _hudManager.HideHud();
 
         // try statement prevents the game loop from getting stuck after the leaderboard
@@ -196,6 +218,14 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
 
         _ticker = _tickerFactory.CreateTicker(TimeSpan.FromSeconds(1d), invokeImmediately: true, queueOnGameThread: true, (_, timeSinceStart, _) =>
         {
+            if (_mapSwitchService?.SwitchingToMap != null)
+            {
+                TimeSpan? mapSwitchTimer = _mapSwitchService.GetEstimatedTimeRemaining();
+                _leaderboardUi.UpdateCountdown(mapSwitchTimer ?? Timeout.InfiniteTimeSpan);
+                // don't end the layout if we're switching a map, it'll be disposed by the map switch when it's ready.
+                return;
+            }
+
             TimeSpan timeLeft = Duration - timeSinceStart;
             if (timeLeft.Ticks <= 0)
             {

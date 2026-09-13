@@ -255,6 +255,38 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
 
             _vehicleSpawnerService.SpawnerBuildableMap[SpawnInfo.Id] = buildables;
             _vehicleSpawnerService.SpawnerBuildableMapIsDirty = true;
+
+            if (Regions.tryGetCoordinate(spawnPos, out byte x, out byte y) && buildable.Asset != null)
+            {
+                // destroy bays with the same position
+                List<BarricadeDrop> bdrops = BarricadeManager.regions[x, y].drops;
+                for (int i = bdrops.Count - 1; i >= 0; i--)
+                {
+                    BarricadeDrop drop = bdrops[i];
+                    if (buildable.Equals(drop))
+                        continue;
+
+                    BarricadeData data = drop.GetServersideData();
+                    if (data.point.IsNearlyEqual(spawnPos) && data.barricade.asset != null && data.barricade.asset.GUID == buildable.Asset.GUID)
+                    {
+                        BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
+                    }
+                }
+
+                List<StructureDrop> sdrops = StructureManager.regions[x, y].drops;
+                for (int i = sdrops.Count - 1; i >= 0; i--)
+                {
+                    StructureDrop drop = sdrops[i];
+                    if (buildable.Equals(drop))
+                        continue;
+
+                    StructureData data = drop.GetServersideData();
+                    if (data.point.IsNearlyEqual(spawnPos) && data.structure.asset != null && data.structure.asset.GUID == buildable.Asset.GUID)
+                    {
+                        StructureManager.destroyStructure(drop, x, y, Vector3.zero);
+                    }
+                }
+            }
         }
 
         Buildable = buildable;
