@@ -1,3 +1,4 @@
+using System;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.FOBs.Construction;
@@ -36,5 +37,8 @@ public enum ShovelableType
     /// A buildable that spawns a vehicle to be operated by players.
     /// </summary>
     [TranslatableValue(Description = "Vehicle buildables.")]
-    Emplacement
+    Emplacement,
+
+    [Obsolete("Still needed for database records.")]
+    AmmoCrate
 }

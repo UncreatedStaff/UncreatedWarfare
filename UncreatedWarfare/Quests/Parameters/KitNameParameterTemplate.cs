@@ -1,15 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text.Json;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Models.Kits;
-using Uncreated.Warfare.Translations.Languages;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Quests.Parameters;
@@ -76,7 +71,7 @@ public class KitNameParameterTemplate : StringParameterTemplate
                     break;
 
                 default:
-                    kit = GetRandomPublicKit(kitDataStore, serviceProvider.GetRequiredService<WarfareModule>());
+                    kit = GetRandomPublicKit(kitDataStore, serviceProvider);
                     value = kit?.Id ?? "default";
                     display = kit?.GetDisplayName(null, true, removeNewLine: true);
                     break;
@@ -145,7 +140,7 @@ public class KitNameParameterTemplate : StringParameterTemplate
                 break;
 
             default:
-                kit = GetRandomPublicKit(kitDataStore, serviceProvider.GetRequiredService<WarfareModule>());
+                kit = GetRandomPublicKit(kitDataStore, serviceProvider);
                 value = kit?.Id ?? "default";
                 display = kit?.GetDisplayName(null, true, removeNewLine: true);
                 break;
@@ -222,13 +217,16 @@ public class KitNameParameterTemplate : StringParameterTemplate
         }
     }
 
-    private static Kit? GetRandomPublicKit(IKitDataStore kitDataStore, WarfareModule module)
+    private static Kit? GetRandomPublicKit(IKitDataStore kitDataStore, IServiceProvider serviceProvider)
     {
         List<Kit> kits = kitDataStore.CachedKitsByKey.Values.Where(x => x is { Type: KitType.Public, IsLocked: false }).ToList();
 
+        WarfareModule module = serviceProvider.GetRequiredService<WarfareModule>();
+        PublicKitLevelConfiguration costConfig = serviceProvider.GetRequiredService<PublicKitLevelConfiguration>();
+
         ITeamManager<Team> teamManager = module.GetActiveLayout().TeamManager;
 
-        kits.RemoveAll(x => x.Season != WarfareModule.Season || !x.IsFree || x.SquadLevel != SquadLevel.Member || !teamManager.AllTeams.Any(t => t.Faction.Equals(x.Faction)));
+        kits.RemoveAll(x => x.Season != WarfareModule.Season || !x.IsFree(costConfig) || x.SquadLevel != SquadLevel.Member || !teamManager.AllTeams.Any(t => t.Faction.Equals(x.Faction)));
 
         return kits.Count == 0 ? null : kits[RandomUtility.GetIndex(kits)];
     }

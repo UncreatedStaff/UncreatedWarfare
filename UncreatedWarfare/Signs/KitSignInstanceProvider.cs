@@ -7,7 +7,6 @@ using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Loadouts;
 using Uncreated.Warfare.Kits.Requests;
-using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Cooldowns;
@@ -35,6 +34,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
     private readonly KitSignTranslations _translations;
     private readonly TextMeasurementService _measurementService;
     private readonly KitRequirementManager _kitRequirements;
+    private readonly PublicKitLevelConfiguration _kitCostConfig;
     private SignMetrics _signMetrics;
 
     private static readonly Color32 ColorKitFavoritedName = new Color32(255, 255, 153, 255);
@@ -55,7 +55,8 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
         IConfiguration systemConfig,
         IKitAccessService kitAccessService,
         TextMeasurementService measurementService,
-        KitRequirementManager kitRequirements)
+        KitRequirementManager kitRequirements,
+        PublicKitLevelConfiguration kitCostConfig)
     {
         _kitDataStore = kitDataStore;
         _nitroBoostService = nitroBoostService;
@@ -64,6 +65,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
         _translations = translations.Value;
         _measurementService = measurementService;
         _kitRequirements = kitRequirements;
+        _kitCostConfig = kitCostConfig;
         LoadoutNumber = -1;
         KitId = null!;
     }
@@ -233,37 +235,42 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
                 return;
             }
         }
-        else if (kit.Type != KitType.Public)
-        {
-            if (player != null && player.Component<KitPlayerComponent>().IsKitAccessible(kit.Key))
-            {
-                cost = _translations.KitPremiumOwned.Translate(language);
-            }
-            else if (kit.Type == KitType.Special)
-            {
-                bldr.Append(_translations.KitExclusive.Translate(language));
-                return;
-            }
-            else
-            {
-                bldr.Append(_translations.KitPremiumCost.Translate(decimal.Round(kit.PremiumCost, 2), language, culture, TimeZoneInfo.Utc));
-                return;
-            }
-        }
         else
         {
-            if (kit.IsFree || _kitAccessService.ArePrimaryKitsGloballyAccessible)
+            KitPlayerComponent? playerComponent = player?.Component<KitPlayerComponent>();
+            if (kit.Type != KitType.Public)
             {
-                cost = _translations.KitFree.Translate(language);
-            }
-            else if (player != null && player.Component<KitPlayerComponent>().IsKitAccessible(kit.Key))
-            {
-                cost = _translations.KitPublicOwned.Translate(language);
+                if (playerComponent != null && playerComponent.IsKitAccessible(kit.Key))
+                {
+                    cost = _translations.KitPremiumOwned.Translate(language);
+                }
+                else if (kit.Type == KitType.Special)
+                {
+                    bldr.Append(_translations.KitExclusive.Translate(language));
+                    return;
+                }
+                else
+                {
+                    bldr.Append(_translations.KitPremiumCost.Translate(decimal.Round(kit.PremiumCost, 2), language, culture, TimeZoneInfo.Utc));
+                    return;
+                }
             }
             else
             {
-                bldr.Append(_translations.KitCreditCost.Translate(kit.CreditCost, language, culture, TimeZoneInfo.Utc));
-                return;
+                if (kit.IsFree(_kitCostConfig, out PublicKitLevel lvl) || _kitAccessService.ArePrimaryKitsGloballyAccessible)
+                {
+                    cost = _translations.KitFree.Translate(language);
+                }
+                else if (playerComponent != null && playerComponent.IsKitAccessible(kit))
+                {
+                    cost = _translations.KitPublicOwned.Translate(language);
+                }
+                else
+                {
+                    double creditCost = lvl.Class <= Class.Unarmed ? 9999 /* unreachable? */ : _kitCostConfig.CreditCostBylevel[lvl];
+                    bldr.Append(_translations.KitCreditCost.Translate((int)Math.Round(creditCost), language, culture, TimeZoneInfo.Utc));
+                    return;
+                }
             }
         }
 
@@ -303,7 +310,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
     {
         string kitName = kit.GetDisplayName(language, true, removeNewLine: false);
 
-        bool isFavorited = player != null && kitPlayerComponent!.IsKitFavorited(kit.Key);
+        bool isFavorited = player != null && kitPlayerComponent.IsKitFavorited(kit.Key);
 
         bldr.Append("<b>");
         AppendName(kitName, isFavorited ? ColorKitFavoritedName : ColorKitUnfavoritedName, out bool nameHasNewLine);

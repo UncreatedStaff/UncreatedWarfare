@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Interaction.Requests;

@@ -2,15 +2,17 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Uncreated.Warfare.Database;
 
 namespace Uncreated.Warfare.Migrations
 {
     [DbContext(typeof(WarfareDbContext))]
-    partial class WarfareDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260928004205_AddPublicKitClassLevels")]
+    partial class AddPublicKitClassLevels
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -640,11 +642,16 @@ namespace Uncreated.Warfare.Migrations
                     b.Property<byte>("Level")
                         .HasColumnType("tinyint unsigned");
 
+                    b.Property<uint?>("KitPrimaryKey")
+                        .HasColumnType("int unsigned");
+
                     b.Property<DateTime>("Timestamp")
                         .HasColumnType("datetime")
                         .HasColumnName("GivenAt");
 
                     b.HasKey("SeasonId", "Steam64", "Class", "Level");
+
+                    b.HasIndex("KitPrimaryKey");
 
                     b.HasIndex("Steam64");
 
@@ -2226,6 +2233,10 @@ namespace Uncreated.Warfare.Migrations
 
             modelBuilder.Entity("Uncreated.Warfare.Models.Kits.KitLevelAccess", b =>
                 {
+                    b.HasOne("Uncreated.Warfare.Models.Kits.KitModel", "Kit")
+                        .WithMany()
+                        .HasForeignKey("KitPrimaryKey");
+
                     b.HasOne("Uncreated.Warfare.Models.Seasons.SeasonData", "Season")
                         .WithMany()
                         .HasForeignKey("SeasonId")

@@ -3,15 +3,15 @@ using Uncreated.Warfare.Kits;
 namespace Uncreated.Warfare.Events.Models.Kits;
 
 /// <summary>
-/// Invoked after a player's kit access is changed.
+/// Invoked after a player's kit level access is changed.
 /// </summary>
 [EventModel(EventSynchronizationContext.Pure)]
-public sealed class KitAccessUpdated : IKitAccessUpdated
+public sealed class KitLevelAccessUpdated : IKitAccessUpdated
 {
     /// <summary>
     /// The kit that was updated.
     /// </summary>
-    public required Kit Kit { get; init; }
+    public required PublicKitLevel KitLevel { get; init; }
 
     /// <summary>
     /// The player who's kit access was updated.
@@ -24,12 +24,9 @@ public sealed class KitAccessUpdated : IKitAccessUpdated
     public required bool HasAccess { get; init; }
 
     /// <summary>
-    /// The type/reason for the player's access.
-    /// </summary>
-    public required KitAccessType AccessType { get; init; }
-
-    /// <summary>
     /// The player who instigated the update, if known.
     /// </summary>
     public required CSteamID Instigator { get; init; }
+
+    KitAccessType IKitAccessUpdated.AccessType => HasAccess ? KitAccessType.Credits : KitAccessType.Unknown;
 }

@@ -3,7 +3,6 @@ using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Cooldowns;
-using Uncreated.Warfare.Players.Costs;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
@@ -292,14 +291,14 @@ public class RequestKitsTranslations : TranslationCollection
     public readonly Translation RequiresNitroBoost = new Translation("Requires <#e00ec9>NITRO BOOST</color> in <#7483c4>Discord</color>");
     
     [TranslationData("Sent when a player successfully purchases a kit.")]
-    public readonly Translation<Kit, int> KitPurchaseSuccess = new Translation<Kit, int>("<#f3e2b4>You have successfully purchased kit <#ffffff>{0}</color> for <#b8ffc1>C</color> <#ffffff>{1}</color> credits.");
+    public readonly Translation<Class, int, int> KitPurchaseSuccess = new Translation<Class, int, int>("<#f3e2b4>You have successfully purchased all <#ffffff>{0} #{1}</color> kits for <#b8ffc1>C</color> <#ffffff>{2}</color> credits.", arg0Fmt: UppercaseAddon.Instance);
 
     
     [TranslationData("Modal heading for when a player is asked if they want to purchase a kit that they don't yet own.")]
-    public readonly Translation ModalConfirmPurchaseKitHeading = new Translation("Purchase Kit", TranslationOptions.TMProUI);
+    public readonly Translation ModalConfirmPurchaseKitHeading = new Translation("Purchase Kits", TranslationOptions.TMProUI);
 
     [TranslationData("Modal description for when a player is asked if they want to purchase a kit that they don't yet own.")]
-    public readonly Translation<Kit, int> ModalConfirmPurchaseKitDescription = new Translation<Kit, int>("Purchase kit <#ffffff>{0}</color> for <#b8ffc1>C</color> <#ffffff>{1}</color> credits?", TranslationOptions.TMProUI);
+    public readonly Translation<Class, int, int> ModalConfirmPurchaseKitDescription = new Translation<Class, int, int>("Purchase all <#ffffff>{0} #{1}</color> kits for <#b8ffc1>C</color> <#ffffff>{2}</color> credits?", TranslationOptions.TMProUI, arg0Fmt: UppercaseAddon.Instance);
 
     [TranslationData("Modal accept button text for when a player is asked if they want to purchase a kit that they don't yet own.")]
     public readonly Translation ModalConfirmPurchaseKitAcceptButton = new Translation("Confirm Purchase", TranslationOptions.TMProUI);

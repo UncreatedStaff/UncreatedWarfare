@@ -16,6 +16,7 @@ namespace Uncreated.Warfare.Kits;
 public class KitPlayerComponent : IPlayerComponent
 {
     private readonly HashSet<uint> _accessibleKits = new HashSet<uint>(16);
+    private readonly HashSet<PublicKitLevel> _accessibleKitLevels = new HashSet<PublicKitLevel>(32);
     private readonly TrackingList<uint> _favoritedKits = new TrackingList<uint>(16);
     private IDictionary<uint, BasicKitStats>? _cachedKitStats;
 
@@ -192,6 +193,11 @@ public class KitPlayerComponent : IPlayerComponent
             .Select(x => x.KitId)
             .ToListAsync(token).ConfigureAwait(false);
 
+        var levelAccess = await dbContext.KitLevelAccess
+            .Where(x => x.Steam64 == s64 && x.SeasonId == WarfareModule.Season)
+            .Select(x => new { x.Class, x.Level })
+            .ToListAsync(token).ConfigureAwait(false);
+
         IDictionary<uint, BasicKitStats> cachedKitStats = await statsTask.ConfigureAwait(false);
 
         await UniTask.SwitchToMainThread(token);
@@ -205,6 +211,13 @@ public class KitPlayerComponent : IPlayerComponent
             _accessibleKits.Clear();
             foreach (uint kit in access)
                 _accessibleKits.Add(kit);
+        }
+
+        lock (_accessibleKitLevels)
+        {
+            _accessibleKitLevels.Clear();
+            foreach (var level in levelAccess)
+                _accessibleKitLevels.Add(new PublicKitLevel(level.Class, level.Level));
         }
 
         lock (_favoritedKits)
@@ -283,6 +296,10 @@ public class KitPlayerComponent : IPlayerComponent
         return null;
     }
 
+    /// <summary>
+    /// Loop through all favorite kits.
+    /// </summary>
+    /// <remarks>It is VERY important this enumerator is disposed after use.</remarks>
     [MustDisposeResource]
     public FavoritesEnumerator EnumerateFavorites()
     {
@@ -365,11 +382,24 @@ public class KitPlayerComponent : IPlayerComponent
         }
     }
 
+    public bool IsKitAccessible(Kit kit)
+    {
+        return kit.TryGetLevel(out PublicKitLevel lvl) ? IsKitAccessible(lvl) : IsKitAccessible(kit.Key);
+    }
+
     public bool IsKitAccessible(uint kitPk)
     {
         lock (_accessibleKits)
         {
             return _accessibleKits.Contains(kitPk);
+        }
+    }
+
+    public bool IsKitAccessible(PublicKitLevel level)
+    {
+        lock (_accessibleKitLevels)
+        {
+            return _accessibleKitLevels.Contains(level);
         }
     }
 
@@ -389,11 +419,27 @@ public class KitPlayerComponent : IPlayerComponent
         }
     }
 
+    internal bool AddAccessibleKit(PublicKitLevel level)
+    {
+        lock (_accessibleKitLevels)
+        {
+            return _accessibleKitLevels.Add(level);
+        }
+    }
+
     internal bool RemoveAccessibleKit(uint kitPk)
     {
         lock (_accessibleKits)
         {
             return _accessibleKits.Remove(kitPk);
+        }
+    }
+
+    internal bool RemoveAccessibleKit(PublicKitLevel level)
+    {
+        lock (_accessibleKitLevels)
+        {
+            return _accessibleKitLevels.Remove(level);
         }
     }
 

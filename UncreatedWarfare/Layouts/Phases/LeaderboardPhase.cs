@@ -186,7 +186,7 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
         if (Duration.Ticks <= 0)
             Duration = TimeSpan.FromSeconds(30d);
 
-        if (_mapSwitchService != null && _mapScheduler != null && _mapScheduler.TryGetPendingMap(out MapData newMap))
+        if (_mapSwitchService != null && _mapScheduler != null && _mapScheduler.TryGetPendingMap(out MapData? newMap))
         {
             _ = UniTask.Create((newMap, token), async args =>
             {

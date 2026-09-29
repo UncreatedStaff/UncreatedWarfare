@@ -40,6 +40,7 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
     public DbSet<Faction> Factions => Set<Faction>();
     public DbSet<KitModel> Kits => Set<KitModel>();
     public DbSet<KitAccess> KitAccess => Set<KitAccess>();
+    public DbSet<KitLevelAccess> KitLevelAccess => Set<KitLevelAccess>();
     public DbSet<KitHotkey> KitHotkeys => Set<KitHotkey>();
     public DbSet<KitLayoutTransformation> KitLayoutTransformations => Set<KitLayoutTransformation>();
     public DbSet<KitFavorite> KitFavorites => Set<KitFavorite>();

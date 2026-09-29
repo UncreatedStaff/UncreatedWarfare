@@ -200,6 +200,45 @@ public class KitSignService :
         }
     }
 
+    /// <summary>
+    /// Update all signs for all kits at a specific class and level for all players.
+    /// </summary>
+    /// <remarks>Thread Safe</remarks>
+    public void UpdateSigns(PublicKitLevel levelInfo)
+    {
+        if (GameThread.IsCurrent)
+            UpdateSignsIntl(levelInfo, null);
+        else
+        {
+            PublicKitLevel k2 = levelInfo;
+            UniTask.Create(async () =>
+            {
+                await UniTask.SwitchToMainThread();
+                UpdateSignsIntl(k2, null);
+            });
+        }
+    }
+
+    /// <summary>
+    /// Update all signs for all kits at a specific class and level for a <paramref name="player"/>.
+    /// </summary>
+    /// <remarks>Thread Safe</remarks>
+    public void UpdateSigns(PublicKitLevel levelInfo, WarfarePlayer player)
+    {
+        if (GameThread.IsCurrent)
+            UpdateSignsIntl(levelInfo, player);
+        else
+        {
+            PublicKitLevel k2 = levelInfo;
+            WarfarePlayer p2 = player;
+            UniTask.Create(async () =>
+            {
+                await UniTask.SwitchToMainThread();
+                UpdateSignsIntl(k2, p2);
+            });
+        }
+    }
+
     private void UpdateSignsIntl(WarfarePlayer? player)
     {
         if (player is { IsOnline: false })
@@ -312,6 +351,22 @@ public class KitSignService :
         }
     }
 
+    private void UpdateSignsIntl(PublicKitLevel levelInfo, WarfarePlayer? player)
+    {
+        if (player is { IsOnline: false })
+            return;
+
+        // expects game thread
+        if (player == null)
+        {
+            _signs.UpdateSigns<KitSignInstanceProvider>((_, provider) => provider.LoadoutNumber < 0 && levelInfo.AppliesTo(provider.KitId));
+        }
+        else
+        {
+            _signs.UpdateSigns<KitSignInstanceProvider>(player, (_, provider) => provider.LoadoutNumber < 0 && levelInfo.AppliesTo(provider.KitId));
+        }
+    }
+
     [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     public void HandleEvent(PlayerKitChanged e, IServiceProvider serviceProvider)
     {
@@ -381,5 +436,11 @@ public class KitSignService :
                     UpdateLoadoutSignsIntl(player);
             }
         });
+    }
+
+    [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
+    public void HandleEvent(KitLevelAccessUpdated e, IServiceProvider serviceProvider)
+    {
+        UpdateSigns(e.KitLevel);
     }
 }

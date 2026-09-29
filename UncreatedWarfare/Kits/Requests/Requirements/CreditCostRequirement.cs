@@ -1,16 +1,35 @@
-﻿namespace Uncreated.Warfare.Kits.Requests.Requirements;
+﻿using System;
+
+namespace Uncreated.Warfare.Kits.Requests.Requirements;
 
 /// <summary>
 /// Checks that a player owns a public kit that costs credits.
 /// </summary>
-public sealed class CreditCostRequirement(IKitAccessService kitAccessService) : IKitRequirement
+public sealed class CreditCostRequirement(IKitAccessService kitAccessService, PublicKitLevelConfiguration config) : IKitRequirement
 {
+    private bool NeedsAccess(Kit kit, out PublicKitLevel levelInfo, out double cost)
+    {
+        if (kit.TryGetLevel(out levelInfo) && config.CreditCostBylevel.TryGetValue(levelInfo, out double v) && v >= 0)
+        {
+            cost = v;
+            return true;
+        }
+
+        cost = 0;
+        return false;
+    }
+
     public KitRequirementResult AcceptCached<TState>(IKitRequirementVisitor<TState> visitor, in KitRequirementResolutionContext<TState> ctx)
     {
-        if (ctx.Kit.CreditCost <= 0 || kitAccessService.ArePrimaryKitsGloballyAccessible || ctx.Component.IsKitAccessible(ctx.Kit.Key))
+        if (ctx.Kit.Type != KitType.Public
+            || kitAccessService.ArePrimaryKitsGloballyAccessible
+            || !NeedsAccess(ctx.Kit, out PublicKitLevel lvlInfo, out double cost)
+            || ctx.Component.IsKitAccessible(lvlInfo))
+        {
             return KitRequirementResult.Yes;
+        }
 
-        visitor.AcceptCreditCostNotMet(in ctx, ctx.Kit.CreditCost, ctx.Player.CachedPoints.Credits);
+        visitor.AcceptCreditCostNotMet(in ctx, (int)Math.Round(cost), ctx.Player.CachedPoints.Credits);
         return KitRequirementResult.No;
     }
 
@@ -20,10 +39,15 @@ public sealed class CreditCostRequirement(IKitAccessService kitAccessService) : 
 
         async Task<KitRequirementResult> Core(IKitRequirementVisitor<TState> visitor, KitRequirementResolutionContext<TState> ctx, CancellationToken token)
         {
-            if (ctx.Kit.CreditCost <= 0 || kitAccessService.ArePrimaryKitsGloballyAccessible || await kitAccessService.HasAccessAsync(ctx.Player.Steam64, ctx.Kit.Key, token).ConfigureAwait(false))
+            if (ctx.Kit.Type != KitType.Public
+                || kitAccessService.ArePrimaryKitsGloballyAccessible
+                || !NeedsAccess(ctx.Kit, out PublicKitLevel lvlInfo, out double cost)
+                || await kitAccessService.HasAccessAsync(ctx.Player.Steam64, lvlInfo, token).ConfigureAwait(false))
+            {
                 return KitRequirementResult.Yes;
+            }
 
-            visitor.AcceptCreditCostNotMet(in ctx, ctx.Kit.CreditCost, ctx.Player.CachedPoints.Credits);
+            visitor.AcceptCreditCostNotMet(in ctx, (int)Math.Round(cost), ctx.Player.CachedPoints.Credits);
             return KitRequirementResult.No;
         }
     }

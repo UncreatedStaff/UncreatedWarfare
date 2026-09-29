@@ -278,7 +278,7 @@ partial class KitSelectionUI
                 requested = await _kitRequestService.RequestAsync(player, kit, new RequestCommandResultHandler(_chatService, _configuration, _requestTranslations), player.DisconnectToken);
                 if (oldKit != null)
                 {
-                    await UpdateKitAsync(oldKit, player, player.DisconnectToken);
+                    await UpdateKitAsync(default, oldKit, player, player.DisconnectToken);
                 }
             }
             catch (OperationCanceledException) when (!player.IsOnline) { }
@@ -292,7 +292,7 @@ partial class KitSelectionUI
                 if (!requested)
                     button.Show(player);
                 else
-                    await UpdateKitAsync(kit, player, player.DisconnectToken);
+                    await UpdateKitAsync(default, kit, player, player.DisconnectToken);
             }
         });
     }
@@ -425,7 +425,7 @@ partial class KitSelectionUI
                             if (result.Success)
                                 await CloseAsync(player);
                             else if (!result.IsOnCooldown)
-                                await UpdateKitAsync(kit, player, player.DisconnectToken);
+                                await UpdateKitAsync(default, kit, player, player.DisconnectToken);
                         }
                     });
                     break;
@@ -438,10 +438,13 @@ partial class KitSelectionUI
                 case PurchaseButtonState.CreditCost:
                     _ = TempCloseAsync(player);
 
+                    PublicKitLevel levelInfo = PublicKitLevel.FromKit(kit);
+                    double creditCost = _publicKitLevelConfig.CreditCostBylevel.GetValueOrDefault(levelInfo);
+
                     // confirm purchase kit modal
                     ToastMessage message = ToastMessage.Popup(
                         _requestKitsTranslations.ModalConfirmPurchaseKitHeading.Translate(player),
-                        _requestKitsTranslations.ModalConfirmPurchaseKitDescription.Translate(kit, kit.CreditCost, player),
+                        _requestKitsTranslations.ModalConfirmPurchaseKitDescription.Translate(levelInfo.Class, levelInfo.Level, (int)Math.Round(creditCost), player),
                         _requestKitsTranslations.ModalConfirmPurchaseKitAcceptButton.Translate(player),
                         _requestKitsTranslations.ModalConfirmPurchaseKitCancelButton.Translate(player),
                         callbacks: new PopupCallbacks((player, _, in _, ref _, ref _) =>
@@ -450,9 +453,9 @@ partial class KitSelectionUI
                             {
                                 try
                                 {
-                                    await _kitRequestService.BuyKitAsync(player, kit, player.UnturnedPlayer.look.aim.position + player.UnturnedPlayer.look.aim.forward * 0.3f, player.DisconnectToken);
+                                    await _kitRequestService.BuyKitLevelAsync(player, levelInfo, player.UnturnedPlayer.look.aim.position + player.UnturnedPlayer.look.aim.forward * 0.3f, player.DisconnectToken);
                                     await TempUncloseAsync(player);
-                                    await UpdateKitAsync(kit, player);
+                                    await UpdateKitAsync(default, kit, player);
                                 }
                                 catch (OperationCanceledException) when (!player.IsOnline) { }
                                 catch (Exception ex)
@@ -547,7 +550,7 @@ partial class KitSelectionUI
                                             if (!player.IsOnline) return;
                                             await TempUncloseAsync(player);
                                             if (!player.IsOnline) return;
-                                            await UpdateKitAsync(kit, player);
+                                            await UpdateKitAsync(default, kit, player);
                                         }
                                         catch (OperationCanceledException) when (!player.IsOnline) { }
                                         catch (Exception ex)

@@ -1,4 +1,5 @@
 using DanielWillett.ModularRpcs.Annotations;
+using DanielWillett.ModularRpcs.Async;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -124,23 +125,35 @@ public partial class MapScheduler : IAsyncEventListener<ServerWorkshopLoading>
     async UniTask IAsyncEventListener<ServerWorkshopLoading>.HandleEventAsync(ServerWorkshopLoading e, IServiceProvider serviceProvider, CancellationToken token)
     {
         int startupMapId = -1;
-        lock (this)
+        try
         {
-            string path = Path.Combine(_module.HomeDirectory, "Cache", NextMapFileName);
-            try
-            {
-                string mapId = File.ReadAllText(path);
-                if (int.TryParse(mapId, NumberStyles.Any, CultureInfo.InvariantCulture, out int id))
-                {
-                    startupMapId = id;
-                }
+            startupMapId = await SendCheckForScheduledMap();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking for scheduled map.");
+        }
 
-                File.Delete(path);
-            }
-            catch (IOException ex)
+        if (startupMapId < 0)
+        {
+            lock (this)
             {
-                if (ex is not FileNotFoundException and not DirectoryNotFoundException)
-                    _logger.LogWarning(ex, $"Failed to read {NextMapFileName}.");
+                string path = Path.Combine(_module.HomeDirectory, "Cache", NextMapFileName);
+                try
+                {
+                    string mapId = File.ReadAllText(path);
+                    if (int.TryParse(mapId, NumberStyles.Any, CultureInfo.InvariantCulture, out int id))
+                    {
+                        startupMapId = id;
+                    }
+
+                    File.Delete(path);
+                }
+                catch (IOException ex)
+                {
+                    if (ex is not FileNotFoundException and not DirectoryNotFoundException)
+                        _logger.LogWarning(ex, $"Failed to read {NextMapFileName}.");
+                }
             }
         }
 
@@ -225,23 +238,22 @@ public partial class MapScheduler : IAsyncEventListener<ServerWorkshopLoading>
         Provider.map = Current.DisplayName;
     }
 
+    [RpcSend, RpcTimeout(2 * Timeouts.Seconds)]
+    private partial RpcTask<int> SendCheckForScheduledMap();
+
     [RpcReceive]
     private async Task<bool> ReceiveScheduleMap(IServiceProvider serviceProvider, int mapId)
     {
-        MapData? map;
-        await using (AsyncServiceScope scope = serviceProvider.CreateAsyncScope())
+        await using AsyncServiceScope scope = serviceProvider.CreateAsyncScope();
+        ISeasonsDbContext dbContext = scope.ServiceProvider.GetRequiredService<ISeasonsDbContext>();
+
+        MapData? map = await dbContext.Maps.Include(x => x.Dependencies).FirstOrDefaultAsync(x => x.Id == mapId);
+        if (map == null)
         {
-            ISeasonsDbContext dbContext = scope.ServiceProvider.GetRequiredService<ISeasonsDbContext>();
-
-            map = await dbContext.Maps.Include(x => x.Dependencies).FirstOrDefaultAsync(x => x.Id == mapId);
-            if (map == null)
-            {
-                return false;
-            }
-
-            ScheduleMap(map);
+            return false;
         }
 
+        ScheduleMap(map);
         return true;
     }
 

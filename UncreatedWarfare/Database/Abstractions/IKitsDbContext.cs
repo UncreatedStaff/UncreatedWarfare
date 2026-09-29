@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Kits.Bundles;
+using Uncreated.Warfare.Models.Seasons;
 using Uncreated.Warfare.Models.Users;
 using Uncreated.Warfare.Models.Web;
 using Uncreated.Warfare.Players.Skillsets;
@@ -14,6 +15,7 @@ public interface IKitsDbContext : IDbContext
 {
     DbSet<KitModel> Kits { get; }
     DbSet<KitAccess> KitAccess { get; }
+    DbSet<KitLevelAccess> KitLevelAccess { get; }
     DbSet<KitHotkey> KitHotkeys { get; }
     DbSet<KitLayoutTransformation> KitLayoutTransformations { get; }
     DbSet<KitFavorite> KitFavorites { get; }
@@ -102,6 +104,16 @@ public interface IKitsDbContext : IDbContext
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<WarfareUserData>()
+            .HasMany<KitLevelAccess>()
+            .WithOne(x => x.PlayerData)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<SeasonData>()
+            .HasMany<KitLevelAccess>()
+            .WithOne(x => x.Season)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<WarfareUserData>()
             .HasMany<KitHotkey>()
             .WithOne(x => x.PlayerData)
             .OnDelete(DeleteBehavior.Cascade);
@@ -142,12 +154,15 @@ public interface IKitsDbContext : IDbContext
 
         modelBuilder.Entity<KitFavorite>()
             .Property(x => x.DateFavorited)
+            .HasColumnType("TIMESTAMP")
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
         modelBuilder.Entity<KitEliteBundle>()
             .HasKey(x => new { x.KitId, x.BundleId });
         modelBuilder.Entity<KitAccess>()
             .HasKey(x => new { x.KitId, x.Steam64 });
+        modelBuilder.Entity<KitLevelAccess>()
+            .HasKey(x => new { x.SeasonId, x.Steam64, x.Class, x.Level });
         modelBuilder.Entity<KitFavorite>()
             .HasKey(x => new { x.KitId, x.Steam64 });
         modelBuilder.Entity<KitFilteredFaction>()

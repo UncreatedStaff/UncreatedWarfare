@@ -56,9 +56,15 @@ public sealed class KitCommandTranslations : TranslationCollection
     
     [TranslationData("Sent to a player when they're granted access to a kit.")]
     public readonly Translation<Kit> KitAccessGivenDm = new Translation<Kit>("<#a0ad8e>You were given access to the kit: <#fff>{0}</color>.", arg0Fmt: Kit.FormatId);
+    
+    [TranslationData("Sent to a player when they're granted access to a kit using its class and level.")]
+    public readonly Translation<Class, int> KitLevelAccessGivenDm = new Translation<Class, int>("<#a0ad8e>You were given access to <#fff>{0} #{1}</color> kits.", arg0Fmt: UppercaseAddon.Instance);
 
     [TranslationData("Sent to a player when they lose access to a kit.")]
     public readonly Translation<Kit> KitAccessRevokedDm = new Translation<Kit>("<#a0ad8e>Your access to <#fff>{0}</color> was revoked.", arg0Fmt: Kit.FormatId);
+
+    [TranslationData("Sent to a player when they lose access to a kit using its class and level.")]
+    public readonly Translation<Class, int> KitLevelAccessRevokedDm = new Translation<Class, int>("<#a0ad8e>Your access to <#fff>{0} #{1}</color> kits was revoked.", arg0Fmt: UppercaseAddon.Instance);
 
     [TranslationData("Sent when a player requests the default loadout for a given class.", "The class of the loadout they requested", "The command to return to their old items", IsPriorityTranslation = false)]
     public readonly Translation<Class, CommandInfo?> RequestDefaultLoadoutGiven = new Translation<Class, CommandInfo?>("<#a8918a>Given default items for a <#cedcde>{0}</color> loadout. '{1}' to return.", arg0Fmt: UppercaseAddon.Instance);
@@ -135,14 +141,26 @@ public sealed class KitCommandTranslations : TranslationCollection
     [TranslationData("Sent to a player when they try to give a player access to a kit that already has access.", IsPriorityTranslation = false)]
     public readonly Translation<IPlayer, Kit> KitAlreadyHasAccess = new Translation<IPlayer, Kit>("<#ff8c69>{0} already has access to <#fff>{1}</color>.", arg0Fmt: WarfarePlayer.FormatColoredCharacterName, arg1Fmt: Kit.FormatId);
 
+    [TranslationData("Sent to a player when they try to give a player access to a kit that already has access, using it's class and level.", IsPriorityTranslation = false)]
+    public readonly Translation<IPlayer, Class, int> KitAlreadyHasLevelAccess = new Translation<IPlayer, Class, int>("<#ff8c69>{0} already has access to <#fff>{1} #{2}</color> kits.", arg0Fmt: WarfarePlayer.FormatColoredCharacterName, arg1Fmt: UppercaseAddon.Instance);
+
     [TranslationData("Sent to a player when they try to take a player's access to a kit that already doesn't have access.", IsPriorityTranslation = false)]
     public readonly Translation<IPlayer, Kit> KitAlreadyMissingAccess = new Translation<IPlayer, Kit>("<#ff8c69>{0} doesn't have access to <#fff>{1}</color>.", arg0Fmt: WarfarePlayer.FormatColoredCharacterName, arg1Fmt: Kit.FormatId);
 
+    [TranslationData("Sent to a player when they try to take a player's access to a kit that already doesn't have access, using it's class and level.", IsPriorityTranslation = false)]
+    public readonly Translation<IPlayer, Class, int> KitAlreadyMissingLevelAccess = new Translation<IPlayer, Class, int>("<#ff8c69>{0} doesn't have access to <#fff>{1} #{2}</color> kits.", arg0Fmt: WarfarePlayer.FormatColoredCharacterName, arg1Fmt: UppercaseAddon.Instance);
+
     [TranslationData("Sent to a player when they give another player access to a kit.", IsPriorityTranslation = false)]
     public readonly Translation<IPlayer, IPlayer, Kit> KitAccessGiven = new Translation<IPlayer, IPlayer, Kit>("<#a0ad8e>{0} (<#aaa>{1}</color>) was given access to the kit: <#fff>{2}</color>.", arg0Fmt: WarfarePlayer.FormatColoredPlayerName, arg1Fmt: WarfarePlayer.FormatSteam64, arg2Fmt: Kit.FormatId);
-    
+
+    [TranslationData("Sent to a player when they give another player access to a kit using its class and level.", IsPriorityTranslation = false)]
+    public readonly Translation<IPlayer, IPlayer, Class, int> KitLevelAccessGiven = new Translation<IPlayer, IPlayer, Class, int>("<#a0ad8e>{0} (<#aaa>{1}</color>) was given access to <#fff>{2} #{3}</color> kits.", arg0Fmt: WarfarePlayer.FormatColoredPlayerName, arg1Fmt: WarfarePlayer.FormatSteam64, arg2Fmt: UppercaseAddon.Instance);
+
     [TranslationData("Sent to a player when they remove another player's access to a kit.", IsPriorityTranslation = false)]
     public readonly Translation<IPlayer, IPlayer, Kit> KitAccessRevoked = new Translation<IPlayer, IPlayer, Kit>("<#a0ad8e>{0} (<#aaa>{1}</color>)'s access to <#fff>{2}</color> was taken away.", arg0Fmt: WarfarePlayer.FormatColoredPlayerName, arg1Fmt: WarfarePlayer.FormatSteam64, arg2Fmt: Kit.FormatId);
+
+    [TranslationData("Sent to a player when they remove another player's access to a kit using its class and level.", IsPriorityTranslation = false)]
+    public readonly Translation<IPlayer, IPlayer, Class, int> KitLevelAccessRevoked = new Translation<IPlayer, IPlayer, Class, int>("<#a0ad8e>{0} (<#aaa>{1}</color>)'s access to <#fff>{2} #{3}</color> kits was taken away.", arg0Fmt: WarfarePlayer.FormatColoredPlayerName, arg1Fmt: WarfarePlayer.FormatSteam64, arg2Fmt: UppercaseAddon.Instance);
 
     [TranslationData("Sent to a player after they start creating a new loadout.", IsPriorityTranslation = false)]
     public readonly Translation<Class, IPlayer, IPlayer, Kit> LoadoutCreated = new Translation<Class, IPlayer, IPlayer, Kit>("<#a0ad8e>Created <#bbc>{0}</color> loadout for {1} (<#aaa>{2}</color>). Kit name: <#fff>{3}</color>.", arg1Fmt: WarfarePlayer.FormatColoredCharacterName, arg2Fmt: WarfarePlayer.FormatSteam64, arg3Fmt: Kit.FormatId);

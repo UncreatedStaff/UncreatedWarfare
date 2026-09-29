@@ -8,6 +8,7 @@
   </Configurations>
   <Folder Name="/Solution Items/">
     <File Path=".gitignore" />
+    <File Path="migrate.ps1" />
     <File Path="netcalls.xlsx" />
   </Folder>
   <Project Path="C:/SteamCMD/steamapps/common/U3DS/Unturned.exe">

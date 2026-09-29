@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using System;
-using System.Collections.Immutable;
 using System.Linq;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Configuration;
@@ -41,9 +40,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
     private LinearDictionary<Team, Kit> _unarmedKitCache = new LinearDictionary<Team, Kit>(0);
 
     private readonly IKitDataStore _kitDataStore;
-    private readonly ITranslationValueFormatter _valueFormatter;
     private readonly IItemDistributionService _itemDistributionService;
-    private readonly LoadoutService _loadoutService;
     private readonly KitCommandTranslations _kitCmdTranslations;
     private readonly CooldownManager _cooldownManager;
     private readonly IKitAccessService _kitAccessService;
@@ -55,6 +52,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
     private readonly EventDispatcher _eventDispatcher;
     private readonly DroppedItemTracker _droppedItemTracker;
     private readonly AssetRedirectService _assetRedirectService;
+    private readonly PublicKitLevelConfiguration _kitLevelConfig;
     private readonly PointsService _pointsService;
     private readonly SquadMenuUI _squadMenuUI;
     private readonly RequestKitsTranslations _kitReqTranslations;
@@ -73,9 +71,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
 
     public KitRequestService(
         IKitDataStore kitDataStore,
-        ITranslationValueFormatter valueFormatter,
         IItemDistributionService itemDistributionService,
-        LoadoutService loadoutService,
         TranslationInjection<RequestKitsTranslations> translations,
         TranslationInjection<KitCommandTranslations> kitCmdTranslations,
         CooldownManager cooldownManager,
@@ -88,6 +84,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         EventDispatcher eventDispatcher,
         DroppedItemTracker droppedItemTracker,
         AssetRedirectService assetRedirectService,
+        PublicKitLevelConfiguration kitLevelConfig,
         PointsService pointsService,
         SquadMenuUI squadMenuUI,
         ChatService chatService,
@@ -99,7 +96,6 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
     {
         _kitDataStore = kitDataStore;
         _kitDataStore.KitRemoved += OnKitRemoved;
-        _loadoutService = loadoutService;
         _kitCmdTranslations = kitCmdTranslations.Value;
         _cooldownManager = cooldownManager;
         _kitAccessService = kitAccessService;
@@ -112,9 +108,9 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         _eventDispatcher = eventDispatcher;
         _droppedItemTracker = droppedItemTracker;
         _assetRedirectService = assetRedirectService;
+        _kitLevelConfig = kitLevelConfig;
         _pointsService = pointsService;
         _squadMenuUI = squadMenuUI;
-        _valueFormatter = valueFormatter;
         _itemDistributionService = itemDistributionService;
         _kitReqTranslations = translations.Value;
         _chatService = chatService;
@@ -364,27 +360,44 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
     }
 
     /// <summary>
-    /// Purchase a kit for a player.
+    /// Purchase a the kit level <paramref name="kit"/> is a part of for a player.
     /// </summary>
     /// <param name="target">Where to play the purchase SFX. If <see langword="null"/> the effect will be played at the player's position.</param>
-    /// <returns><see langword="false"/> if the kit's credit cost is 0 or if the kit can't be found, otherwise <see langword="true"/>.</returns>
-    public async Task<bool> BuyKitAsync(WarfarePlayer player, Kit kit, Vector3? target = null, CancellationToken token = default)
+    /// <returns><see langword="false"/> if the kit's credit cost is 0 or if the kit can't be found or bought, otherwise <see langword="true"/>.</returns>
+    public Task<bool> BuyKitLevelAsync(WarfarePlayer player, Kit kit, Vector3? target = null, CancellationToken token = default)
     {
-        if (kit.CreditCost <= 0)
+        if (!kit.TryGetLevel(out PublicKitLevel levelInfo))
+        {
+            return Task.FromResult(false);
+        }
+
+        return BuyKitLevelAsync(player, levelInfo, target, token);
+    }
+
+    /// <summary>
+    /// Purchase a kit level for a player.
+    /// </summary>
+    /// <param name="target">Where to play the purchase SFX. If <see langword="null"/> the effect will be played at the player's position.</param>
+    /// <returns><see langword="false"/> if the kit's credit cost is 0 or if the kit can't be found or bought, otherwise <see langword="true"/>.</returns>
+    public async Task<bool> BuyKitLevelAsync(WarfarePlayer player, PublicKitLevel levelInfo, Vector3? target = null, CancellationToken token = default)
+    {
+        if (!_kitLevelConfig.CreditCostBylevel.TryGetValue(levelInfo, out double creditCost) || creditCost <= 0f)
+        {
             return false;
+        }
 
         using CombinedTokenSources srcComb = token.CombineTokensIfNeeded(player.DisconnectToken);
 
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            if (await _kitAccessService.GetAccessAsync(player.Steam64, kit.Key, token) != null)
+            if (await _kitAccessService.HasAccessAsync(player.Steam64, levelInfo, token))
             {
                 return false;
             }
 
             // give access to the kit
-            if (!await _kitAccessService.UpdateAccessAsync(player.Steam64, kit.Key, KitAccessType.Credits, CSteamID.Nil, token))
+            if (!await _kitAccessService.UpdateAccessAsync(player.Steam64, levelInfo, hasAccess: true, CSteamID.Nil, token))
             {
                 return false;
             }
@@ -392,14 +405,14 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
             try
             {
                 // purchase the kit
-                await _pointsService.ApplyEvent(player, _pointsService.GetPurchaseEvent(player, kit.CreditCost), token);
+                await _pointsService.ApplyEvent(player, _pointsService.GetPurchaseEvent(player, creditCost), token);
             }
             catch
             {
                 // if purchase somehow failed, remove access before rethrowing
                 try
                 {
-                    await _kitAccessService.UpdateAccessAsync(player.Steam64, kit.Key, null, CSteamID.Nil, CancellationToken.None);
+                    await _kitAccessService.UpdateAccessAsync(player.Steam64, levelInfo, true, CSteamID.Nil, CancellationToken.None);
                 }
                 catch (Exception ex)
                 {
@@ -410,14 +423,14 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
 
             await UniTask.SwitchToMainThread(CancellationToken.None);
 
-            if (!player.IsOnline)
+            if (!player.IsOnline && !target.HasValue)
                 return true;
 
             // "cash register" sound effect
             IAssetLink<EffectAsset> purchaseEffect = AssetLink.Create<EffectAsset>("5e2a0073025849d39322932d88609777");
             EffectUtility.TriggerEffect(purchaseEffect, EffectManager.SMALL, target ?? player.Position, true);
 
-            _chatService.Send(player, _kitReqTranslations.KitPurchaseSuccess, kit, kit.CreditCost);
+            _chatService.Send(player, _kitReqTranslations.KitPurchaseSuccess, levelInfo.Class, levelInfo.Level, (int)Math.Round(creditCost));
         }
         finally
         {
@@ -460,7 +473,6 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
                 }
             }
 
-            ulong steam64 = player.Steam64.m_SteamID;
             List<uint> kits = await _kitDataStore.QueryListAsync(kits => kits
                 .OrderByDescending(x => x.Class == Class.Rifleman)
                 .Where(x => x.Type == KitType.Public
@@ -471,11 +483,35 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
                             && x.Season == WarfareModule.Season
                             && !x.Disabled
                             && x.Class != Class.Unarmed
-                            && x.FactionId == factionId
-                            && (x.CreditCost == 0 || x.Access.Any(a => a.Steam64 == steam64))).Select(x => x.PrimaryKey),
+                            && x.FactionId == factionId).Select(x => x.PrimaryKey),
                 token: token
             ).ConfigureAwait(false);
 
+            KitPlayerComponent kpc = player.Component<KitPlayerComponent>();
+            for (int i = kits.Count - 1; i >= 0; i--)
+            {
+                uint id = kits[i];
+                if (!_kitDataStore.CachedKitsByKey.TryGetValue(id, out Kit? cachedKit))
+                {
+                    kits.RemoveAt(i);
+                    continue;
+                }
+
+                if (!cachedKit.TryGetLevel(out PublicKitLevel lvl))
+                {
+                    if (!kpc.IsKitAccessible(id))
+                        kits.RemoveAt(i);
+                    
+                    continue;
+                }
+
+                // if its free
+                if (_kitLevelConfig.CreditCostBylevel.GetValueOrDefault(lvl) <= 0)
+                    continue;
+
+                if (!kpc.IsKitAccessible(lvl))
+                    kits.RemoveAt(i);
+            }
 
             Kit? kit = null;
             if (kits.Count != 0)
@@ -899,15 +935,16 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
                 hit = default;
 
             Kit kit = ctx.Kit;
+            PublicKitLevel lvl = PublicKitLevel.FromKit(kit);
             // confirm purchase kit modal
             ToastMessage message = ToastMessage.Popup(
                 _this._kitReqTranslations.ModalConfirmPurchaseKitHeading.Translate(player),
-                _this._kitReqTranslations.ModalConfirmPurchaseKitDescription.Translate(kit, (int)Math.Ceiling(cost), player),
+                _this._kitReqTranslations.ModalConfirmPurchaseKitDescription.Translate(lvl.Class, lvl.Level, (int)Math.Ceiling(cost), player),
                 _this._kitReqTranslations.ModalConfirmPurchaseKitAcceptButton.Translate(player),
                 _this._kitReqTranslations.ModalConfirmPurchaseKitCancelButton.Translate(player),
                 callbacks: new PopupCallbacks((player, _, in _, ref _, ref _) =>
                 {
-                    _ = _this.BuyKitAsync(player, kit, hit.transform?.position, player.DisconnectToken);
+                    _ = _this.BuyKitLevelAsync(player, lvl, hit.transform?.position, player.DisconnectToken);
                 }, null)
             );
 

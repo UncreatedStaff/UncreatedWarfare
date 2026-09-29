@@ -587,7 +587,7 @@ public sealed class WarfareModule
         // all module assemblies and plugins
         Assembly[] relevantAssemblies = [ thisAsm ];
 
-        bldr.RegisterType<MapScheduler>()
+        bldr.RegisterRpcType<MapScheduler>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
         bldr.RegisterType<MapSwitchService>()
@@ -915,6 +915,8 @@ public sealed class WarfareModule
 
         // Kits
         bldr.RegisterType<DefaultLoadoutItemsConfiguration>()
+            .SingleInstance();
+        bldr.RegisterType<PublicKitLevelConfiguration>()
             .SingleInstance();
 
         bldr.RegisterType<KitCreateMissingDefaultKitsTweak>().As<ILayoutHostedService>();

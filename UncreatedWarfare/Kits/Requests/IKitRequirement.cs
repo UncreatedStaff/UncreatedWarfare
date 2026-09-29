@@ -226,7 +226,7 @@ public enum KitRequirementResult
     No,
 
     /// <summary>
-    /// Unable to tell, mainly for <see cref="IKitRequirement.IsMetCached"/>.
+    /// Unable to tell, mainly for <see cref="IKitRequirement.AcceptCached{TState}"/>.
     /// </summary>
     Inconclusive,
 

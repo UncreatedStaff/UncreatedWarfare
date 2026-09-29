@@ -69,10 +69,6 @@ public class KitModel
 
     [DefaultValue(0)]
     [CommandSettable]
-    public int CreditCost { get; set; }
-
-    [DefaultValue(0)]
-    [CommandSettable]
     public decimal PremiumCost { get; set; }
 
     [DefaultValue(SquadLevel.Member)]

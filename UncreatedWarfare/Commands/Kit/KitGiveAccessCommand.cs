@@ -1,10 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Globalization;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations;
 
@@ -32,7 +30,7 @@ internal sealed class KitGiveAccessCommand : IExecutableCommand
 
     public async UniTask ExecuteAsync(CancellationToken token)
     {
-        (CSteamID? steam64, WarfarePlayer? onlinePlayer) = await Context.TryGetPlayer(0).ConfigureAwait(false);
+        (CSteamID? steam64, WarfarePlayer? onlinePlayer) = await Context.TryGetPlayer(0);
 
         if (!steam64.HasValue || !Context.TryGet(1, out string? kitName))
         {
@@ -47,34 +45,48 @@ internal sealed class KitGiveAccessCommand : IExecutableCommand
             accessType = KitAccessType.Purchase;
         }
 
-        Kit? kit = await _kitDataStore.QueryKitAsync(kitName, KitInclude.Base, token).ConfigureAwait(false);
+        Kit? kit = await _kitDataStore.QueryKitAsync(kitName, KitInclude.Base, token);
         if (kit == null)
         {
             throw Context.Reply(_translations.KitNotFound, kitName);
         }
 
-        bool hasAccess = await _kitAccessService.HasAccessAsync(steam64.Value, kit.Key, token).ConfigureAwait(false);
-
-        PlayerNames playerName = onlinePlayer?.Names ?? await _userDataService.GetUsernamesAsync(steam64.Value.m_SteamID, token).ConfigureAwait(false);
+        PlayerNames playerName = onlinePlayer?.Names ?? await _userDataService.GetUsernamesAsync(steam64.Value.m_SteamID, token);
         IPlayer player = (IPlayer?)onlinePlayer ?? playerName;
 
-        if (hasAccess)
+        if (kit.TryGetLevel(out PublicKitLevel publicKitLevel))
         {
-            throw Context.Reply(_translations.KitAlreadyHasAccess, player, kit);
+            if (await _kitAccessService.HasAccessAsync(steam64.Value, publicKitLevel, token)
+                || !await _kitAccessService.UpdateAccessAsync(steam64.Value, publicKitLevel, hasAccess: true, Context.CallerId, token))
+            {
+                throw Context.Reply(_translations.KitAlreadyHasLevelAccess, player, publicKitLevel.Class, publicKitLevel.Level);
+            }
+
+            await UniTask.SwitchToMainThread(token);
+
+            Context.Reply(_translations.KitLevelAccessGiven, player, player, publicKitLevel.Class, publicKitLevel.Level);
+
+            if (onlinePlayer != null)
+            {
+                _chatService.Send(onlinePlayer, _translations.KitLevelAccessGivenDm, publicKitLevel.Class, publicKitLevel.Level);
+            }
         }
-
-        if (!await _kitAccessService.UpdateAccessAsync(steam64.Value, kit.Key, accessType, Context.CallerId, token).ConfigureAwait(false))
+        else
         {
-            throw Context.Reply(_translations.KitAlreadyHasAccess, player, kit);
-        }
+            if (await _kitAccessService.HasAccessAsync(steam64.Value, kit.Key, token)
+                || !await _kitAccessService.UpdateAccessAsync(steam64.Value, kit.Key, accessType, Context.CallerId, token))
+            {
+                throw Context.Reply(_translations.KitAlreadyHasAccess, player, kit);
+            }
 
-        await UniTask.SwitchToMainThread(token);
+            await UniTask.SwitchToMainThread(token);
 
-        Context.Reply(_translations.KitAccessGiven, player, player, kit);
+            Context.Reply(_translations.KitAccessGiven, player, player, kit);
 
-        if (onlinePlayer != null)
-        {
-            _chatService.Send(onlinePlayer, _translations.KitAccessGivenDm, kit);
+            if (onlinePlayer != null)
+            {
+                _chatService.Send(onlinePlayer, _translations.KitAccessGivenDm, kit);
+            }
         }
     }
 }

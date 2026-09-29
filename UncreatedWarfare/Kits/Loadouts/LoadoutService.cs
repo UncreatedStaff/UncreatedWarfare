@@ -397,7 +397,6 @@ public partial class LoadoutService
                 kit.Skillsets.Clear();
                 kit.Faction = null;
                 kit.FactionId = null;
-                kit.CreditCost = 0;
                 kit.PremiumCost = LoadoutCost;
                 kit.Type = KitType.Loadout;
                 kit.Disabled = true;

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Immutable;
 using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Kits.Items;
@@ -173,11 +174,6 @@ public class Kit : IRequestable<Kit>, ITranslationArgument
     public bool RequiresSquad { get; private set; }
 
     /// <summary>
-    /// Cost to unlock this kit in in-game credits.
-    /// </summary>
-    public int CreditCost { get; private set; }
-
-    /// <summary>
     /// Cost to unlock this kit in US dollars.
     /// </summary>
     public decimal PremiumCost { get; private set; }
@@ -268,11 +264,6 @@ public class Kit : IRequestable<Kit>, ITranslationArgument
     public CSteamID[] Favorites => _favorites ?? throw new NotIncludedException("KitModel.Favorites");
 
     /// <summary>
-    /// Whether or not this kit can be used by all players.
-    /// </summary>
-    public bool IsFree => Type == KitType.Public && !RequiresServerBoost && CreditCost <= 0;
-
-    /// <summary>
     /// Whether or not this kit is a premium kit that can be bought (elite or loadout kits).
     /// </summary>
     public bool IsPaid => Type is KitType.Elite or KitType.Loadout;
@@ -329,7 +320,6 @@ public class Kit : IRequestable<Kit>, ITranslationArgument
         RequestCooldown = TimeSpan.FromSeconds(model.RequestCooldown);
         MinRequiredSquadMembers = model.MinRequiredSquadMembers;
         RequiresSquad = model.RequiresSquad;
-        CreditCost = model.CreditCost;
         PremiumCost = model.PremiumCost;
         WeaponText = model.Weapons;
 
@@ -374,6 +364,29 @@ public class Kit : IRequestable<Kit>, ITranslationArgument
 
         if (model.Favorites != null)
             UpdateFavoritesFromModel(model.Favorites);
+    }
+
+    /// <inheritdoc cref="IsFree(PublicKitLevelConfiguration,out PublicKitLevel)"/>
+    public bool IsFree(PublicKitLevelConfiguration config)
+    {
+        return IsFree(config, out _);
+    }
+
+    /// <summary>
+    /// Whether or not this kit can be used by all players.
+    /// </summary>
+    public bool IsFree(PublicKitLevelConfiguration config, out PublicKitLevel lvl)
+    {
+        if (Type != KitType.Public || RequiresServerBoost)
+        {
+            lvl = default;
+            return false;
+        }
+
+        if (!TryGetLevel(out lvl))
+            return true;
+
+        return !config.CreditCostBylevel.TryGetValue(lvl, out double v) || v <= 0;
     }
 
     private void UpdateUnlockRequirementsFromModel(List<KitUnlockRequirement> unlockRequirements)
@@ -518,6 +531,29 @@ public class Kit : IRequestable<Kit>, ITranslationArgument
         }
 
         _favorites = array;
+    }
+
+    /// <summary>
+    /// Attempt to read a <see cref="PublicKitLevel"/> from this <see cref="Kit"/>.
+    /// </summary>
+    public bool TryGetLevel(out PublicKitLevel level)
+    {
+        if (Type != KitType.Public || Class <= Class.Unarmed || Class > ClassConverter.MaxClass)
+        {
+            Unsafe.SkipInit(out level);
+            return false;
+        }
+
+        try
+        {
+            level = PublicKitLevel.FromKit(this);
+            return true;
+        }
+        catch (ArgumentException)
+        {
+            Unsafe.SkipInit(out level);
+            return false;
+        }
     }
 
     public static readonly SpecialFormat FormatId = new SpecialFormat("Kit Id", "i");
