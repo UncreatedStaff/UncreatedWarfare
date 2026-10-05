@@ -13,7 +13,7 @@
         <!--<DefineConstants>$(DefineConstants);TELEMETRY</DefineConstants>-->
 
         <!-- Enable this for manual profiling with ProfilerUtil -->
-        <DefineConstants>$(DefineConstants);PROFILING</DefineConstants>
+        <!--<DefineConstants>$(DefineConstants);PROFILING</DefineConstants>-->
 
     </PropertyGroup>
 

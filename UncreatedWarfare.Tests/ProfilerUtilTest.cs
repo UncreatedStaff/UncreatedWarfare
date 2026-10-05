@@ -1,4 +1,5 @@
-﻿using NUnit.Framework;
+﻿#if false
+using NUnit.Framework;
 using System;
 using System.Threading;
 using Uncreated.Warfare.Profiling;
@@ -26,3 +27,4 @@ public class ProfilerUtilTest
         Thread.Sleep(sleep);
     }
 }
+#endif
