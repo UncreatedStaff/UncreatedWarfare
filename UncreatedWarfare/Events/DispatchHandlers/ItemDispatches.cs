@@ -17,6 +17,8 @@ partial class EventDispatcher
         if (!shouldAllow)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         shouldAllow = false;
 
         ItemAsset? asset = itemData.item.GetAsset();
@@ -51,6 +53,8 @@ partial class EventDispatcher
         // DroppedItemTracker handles the ItemDestroyed invocation.
         EventContinuations.Dispatch(args, this, warfarePlayer.DisconnectToken, out shouldAllow, continuation: args =>
         {
+            using IDisposable? profiler = ProfilerUtil.Profile();
+
             if (args.AutoFindFreeSpace
                     ? args.Inventory.tryAddItem(args.Item, true)
                     : args.Inventory.tryAddItem(args.Item, args.DestinationX, args.DestinationY, (byte)args.DestinationPage, args.DestinationRotation)
@@ -94,6 +98,8 @@ partial class EventDispatcher
         if (_shouldIgnorePlayerCraftingCraftBlueprintRequested)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         bool forceAll = PlayerCraftingReceiveCraft.LastCraftAll;
         WarfarePlayer player = _playerService.GetOnlinePlayer(crafting);
 
@@ -109,6 +115,8 @@ partial class EventDispatcher
         // DroppedItemTracker handles the ItemDestroyed invocation.
         EventContinuations.Dispatch(args, this, player.DisconnectToken, out shouldAllow, continuation: args =>
         {
+            using IDisposable? profiler = ProfilerUtil.Profile();
+
             _shouldIgnorePlayerCraftingCraftBlueprintRequested = true;
             try
             {

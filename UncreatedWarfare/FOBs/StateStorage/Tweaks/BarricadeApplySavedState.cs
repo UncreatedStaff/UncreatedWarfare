@@ -21,6 +21,8 @@ public class BarricadeApplySavedStateTweaks : IEventListener<BarricadePlaced>
     [EventListener(Priority = int.MaxValue, MustRunInstantly = true)]
     void IEventListener<BarricadePlaced>.HandleEvent(BarricadePlaced e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         FactionInfo? factionInfo = e.Owner?.Team?.Faction;
         BarricadeStateSave? save = _barricadeStateStore.FindBarricadeSave(e.Barricade.asset, factionInfo);
 

@@ -18,6 +18,8 @@ partial class EventDispatcher
         if (!shouldAllow)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         WarfarePlayer? player = _playerService.GetOnlinePlayerOrNull(owner);
         if (player == null)
         {
@@ -52,6 +54,8 @@ partial class EventDispatcher
         {
             if (!args.OriginalPlacer.IsOnline)
                 return;
+
+            using IDisposable? profiler = ProfilerUtil.Profile();
 
             // check if the item hasn't been moved in invetory for some reason
             PlayerInventory inventory = args.OriginalPlacer.UnturnedPlayer.inventory;
@@ -122,6 +126,8 @@ partial class EventDispatcher
     /// </summary>
     private void StructureManagerOnStructureSpawned(StructureRegion region, StructureDrop drop)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         StructureData data = drop.GetServersideData();
 
         WarfarePlayer? owner = new CSteamID(data.owner).GetEAccountType() == EAccountType.k_EAccountTypeIndividual
@@ -149,6 +155,8 @@ partial class EventDispatcher
     {
         if (!shouldAllow)
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         DestroyerComponent.AddOrUpdate(structure.model.gameObject, instigatorClient.playerID.steamID.m_SteamID, true, EDamageOrigin.Unknown);
 
@@ -196,6 +204,8 @@ partial class EventDispatcher
             {
                 if (args.ServersideData.structure.isDead)
                     return;
+
+                using IDisposable? profiler = ProfilerUtil.Profile();
 
                 // simulate StructureDrop.ReceiveSalvageRequest
                 ItemStructureAsset? asset = args.Structure.asset;
@@ -247,6 +257,8 @@ partial class EventDispatcher
         if (_ignoreStructureManagerOnDamageStructureRequested)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         StructureDrop? drop = StructureManager.FindStructureByRootTransform(structureTransform);
         if (drop == null)
         {
@@ -291,6 +303,8 @@ partial class EventDispatcher
         {
             if (args.Structure == null || args.Structure.GetServersideData().structure.isDead)
                 return;
+
+            using IDisposable? profiler = ProfilerUtil.Profile();
 
             _ignoreStructureManagerOnDamageStructureRequested = true;
             try

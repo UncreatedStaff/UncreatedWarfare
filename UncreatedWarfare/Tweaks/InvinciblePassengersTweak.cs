@@ -21,6 +21,8 @@ internal sealed class InvinciblePassengersTweak(VehicleService vehicleService) :
         if (vehicle is null || vehicle.isExploded || vehicle.isDrowned || vehicle.isDead)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         WarfareVehicle? vehicleInfo = vehicleService.GetVehicle(vehicle);
         if (vehicleInfo?.Info == null)
             return;

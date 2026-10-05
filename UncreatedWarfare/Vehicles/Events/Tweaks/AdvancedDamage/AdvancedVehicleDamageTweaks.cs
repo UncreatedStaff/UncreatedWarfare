@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Configuration;
-using System;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
@@ -73,6 +72,8 @@ public class AdvancedVehicleDamageTweaks :
     [EventListener(MustRunInstantly = true)]
     public void HandleEvent(ProjectileExploding e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (e.HitVehicle == null || !e.HitVehicle.TryGetComponent(out WarfareVehicleComponent comp))
             return;
 
@@ -82,12 +83,16 @@ public class AdvancedVehicleDamageTweaks :
 
     private void UseableGunOnBulletHit(UseableGun gun, BulletInfo bullet, InputInfo hit, ref bool shouldAllow)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (hit.vehicle != null && hit.vehicle.TryGetComponent(out WarfareVehicleComponent comp))
             comp.WarfareVehicle.AdvancedDamageApplier.RegisterDirectHitDamageMultiplier(AdvancedVehicleDamageApplier.GetComponentDamageMultiplier(hit));
     }
 
     public void HandleEvent(VehiclePreDamaged e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (e.InstantaneousDamageOrigin
             is not EDamageOrigin.Useable_Gun
             and not EDamageOrigin.Bullet_Explosion

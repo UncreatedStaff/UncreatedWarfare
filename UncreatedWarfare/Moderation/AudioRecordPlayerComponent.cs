@@ -77,6 +77,8 @@ public class AudioRecordPlayerComponent : IPlayerComponent, IDisposable
 
     public void AppendPacket(ArraySegment<byte> packet)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _lastVoiceChat = Time.realtimeSinceStartup;
         if (!_lastVoiceChatState)
         {
@@ -141,6 +143,8 @@ public class AudioRecordPlayerComponent : IPlayerComponent, IDisposable
 
     public ArraySegment<byte>[] CreatePackets()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (_packets == null || _packets.Count == 0 || _voiceBuffer == null)
@@ -275,6 +279,8 @@ public class AudioRecordPlayerComponent : IPlayerComponent, IDisposable
 
     private void Update()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         bool vcState = Player.IsOnline && Time.realtimeSinceStartup - _lastVoiceChat < 0.35f;
         if (vcState == _lastVoiceChatState)
             return;

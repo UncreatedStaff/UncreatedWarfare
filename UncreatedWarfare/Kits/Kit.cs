@@ -38,7 +38,7 @@ namespace Uncreated.Warfare.Kits;
 /// Elite kits can also be in bundles.
 /// </para>
 /// </summary>
-public class Kit : IRequestable<Kit>, ITranslationArgument
+public class Kit : IRequestable<Kit>, ITranslationArgument, IUnlockRequirementProvider
 {
     private KitItemClothingCache _clothingCache;
 
@@ -304,6 +304,8 @@ public class Kit : IRequestable<Kit>, ITranslationArgument
 
     internal void UpdateFromModel(KitModel model, IFactionDataStore factionDataStore, ICachableLanguageDataStore languageDataStore)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (Key != 0 && Key != model.PrimaryKey)
             throw new ArgumentException("Key not same as model.", nameof(model));
 
@@ -584,6 +586,8 @@ public class Kit : IRequestable<Kit>, ITranslationArgument
 
         return GetDisplayName(parameters.Language, true);
     }
+
+    IEnumerable<UnlockRequirement> IUnlockRequirementProvider.UnlockRequirements => UnlockRequirements;
 
     internal struct KitItemClothingCache
     {

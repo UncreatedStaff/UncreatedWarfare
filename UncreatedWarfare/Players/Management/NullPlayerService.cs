@@ -1,4 +1,3 @@
-using System;
 using Uncreated.Warfare.Util.List;
 
 namespace Uncreated.Warfare.Players.Management;

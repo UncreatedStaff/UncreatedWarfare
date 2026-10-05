@@ -1,9 +1,6 @@
 using DanielWillett.ReflectionTools;
 using SDG.Framework.Utilities;
 using SDG.NetPak;
-using SDG.NetTransport;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using Uncreated.Warfare.Commands;
@@ -269,6 +266,8 @@ public static class ItemUtility
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         PlayerInventory inv = player.inventory;
@@ -304,6 +303,8 @@ public static class ItemUtility
 
     private static bool CheckAttached(ItemJar jar, ushort id)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (id == 0 || jar.item.state.Length != 18 || jar.item.GetAsset() is ItemGunAsset)
             return false;
         
@@ -325,6 +326,8 @@ public static class ItemUtility
     /// <exception cref="GameThreadException">Not on main thread.</exception>
     public static int CountItems(Player player, Predicate<ItemJar> itemSelector, int max = -1)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (itemSelector == null)
             throw new ArgumentNullException(nameof(itemSelector));
 
@@ -361,6 +364,8 @@ public static class ItemUtility
     /// <returns>Number of items destroyed.</returns>
     public static int DestroyAllDroppedItems(bool despawned)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int ct = 0;
         foreach (ItemInfo item in EnumerateDroppedItems())
         {
@@ -381,6 +386,8 @@ public static class ItemUtility
     /// <returns>Number of items destroyed.</returns>
     public static int DestroyDroppedItemsInRange(Vector3 position, float radius, IAssetLink<ItemAsset> asset, bool playTakeItemSound, int max = -1, bool horizontalDistanceOnly = false, CSteamID pickUpPlayer = default, Page pickupPage = (Page)byte.MaxValue, byte pickupX = 0, byte pickupY = 0, byte pickupRot = 0)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
@@ -424,6 +431,8 @@ public static class ItemUtility
     /// <returns>Number of items destroyed.</returns>
     public static int DestroyDroppedItemsInRange(Vector3 position, float radius, Predicate<ItemData> itemSelector, bool playTakeItemSound, int max = -1, bool horizontalDistanceOnly = false, CSteamID pickUpPlayer = default, Page pickupPage = (Page)byte.MaxValue, byte pickupX = 0, byte pickupY = 0, byte pickupRot = 0)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (itemSelector == null)
             throw new ArgumentNullException(nameof(itemSelector));
 
@@ -467,6 +476,8 @@ public static class ItemUtility
     /// <returns>Number of items destroyed.</returns>
     public static int DestroyDroppedItemsInRange(Vector3 position, float radius, bool playTakeItemSound, int max = -1, bool horizontalDistanceOnly = false, CSteamID pickUpPlayer = default, Page pickupPage = (Page)byte.MaxValue, byte pickupX = 0, byte pickupY = 0, byte pickupRot = 0)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         float sqrRadius = radius * radius;
@@ -505,6 +516,8 @@ public static class ItemUtility
     /// <exception cref="GameThreadException">Not on main thread.</exception>
     public static bool DestroyDroppedItem(ItemData item, bool despawned, bool playTakeItemSound = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (item == null)
             throw new ArgumentNullException(nameof(item));
 
@@ -527,6 +540,8 @@ public static class ItemUtility
     /// <exception cref="GameThreadException">Not on main thread.</exception>
     public static bool DestroyDroppedItem(Item item, bool despawned, bool playTakeItemSound = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (item == null)
             throw new ArgumentNullException(nameof(item));
 
@@ -549,6 +564,8 @@ public static class ItemUtility
     /// <exception cref="GameThreadException">Not on main thread.</exception>
     public static bool DestroyDroppedItem(Item item, bool despawned, WarfarePlayer pickUpPlayer, Page pickupPage = (Page)byte.MaxValue, byte pickupX = 0, byte pickupY = 0, byte pickupRot = 0, bool playTakeItemSound = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (item == null)
             throw new ArgumentNullException(nameof(item));
 
@@ -571,6 +588,8 @@ public static class ItemUtility
     /// <exception cref="GameThreadException">Not on main thread.</exception>
     public static bool DestroyDroppedItem(ItemData item, bool despawned, WarfarePlayer pickUpPlayer, Page pickupPage = (Page)byte.MaxValue, byte pickupX = 0, byte pickupY = 0, byte pickupRot = 0, bool playTakeItemSound = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (item == null)
             throw new ArgumentNullException(nameof(item));
 
@@ -593,6 +612,8 @@ public static class ItemUtility
     /// <exception cref="GameThreadException">Not on main thread.</exception>
     public static void DestroyDroppedItem(byte x, byte y, int index, bool despawned, bool playTakeItemSound = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (!Regions.checkSafe(x, y))
@@ -611,6 +632,8 @@ public static class ItemUtility
     /// <exception cref="GameThreadException">Not on main thread.</exception>
     public static void DestroyDroppedItem(byte x, byte y, int index, bool despawned, WarfarePlayer pickUpPlayer, bool playTakeItemSound, Page pickupPage, byte pickupX, byte pickupY, byte pickupRot)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (!Regions.checkSafe(x, y))
@@ -625,6 +648,8 @@ public static class ItemUtility
 
     internal static void RemoveDroppedItemUnsafe(byte x, byte y, int index, bool despawned, CSteamID pickUpPlayer, bool playTakeItemSound, Page pickupPage, byte pickupX, byte pickupY, byte pickupRot)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ItemRegion region = ItemManager.regions[x, y];
         ItemData item = region.items[index];
 
@@ -665,6 +690,8 @@ public static class ItemUtility
     /// <param name="refillItems">If items should be fully refilled (like guns, etc.)</param>
     public static List<IItem> ItemsFromInventory(WarfarePlayer player, bool addClothes = true, bool addItems = true, bool refillItems = false, AssetRedirectService? assetRedirectService = null)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
         if (!addItems && !addClothes)
             return new List<IItem>(0);
@@ -768,6 +795,8 @@ public static class ItemUtility
     /// </summary>
     public static void RefillState(ref byte[] state, ItemAsset asset)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (state.Length == 0)
             return;
 
@@ -818,6 +847,8 @@ public static class ItemUtility
     /// <param name="state">Used to select the current magazine if supplied.</param>
     public static ItemMagazineAsset? FindMagazineAsset(ItemGunAsset gunAsset, byte[]? state = null)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (state is { Length: >= 10 }
@@ -847,6 +878,8 @@ public static class ItemUtility
     /// </summary>
     public static void ClearInventoryAndSlots(WarfarePlayer player, bool clothes = true)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ClearInventory(player, clothes);
         UpdateSlots(player);
     }
@@ -856,6 +889,8 @@ public static class ItemUtility
     /// </summary>
     public static void UpdateSlots(WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
         if (!player.IsOnline)
             return;
@@ -902,6 +937,8 @@ public static class ItemUtility
 
     internal static bool RemoveAutoItem(Player nativePlayer, ItemAsset expectedAsset)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         for (int pg = PlayerInventory.SLOTS; pg < PlayerInventory.STORAGE; ++pg)
         {
             Items page = nativePlayer.inventory.items[pg];
@@ -937,6 +974,8 @@ public static class ItemUtility
     /// </summary>
     public static bool TryFindJarPage(PlayerInventory inventory, ItemJar jar, out Page page)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int maxPage = PlayerInventory.STORAGE;
         for (byte pg = 0; pg < maxPage; ++pg)
         {
@@ -956,6 +995,8 @@ public static class ItemUtility
     /// </summary>
     public static bool TryFindItem(PlayerInventory inventory, Item item, out byte x, out byte y, out Page page, out byte rot)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int maxPage = PlayerInventory.PAGES - 2;
         for (byte pg = 0; pg < maxPage; ++pg)
         {
@@ -987,6 +1028,8 @@ public static class ItemUtility
     /// </summary>
     public static bool HasAnyItems(WarfarePlayer player, bool clothes = true)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (clothes)
         {
             PlayerClothing clothing = player.UnturnedPlayer.clothing;
@@ -1019,6 +1062,8 @@ public static class ItemUtility
     /// </summary>
     public static void ClearInventory(WarfarePlayer player, bool clothes = true)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
         if (!player.IsOnline)
             return;
@@ -1138,6 +1183,8 @@ public static class ItemUtility
     /// </summary>
     public static void SendPages(WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
         if (!player.IsOnline)
             return;
@@ -1175,6 +1222,8 @@ public static class ItemUtility
     /// </summary>
     public static ItemJar? GetHeldItem(this WarfarePlayer player, out Page page)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
         if (player.IsOnline)
         {
@@ -1197,6 +1246,8 @@ public static class ItemUtility
     /// </summary>
     public static bool IsHeldItem(WarfarePlayer player, Page page, byte x, byte y)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
         if (!player.IsOnline)
             return false;
@@ -1218,6 +1269,8 @@ public static class ItemUtility
     /// </summary>
     public static ItemJar? GetItemAt(this WarfarePlayer player, Page page, byte x, byte y, out byte index)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
         if (player.IsOnline)
         {
@@ -1247,6 +1300,8 @@ public static class ItemUtility
     /// </summary>
     public static ItemJar? GetItemAt(this PlayerInventory inventory, Page page, byte x, byte y, out byte index)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         index = inventory.getIndex((byte)page, x, y);
@@ -1261,6 +1316,8 @@ public static class ItemUtility
     /// </summary>
     public static bool IsOverlapping(byte posX1, byte posY1, byte sizeX1, byte sizeY1, byte posX2, byte posY2, byte sizeX2, byte sizeY2, byte rotation1, byte rotation2)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (rotation1 % 2 == 1)
             (sizeX1, sizeY1) = (sizeY1, sizeX1);
         if (rotation2 % 2 == 1)
@@ -1282,6 +1339,8 @@ public static class ItemUtility
     /// </summary>
     public static bool CanPerformMove(PlayerInventory inventory, ItemJar item, Page page, byte x, byte y, byte rot)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Items destinationPage = inventory.items[(int)page];
 
         byte sx = item.size_x, sy = item.size_y;
@@ -1305,6 +1364,8 @@ public static class ItemUtility
     /// </summary>
     public static bool CanPerformSwap(PlayerInventory inventory, ItemJar item1, Page item1Page, ItemJar item2, Page item2Page)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (item1 == item2)
         {
             return item1Page == item2Page;
@@ -1443,6 +1504,8 @@ public static class ItemUtility
     [Pure]
     public static ItemInfo FindItem(uint instanceId, byte expectedRegionX, byte expectedRegionY)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         SurroundingRegionsIterator iterator = RegionUtility.EnumerateRegions(expectedRegionX, expectedRegionY);
@@ -1468,6 +1531,8 @@ public static class ItemUtility
     [Pure]
     public static ItemInfo FindItem(Item item, byte expectedRegionX, byte expectedRegionY)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         SurroundingRegionsIterator iterator = RegionUtility.EnumerateRegions(expectedRegionX, expectedRegionY);
@@ -1493,6 +1558,8 @@ public static class ItemUtility
     [Pure]
     public static ItemInfo FindItem(uint instanceId, IAssetLink<ItemAsset> expectedAsset, Vector3 expectedPosition)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         ItemInfo foundByPosition = default;
@@ -1574,6 +1641,8 @@ public static class ItemUtility
     [Pure]
     public static ItemInfo GetClosestItemInRange(Vector3 position, float radius, IAssetLink<ItemAsset> asset, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
@@ -1613,6 +1682,8 @@ public static class ItemUtility
     [Pure]
     public static ItemInfo GetClosestItem(Vector3 position, IAssetLink<ItemAsset> asset, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
@@ -1655,6 +1726,8 @@ public static class ItemUtility
     [Pure]
     public static ItemInfo GetClosestItemInRange(Vector3 position, float radius, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
@@ -1690,6 +1763,8 @@ public static class ItemUtility
     [Pure]
     public static ItemInfo GetClosestItem(Vector3 position, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
@@ -1730,6 +1805,8 @@ public static class ItemUtility
     [Pure]
     public static ItemInfo GetClosestItemWhere(Vector3 position, float radius, Predicate<ItemData> itemSelector, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (itemSelector == null)
             throw new ArgumentNullException(nameof(itemSelector));
 
@@ -1769,6 +1846,8 @@ public static class ItemUtility
     [Pure]
     public static ItemInfo GetClosestItemWhere(Vector3 position, Predicate<ItemData> itemSelector, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (itemSelector == null)
             throw new ArgumentNullException(nameof(itemSelector));
 
@@ -1812,6 +1891,8 @@ public static class ItemUtility
     [Pure]
     public static int CountItemsWhere(Vector3 position, float radius, Predicate<ItemData> itemSelector, int max = -1, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (itemSelector == null)
             throw new ArgumentNullException(nameof(itemSelector));
 
@@ -1853,6 +1934,8 @@ public static class ItemUtility
     [Pure]
     public static int CountItemsWhere(Predicate<ItemData> itemSelector, int max = -1)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (itemSelector == null)
             throw new ArgumentNullException(nameof(itemSelector));
 
@@ -1889,6 +1972,8 @@ public static class ItemUtility
     [Pure]
     public static int CountItemsInRange(Vector3 position, float radius, IAssetLink<ItemAsset> asset, int max = -1, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
@@ -1930,6 +2015,8 @@ public static class ItemUtility
     [Pure]
     public static int CountItems(IAssetLink<ItemAsset> asset, int max = -1)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
@@ -1965,6 +2052,8 @@ public static class ItemUtility
     [Pure]
     public static int CountItemsInRange(Vector3 position, float radius, int max = -1, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         float sqrRadius = radius * radius;
@@ -2001,6 +2090,8 @@ public static class ItemUtility
     [Pure]
     public static FirearmClass GetFirearmClass(ItemGunAsset gun)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ItemMagazineAsset? magazine = gun.SelectDefaultMagazine();
 
         if (magazine?.pellets > 1)

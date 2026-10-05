@@ -1,7 +1,6 @@
 using DanielWillett.ReflectionTools;
 using SDG.Framework.Utilities;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Players;
@@ -15,10 +14,14 @@ namespace Uncreated.Warfare.Events;
 /// </summary>
 public class EventSynchronizer : IDisposable
 {
+    // avoid a flood of new events after a long timeout.
+    internal const int MaxTimedoutEventsPerFramePerGroup = 4;
+
     private readonly ILogger<EventSynchronizer> _logger;
 
     private readonly SynchronizationGroup _globalGroup;
     private readonly PlayerDictionary<SynchronizationGroup> _playerGroups;
+    private readonly List<ulong> _playerGroupValues;
     private readonly List<SynchronizationEntry> _globalPlayerEntries;
 
     private readonly List<SynchronizationEntry> _toContinueBuffer = new List<SynchronizationEntry>(2);
@@ -32,7 +35,8 @@ public class EventSynchronizer : IDisposable
     public EventSynchronizer(ILogger<EventSynchronizer> logger)
     {
         _globalGroup = new SynchronizationGroup(null, this);
-        _playerGroups = new PlayerDictionary<SynchronizationGroup>(96);
+        _playerGroups = new PlayerDictionary<SynchronizationGroup>(128);
+        _playerGroupValues = new List<ulong>(128);
         _globalPlayerEntries = new List<SynchronizationEntry>(16);
 
         _logger = logger;
@@ -57,19 +61,22 @@ public class EventSynchronizer : IDisposable
     // occasionally check for timeouts, spreading the groups out between frames
     private void OnUpdate()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         DateTime now = DateTime.UtcNow;
         _toContinueBuffer.Clear();
-        if (_playerGroups.Count > 0)
+        if (_playerGroupValues.Count > 0)
         {
             ++_timeoutCheckIndex;
-            if (_timeoutCheckIndex >= _playerGroups.Count)
+            if (_timeoutCheckIndex >= _playerGroupValues.Count)
             {
                 _globalGroup.CheckForTimeouts(_logger, now, _toContinueBuffer);
                 _timeoutCheckIndex = 0;
             }
             else
             {
-                _playerGroups.Values.ElementAt(_timeoutCheckIndex).CheckForTimeouts(_logger, now, _toContinueBuffer);
+                ulong steam64 = _playerGroupValues[_timeoutCheckIndex];
+                _playerGroups[steam64].CheckForTimeouts(_logger, now, _toContinueBuffer);
             }
         }
         else
@@ -212,6 +219,7 @@ public class EventSynchronizer : IDisposable
         lock (_playerGroups)
         {
             _playerGroups.Add(player, group);
+            _playerGroupValues.Add(player.Steam64.m_SteamID);
         }
         return group;
     }
@@ -264,6 +272,7 @@ public class EventSynchronizer : IDisposable
                         foreach (ulong s64 in _toRemoveBuffer)
                         {
                             _playerGroups.Remove(s64);
+                            _playerGroupValues.Remove(s64);
                         }
                     }
                 }
@@ -287,6 +296,7 @@ public class EventSynchronizer : IDisposable
                     lock (_playerGroups)
                     {
                         _playerGroups.Remove(player);
+                        _playerGroupValues.Remove(player.Steam64.m_SteamID);
                     }
                 }
 
@@ -304,13 +314,20 @@ public class EventSynchronizer : IDisposable
                 break;
 
             case 1:
+            {
+                using IDisposable? profiler = ProfilerUtil.Profile("1");
+
                 // one is most common, no need to make a copy
                 SynchronizationEntry buffer = _toContinueBuffer[0];
                 _toContinueBuffer.Clear();
                 buffer.WaitEvent?.TrySetResult(buffer);
                 break;
+            }
 
             default:
+            {
+                using IDisposable? profiler = ProfilerUtil.Profile("> 1");
+
                 // avoid collection modified exception
                 SynchronizationEntry[] copy = _toContinueBuffer.ToArray();
                 _toContinueBuffer.Clear();
@@ -320,6 +337,7 @@ public class EventSynchronizer : IDisposable
                 }
 
                 break;
+            }
         }
     }
 }
@@ -397,11 +415,26 @@ internal class SynchronizationGroup
         {
             bucket.CheckForTimeout(logger, now, null, continueBuffer);
         }
+        foreach (SynchronizationBucket bucket in Types.Values)
+        {
+            bucket.CheckForTimeout(logger, now, null, continueBuffer);
+        }
     }
 
     public bool IsCleared()
     {
-        return Tags.Values.All(x => x.IsCleared()) && Types.Values.All(x => x.IsCleared());
+        foreach (SynchronizationBucket bucket in Tags.Values)
+        {
+            if (!bucket.IsCleared())
+                return false;
+        }
+        foreach (SynchronizationBucket bucket in Types.Values)
+        {
+            if (!bucket.IsCleared())
+                return false;
+        }
+
+        return true;
     }
 }
 
@@ -420,6 +453,7 @@ internal class SynchronizationBucket
 
     public void CheckForTimeout(ILogger logger, DateTime now, SynchronizationEntry? newEntry, List<SynchronizationEntry> continueBuffer)
     {
+        int ct = 0;
         while (true)
         {
             if (Current == null || now - Current.TimeoutTime <= _owner.MaxTimeout)
@@ -448,6 +482,10 @@ internal class SynchronizationBucket
             if (newEntry is { WaitCount: <= 0, WaitEvent: not null })
             {
                 continueBuffer.Add(newEntry);
+                if (++ct > EventSynchronizer.MaxTimedoutEventsPerFramePerGroup)
+                {
+                    break;
+                }
             }
         }
     }

@@ -1,4 +1,3 @@
-using System;
 using System.Globalization;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Localization;

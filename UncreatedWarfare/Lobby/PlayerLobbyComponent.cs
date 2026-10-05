@@ -178,6 +178,8 @@ public class PlayerLobbyComponent : IPlayerComponent, IDisposable
         if (_lobbyManager.TeamFlags == null)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ++_simCount;
 
         Vector3 position = Player.Position;
@@ -240,6 +242,8 @@ public class PlayerLobbyComponent : IPlayerComponent, IDisposable
     /// </summary>
     public void UpdateUI(bool send = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (send)
             _hasUi = false;
 
@@ -306,6 +310,8 @@ public class PlayerLobbyComponent : IPlayerComponent, IDisposable
     /// </summary>
     public void UpdateTeamInfo()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ITransportConnection connection = Player.Connection;
 
         if (_hasUi)

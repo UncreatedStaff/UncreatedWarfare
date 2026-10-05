@@ -85,6 +85,8 @@ public class SphereProximity : ISphereProximity, IFormattable
     /// <inheritdoc />
     public bool TestPoint(in Vector3 position)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Vector3 pos = _sphere.position;
         float x = pos.x - position.x,
               y = pos.y - position.y,
@@ -96,6 +98,8 @@ public class SphereProximity : ISphereProximity, IFormattable
     /// <inheritdoc />
     public bool TestPoint(in Vector2 position)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Vector3 pos = _sphere.position;
         float x = pos.x - position.x,
               z = pos.z - position.y;

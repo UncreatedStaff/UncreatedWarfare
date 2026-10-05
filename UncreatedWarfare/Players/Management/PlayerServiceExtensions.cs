@@ -406,6 +406,8 @@ public static class PlayerServiceExtensions
 
     private static WarfarePlayer? SearchPlayers([InstantHandle] IEnumerable<WarfarePlayer> players, string searchTerm, CultureInfo culture, PlayerNameType preferredName)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         using IEnumerator<WarfarePlayer> enumerator = players.GetEnumerator();
 
         ReadOnlySpan<PlayerNameType> nameOrder = preferredName switch
@@ -433,6 +435,8 @@ public static class PlayerServiceExtensions
 
     private static void SearchPlayers([InstantHandle] IEnumerable<WarfarePlayer> players, string searchTerm, CultureInfo culture, PlayerNameType preferredName, IList<WarfarePlayer> output)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         using IEnumerator<WarfarePlayer> enumerator = players.GetEnumerator();
 
         ReadOnlySpan<PlayerNameType> nameOrder = preferredName switch

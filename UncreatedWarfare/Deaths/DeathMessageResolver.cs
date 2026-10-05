@@ -499,7 +499,18 @@ public class DeathMessageResolver
             [
                 new DeathTranslation(DeathFlags.None, "{0} tried to consume dangerous food."),
                 new DeathTranslation(DeathFlags.Item, "{0} tried to consume {3}."), // tested
-                new DeathTranslation(DeathFlags.Item | DeathFlags.Killer, "{0} suicide bombed {1} with a {3}.") // tested
+                new DeathTranslation(DeathFlags.Item | DeathFlags.Killer, "{1} suicide bombed {0} with a {3}.") // tested
+            ]
+        },
+        new CauseGroup
+        {
+            // for consumables which cause a bleed-out effect to the target
+            // ex. a consumable with "Bleeding_Modifier Cut" in the asset file.
+            CustomKey = "bleed-out-consumable",
+            Translations =
+            [
+                new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Item, "{0} bled out trying to consume {3}."),
+                new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Item | DeathFlags.Killer, "{1} fed {0} a {3} which caused them to bleed out.")
             ]
         },
         new CauseGroup // mortar override

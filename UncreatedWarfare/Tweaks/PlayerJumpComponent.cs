@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using System;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
@@ -60,6 +59,8 @@ public class PlayerJumpComponent : IPlayerComponent, IAsyncEventListener<PlayerP
 
     public void Jump(bool raycast, float distance)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (!Player.IsOnline)

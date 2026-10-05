@@ -24,6 +24,8 @@ partial class EventDispatcher
         if (vehicle == null || !vehicle.isDriven || !shouldallow) 
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         WarfarePlayer? player = _playerService.GetOnlinePlayerOrNull(vehicle.passengers[0].player);
         if (player is null)
             return;
@@ -38,6 +40,8 @@ partial class EventDispatcher
 
         EventContinuations.Dispatch(args, this, _unloadToken, out shouldallow, continuation: args =>
         {
+            using IDisposable? profiler = ProfilerUtil.Profile();
+
             bool isLocking = args.IsLocking;
 
             if (args.Vehicle == null || args.Vehicle.Vehicle.isDead || args.Vehicle.Vehicle.isLocked == isLocking)
@@ -77,6 +81,8 @@ partial class EventDispatcher
     /// </summary>
     private void VehicleManagerOnToggledVehicleLock(InteractableVehicle vehicle)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         WarfareVehicle warfareVehicle = VehicleService.GetVehicle(vehicle);
 
         WarfarePlayer? player = warfareVehicle.DamageTracker.LastLockingPlayer;
@@ -101,6 +107,8 @@ partial class EventDispatcher
     /// </summary>
     private void VehicleManagerOnVehicleExploded(InteractableVehicle vehicle)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         WarfareVehicle warfareVehicle = VehicleService.GetVehicle(vehicle);
 
         ITeamManager<Team>? teamManager = _warfare.IsLayoutActive() ? _warfare.ScopedProvider.Resolve<ITeamManager<Team>>() : null;
@@ -151,6 +159,8 @@ partial class EventDispatcher
     /// </summary>
     private void VehicleManagerOnPassengerExitRequested(Player unturnedPlayer, InteractableVehicle vehicle, ref bool shouldAllow, ref Vector3 pendingLocation, ref float pendingYaw)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         WarfarePlayer player = _playerService.GetOnlinePlayer(unturnedPlayer);
 
         WarfareVehicle warfareVehicle = VehicleService.GetVehicle(vehicle);
@@ -189,6 +199,8 @@ partial class EventDispatcher
         if (SendSwapVehicleSeats == null)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         WarfarePlayer player = _playerService.GetOnlinePlayer(unturnedPlayer);
 
         WarfareVehicle warfareVehicle = VehicleService.GetVehicle(vehicle);
@@ -215,6 +227,8 @@ partial class EventDispatcher
 
     private void OnDamageVehicleRequested(CSteamID instigatorsSteamID, InteractableVehicle vehicle, ref ushort pendingTotalDamage, ref bool canRepair, ref bool shouldAllow, EDamageOrigin damageOrigin)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         WarfareVehicle warfareVehicle = VehicleService.GetVehicle(vehicle);
         
         DamageVehicleRequested args = new DamageVehicleRequested
@@ -235,6 +249,8 @@ partial class EventDispatcher
 
     private void VehicleManagerOnPreDestroyVehicle(InteractableVehicle vehicle)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         WarfareVehicle warfareVehicle = VehicleService.GetVehicle(vehicle);
         
         VehicleDespawned args = new VehicleDespawned

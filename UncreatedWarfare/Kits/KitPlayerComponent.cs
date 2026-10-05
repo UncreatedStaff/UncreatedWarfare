@@ -268,6 +268,8 @@ public class KitPlayerComponent : IPlayerComponent
 
     internal Kit? GetFavoriteAtIndex(int index, Team? team = null)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         team ??= Player.Team;
 
         if (index < 0)

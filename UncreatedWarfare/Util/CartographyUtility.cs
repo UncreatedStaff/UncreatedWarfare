@@ -42,6 +42,8 @@ public static class CartographyUtility
     /// </summary>
     public static Vector2 DenormalizeMapCoordinates(Vector2 mapCoordinates)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         mapCoordinates.x = mapCoordinates.x / 2f + 0.5f;
         mapCoordinates.y = mapCoordinates.y / 2f + 0.5f;
 
@@ -55,6 +57,8 @@ public static class CartographyUtility
     /// </summary>
     public static Vector2 NormalizeMapCoordinates(Vector2 mapPixelCoodinates)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         mapPixelCoodinates.x /= _mapImageSize.x;
         mapPixelCoodinates.y /= _mapImageSize.y;
 
@@ -65,6 +69,8 @@ public static class CartographyUtility
 
     internal static void Init(int level)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         CartographyVolume? cartoVolume = CartographyVolumeManager.Get().GetMainVolume();
 
         if (cartoVolume == null)

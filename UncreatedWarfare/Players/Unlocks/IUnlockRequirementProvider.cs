@@ -1,6 +1,5 @@
-﻿using System.Collections.Generic;
+﻿namespace Uncreated.Warfare.Players.Unlocks;
 
-namespace Uncreated.Warfare.Players.Unlocks;
 public interface IUnlockRequirementProvider
 {
     /// <summary>

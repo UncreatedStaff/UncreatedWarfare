@@ -69,6 +69,8 @@ public class BuildableFobEntity<TInfo> : IBuildableFobEntity, IDisposable where 
 
     private void UpdateIcon()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (Icon != null)
         {
             Icon.Dispose();

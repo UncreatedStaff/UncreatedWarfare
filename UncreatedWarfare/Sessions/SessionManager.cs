@@ -176,6 +176,7 @@ public class SessionManager :
 
             player.CurrentSession = record;
 
+            await UniTask.SwitchToThreadPool();
             await _dbContext.SaveChangesAsync(token).ConfigureAwait(false);
 
             if (previousSession != null)
@@ -444,6 +445,8 @@ public class SessionManager :
     /// <returns>If <paramref name="previousSession"/> needs to be removed after saving changes.</returns>
     private bool EndPreviousSessionIntl(SessionRecord previousSession, SessionRecord record, ulong player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         bool needsRemove = false;
         // check if session is insignificant (no events and elapsed time < 5 seconds)
         if (IsInsignificant(previousSession))
@@ -505,6 +508,8 @@ public class SessionManager :
 
     private SessionRecord StartCreatingSession(WarfarePlayer player, bool startedGame, out SessionRecord? previous)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         DateTimeOffset now = DateTimeOffset.UtcNow;
@@ -560,6 +565,8 @@ public class SessionManager :
 
     private void EndSession(SessionRecord record, bool endGame, DateTimeOffset dt, bool update = true)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         record.EndedTimestamp = dt;
         record.LengthSeconds = (record.EndedTimestamp.Value - record.StartedTimestamp).TotalSeconds;
         record.FinishedGame = endGame;
@@ -630,6 +637,8 @@ public class SessionManager :
 
     private bool IsSessionExpired(WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         SessionRecord? currentSession = player.CurrentSession;
         if (currentSession == null)
             return player.IsOnline;

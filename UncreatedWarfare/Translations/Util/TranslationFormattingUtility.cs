@@ -1,10 +1,10 @@
 using StackCleaner;
-using System;
 using System.Globalization;
 using System.Text;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Translations.Util;
+
 public static class TranslationFormattingUtility
 {
     private const string ColorEndTag = "</color>";
@@ -17,6 +17,8 @@ public static class TranslationFormattingUtility
     /// <param name="imgui">Use Unity rich text instead of TMPro.</param>
     public static StringBuilder AppendColorized(this StringBuilder stringBuilder, ReadOnlySpan<char> text, Color32 color, bool imgui = false, bool end = true)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (text.Length == 0 && end)
             return stringBuilder;
 
@@ -43,6 +45,8 @@ public static class TranslationFormattingUtility
     /// <param name="imgui">Use Unity rich text instead of TMPro.</param>
     public static StringBuilder AppendColorized(this StringBuilder stringBuilder, ReadOnlySpan<char> text, string hexColor, bool imgui = false, bool end = true)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         HexStringHelper.TryParseHexColor32(hexColor, out Color32 color);
         
         return AppendColorized(stringBuilder, text, color, imgui, end);
@@ -54,6 +58,8 @@ public static class TranslationFormattingUtility
     /// <param name="imgui">Use Unity rich text instead of TMPro.</param>
     public static string Colorize(ReadOnlySpan<char> text, Color32 color, bool imgui = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         return Colorize(text, color, imgui ? TranslationOptions.TranslateWithUnityRichText : TranslationOptions.None, StackColorFormatType.None);
     }
 
@@ -63,6 +69,8 @@ public static class TranslationFormattingUtility
     /// <param name="imgui">Use Unity rich text instead of TMPro.</param>
     public static string Colorize(ReadOnlySpan<char> text, string hexColor, bool imgui = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!HexStringHelper.TryParseHexColor32(hexColor, out Color32 color))
             color = Color.white;
 
@@ -75,6 +83,8 @@ public static class TranslationFormattingUtility
     /// <param name="imgui">Use Unity rich text instead of TMPro.</param>
     public static string Colorize(string text, Color32 color, bool imgui = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         return Colorize(text, color, imgui ? TranslationOptions.TranslateWithUnityRichText : TranslationOptions.None, StackColorFormatType.None);
     }
 
@@ -84,6 +94,8 @@ public static class TranslationFormattingUtility
     /// <param name="imgui">Use Unity rich text instead of TMPro.</param>
     public static string Colorize(string text, string hexColor, bool imgui = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!HexStringHelper.TryParseHexColor32(hexColor, out Color32 color))
             color = Color.white;
 
@@ -95,6 +107,8 @@ public static class TranslationFormattingUtility
     /// </summary>
     public static string Colorize(string text, Color32 color, TranslationOptions options, StackColorFormatType terminalColoring)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if ((options & TranslationOptions.NoRichText) != 0)
         {
             return text;
@@ -118,6 +132,8 @@ public static class TranslationFormattingUtility
     /// </summary>
     public static unsafe string Colorize(ReadOnlySpan<char> text, Color32 color, TranslationOptions options, StackColorFormatType terminalColoring)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if ((options & TranslationOptions.NoRichText) != 0)
         {
             return new string(text);
@@ -193,6 +209,8 @@ public static class TranslationFormattingUtility
     /// </summary>
     public static unsafe string CreateIMGUIString(ReadOnlySpan<char> original)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (original.Length < 6)
             return new string(original);
 
@@ -221,6 +239,8 @@ public static class TranslationFormattingUtility
     /// </summary>
     public static Color32? ExtractColor(ReadOnlySpan<char> text, out int innerStartIndex, out int innerLength)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         innerStartIndex = 0;
         innerLength = text.Length;
 
@@ -457,6 +477,8 @@ public static class TranslationFormattingUtility
     /// <param name="indices">The first index is assumed to be zero, this is a list of all the following indices.</param>
     public static string FormatString(ReadOnlySpan<char> format, ReadOnlySpan<char> strings, ReadOnlySpan<int> indices)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (format.Length < 3)
             return new string(format);
 

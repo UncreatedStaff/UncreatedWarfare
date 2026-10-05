@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Configuration;
-using System;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Kits;
 

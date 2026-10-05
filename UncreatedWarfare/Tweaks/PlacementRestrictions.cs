@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using System;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
@@ -98,6 +97,8 @@ internal class PlacementRestrictions : IEventListener<PlaceBarricadeRequested>, 
     [EventListener(Priority = 1)]
     void IEventListener<TriggerTrapRequested>.HandleEvent(TriggerTrapRequested e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // cancel invalid traps from going off
         if (!IsTrapPositionValid(e.Barricade.GetServersideData().point))
         {

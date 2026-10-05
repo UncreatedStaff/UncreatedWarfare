@@ -64,6 +64,8 @@ public class ProjectileSolver : ILevelHostedService, IDisposable
 
     UniTask ILevelHostedService.LoadLevelAsync(CancellationToken token)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _mainScene = SceneManager.GetActiveScene();
         _simScene = SceneManager.CreateScene("SimulationScene", new CreateSceneParameters(LocalPhysicsMode.Physics3D));
         _physxScene = _simScene.GetPhysicsScene();
@@ -142,7 +144,7 @@ public class ProjectileSolver : ILevelHostedService, IDisposable
         _physxScene = default;
         try
         {
-            AsyncOperation? op =SceneManager.UnloadSceneAsync(_simScene);
+            AsyncOperation? op = SceneManager.UnloadSceneAsync(_simScene);
             if (op != null)
                 await op;
         }
@@ -176,6 +178,10 @@ public class ProjectileSolver : ILevelHostedService, IDisposable
 
         if (component.Asset.projectile != null)
         {
+#if PROFILING
+            using (IDisposable? profiler = ProfilerUtil.Profile("Create projectile sim")) {
+#endif
+
             Transform transform = Object.Instantiate(
                 component.Asset.projectile,
                 component.Origin,
@@ -213,6 +219,9 @@ public class ProjectileSolver : ILevelHostedService, IDisposable
             float lastTracerSent = 0f;
             EffectAsset? tracerAsset = Assets.find<EffectAsset>(new Guid("50dbb9c23ae647b8adb829a771742d4c"));
 #endif
+#if PROFILING
+            profiler?.Dispose();
+#endif
 
             for (; !component.HasLanded && !c.IsExploded && i < iter; ++i)
             {
@@ -242,6 +251,9 @@ public class ProjectileSolver : ILevelHostedService, IDisposable
             component.CompletePrediction(projectedPosition, projectedLandTime);
 
             Object.Destroy(transform.gameObject);
+#if PROFILING
+            } // end using profiler
+#endif
         }
 
         if (_queue.TryDequeue(out _current))

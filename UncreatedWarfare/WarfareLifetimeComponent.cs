@@ -43,6 +43,8 @@ public partial class WarfareLifetimeComponent : MonoBehaviour
     [UsedImplicitly]
     private void Update()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (_chatService == null)
         {
             if (_module.ServiceProvider == null)
@@ -147,6 +149,8 @@ public partial class WarfareLifetimeComponent : MonoBehaviour
     [RpcReceive]
     public void QueueShutdownInTime(TimeSpan time, string? shutdownReason = null)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         DateTime dt = DateTime.UtcNow.Add(time);
         if (QueuedShutdownType == ShutdownMode.Time && ShutdownTime > dt)
             return;
@@ -167,6 +171,8 @@ public partial class WarfareLifetimeComponent : MonoBehaviour
     [RpcReceive]
     public void QueueShutdownAtLayoutEnd(string? shutdownReason = null)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (QueuedShutdownType == ShutdownMode.OnLayoutEnd)
             return;
 
@@ -187,6 +193,8 @@ public partial class WarfareLifetimeComponent : MonoBehaviour
     [RpcReceive]
     public void CancelShutdown()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (QueuedShutdownType == ShutdownMode.None)
             return;
 
@@ -204,6 +212,8 @@ public partial class WarfareLifetimeComponent : MonoBehaviour
 
     internal async Task NotifyShutdownNow(string? reason)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (QueuedShutdownType != ShutdownMode.None && string.Equals(ShutdownReason, reason))
         {
             await TrySendShutdownUpdate(true);

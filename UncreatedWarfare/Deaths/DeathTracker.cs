@@ -46,6 +46,7 @@ public class DeathTracker : IHostedService
         UseableGun.onProjectileSpawned += UseableGunOnProjectileSpawned;
         UseableThrowable.onThrowableSpawned += OnThrowableSpawned;
         UseableConsumeable.onConsumePerformed += UseableConsumeableOnConsumePerformed;
+        PlayerLife.OnTellBleeding_Global += OnBleedingUpdated;
 
         EDeathCause[] causes = Enum.GetValues(typeof(EDeathCause)).Cast<EDeathCause>().ToArray();
         if (causes.Contains(InEnemyMainDeathCause))
@@ -75,12 +76,15 @@ public class DeathTracker : IHostedService
         UseableGun.onProjectileSpawned -= UseableGunOnProjectileSpawned;
         UseableThrowable.onThrowableSpawned -= OnThrowableSpawned;
         UseableConsumeable.onConsumePerformed -= UseableConsumeableOnConsumePerformed;
+        PlayerLife.OnTellBleeding_Global -= OnBleedingUpdated;
 
         return UniTask.CompletedTask;
     }
 
     private static void UseableConsumeableOnConsumePerformed(Player instigatingPlayer, ItemConsumeableAsset consumeableAsset)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         PlayerDeathTrackingComponent deathTrackingComponent = PlayerDeathTrackingComponent.GetOrAdd(instigatingPlayer);
 
         deathTrackingComponent.LastExplosiveConsumed = null;
@@ -97,6 +101,8 @@ public class DeathTracker : IHostedService
 
     private static void UseableGunOnProjectileSpawned(UseableGun sender, GameObject projectile)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         PlayerDeathTrackingComponent deathTrackingComponent = PlayerDeathTrackingComponent.GetOrAdd(sender.player);
 
         ItemGunAsset gun = sender.equippedGunAsset;
@@ -128,6 +134,8 @@ public class DeathTracker : IHostedService
 
     private void OnThrowableSpawned(UseableThrowable useable, GameObject throwable)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ThrowableComponent comp = throwable.AddComponent<ThrowableComponent>();
         PlayerDeathTrackingComponent deathTrackingComponent = PlayerDeathTrackingComponent.GetOrAdd(useable.player);
 
@@ -213,6 +221,8 @@ public class DeathTracker : IHostedService
 
     internal void FillArgs(WarfarePlayer dead, EDeathCause cause, ELimb limb, CSteamID instigator, PlayerDied e)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile($"FillArgs: {EnumUtility.GetNameSafe(cause)}");
+
         Team deadTeam = dead.Team;
         e.DeadTeam = deadTeam;
         e.MessageFlags = DeathFlags.None;
@@ -916,13 +926,14 @@ public class DeathTracker : IHostedService
                 break;
         }
     }
+
     internal void OnWillStartBleeding(ref DamagePlayerParameters parameters)
     {
-        PlayerDeathTrackingComponent comp = PlayerDeathTrackingComponent.GetOrAdd(parameters.player);
-        
         if (parameters.cause == EDeathCause.BLEEDING)
             return;
 
+        PlayerDeathTrackingComponent comp = PlayerDeathTrackingComponent.GetOrAdd(parameters.player);
+        
         WarfarePlayer dead = _playerService.GetOnlinePlayer(parameters.player);
 
         PlayerDied e = new PlayerDied(in parameters) { Player = dead };
@@ -930,5 +941,17 @@ public class DeathTracker : IHostedService
         e.WasBleedout = true;
 
         comp.BleedOutInfo = e;
+    }
+
+    private static void OnBleedingUpdated(PlayerLife life)
+    {
+        if (life.isBleeding)
+            return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
+        PlayerDeathTrackingComponent comp = PlayerDeathTrackingComponent.GetOrAdd(life.player);
+
+        comp.BleedOutInfo = null;
     }
 }

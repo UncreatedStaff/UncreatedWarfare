@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-
 namespace Uncreated.Warfare.Vehicles.WarfareVehicles.Transport;
 public class TranportTracker
 {
@@ -14,6 +11,8 @@ public class TranportTracker
     }
     public void RecordPlayerEntry(ulong steam64, Vector3 entryPoint, int seatIndex)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _playerEntryPositions[steam64] = entryPoint;
         if (seatIndex == 0)
         {
@@ -24,6 +23,8 @@ public class TranportTracker
     /// <returns>The total distance travelled by the exiting player from their original recorded entry point.</returns>
     public float RecordPlayerExit(ulong steam64, Vector3 exitPoint)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (LastKnownDriver.HasValue && LastKnownDriver.Value.m_SteamID == steam64)
         {
             LastKnownDriverExitTime = DateTime.UtcNow;

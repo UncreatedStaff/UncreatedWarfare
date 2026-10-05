@@ -24,6 +24,8 @@ public abstract class LoopTickerCollector<T> : IDisposable
 
     private void OnTick(ILoopTicker ticker, TimeSpan timeSinceStart, TimeSpan deltaTime)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         IEnumerable<T> itemsToAdd = ItemsToAdd(out bool pooled);
         foreach (T item in itemsToAdd)
         {

@@ -55,6 +55,8 @@ public partial class PlayerNitroBoostService : IEventListener<PlayerJoined>
     /// <exception cref="NotSupportedException">Not ran on warfare.</exception>
     public bool? IsBoostingQuick(CSteamID steam64)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (!WarfareModule.IsActive)

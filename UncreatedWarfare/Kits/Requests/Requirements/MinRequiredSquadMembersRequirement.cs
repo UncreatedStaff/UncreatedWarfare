@@ -24,15 +24,15 @@ public sealed class MinRequiredSquadMembersRequirement(SquadManager? squadManage
         {
             if (player.Component<KitPlayerComponent>().IsKit(ctx.Kit.Key))
             {
-                visitor.AcceptMinRequiredSquadMembersNotMet(in ctx, player, squad.Members.Count, min);
+                visitor.AcceptMinRequiredSquadMembersNotMet(in ctx, player, squad.Members.Length, min);
                 return KitRequirementResult.No;
             }
         }
 
-        if (squad.Members.Count >= ctx.Kit.MinRequiredSquadMembers.Value)
+        if (squad.Members.Length >= ctx.Kit.MinRequiredSquadMembers.Value)
             return KitRequirementResult.Yes;
 
-        visitor.AcceptMinRequiredSquadMembersNotMet(in ctx, null, squad.Members.Count, min);
+        visitor.AcceptMinRequiredSquadMembersNotMet(in ctx, null, squad.Members.Length, min);
         return KitRequirementResult.No;
     }
 

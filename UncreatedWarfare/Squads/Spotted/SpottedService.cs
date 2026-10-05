@@ -1,6 +1,5 @@
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
-using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
@@ -86,6 +85,8 @@ internal sealed class SpottedService : ILayoutHostedService, IEventListener<Vehi
         {
             return;
         }
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         shouldAllow = false;
 

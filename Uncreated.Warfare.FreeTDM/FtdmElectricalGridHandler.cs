@@ -1,6 +1,8 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Profiling;
 using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.FreeTeamDeathmatch;
@@ -29,6 +31,8 @@ internal sealed class FtdmElectricalGridHandler : IElectricalGridHandler
 
     public bool IsPowered(LevelObject @object)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ZoneProximity? playArea = _ftdmService.PlayArea;
         if (!playArea.HasValue)
         {
@@ -40,6 +44,8 @@ internal sealed class FtdmElectricalGridHandler : IElectricalGridHandler
 
     public bool IsPowered(InteractablePower otherInteractable)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ZoneProximity? playArea = _ftdmService.PlayArea;
         if (!playArea.HasValue)
         {
@@ -51,6 +57,8 @@ internal sealed class FtdmElectricalGridHandler : IElectricalGridHandler
 
     void IElectricalGridHandler.Start()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         foreach (Team team in _layout.TeamManager.AllTeams)
         {
             Zone? zone = _zoneStore.SearchZone(ZoneType.MainBase, team.Faction);

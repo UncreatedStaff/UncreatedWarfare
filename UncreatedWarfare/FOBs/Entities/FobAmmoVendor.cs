@@ -58,6 +58,8 @@ public class FobAmmoVendor : BuildableFobEntity<ShovelableInfo>, IAmmoStorage
     {
         GameThread.AssertCurrent();
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (_resourceFob is { IsRegistered: true })
         {
             return _resourceFob;
@@ -82,6 +84,8 @@ public class FobAmmoVendor : BuildableFobEntity<ShovelableInfo>, IAmmoStorage
 
     private void OnFobDeregistered()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         try
         {
             AmmoCountUpdated?.Invoke(0);
@@ -101,6 +105,8 @@ public class FobAmmoVendor : BuildableFobEntity<ShovelableInfo>, IAmmoStorage
     {
         if (type != SupplyType.Ammo)
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         try
         {

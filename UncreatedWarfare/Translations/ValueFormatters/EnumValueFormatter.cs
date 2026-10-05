@@ -41,6 +41,8 @@ public sealed class EnumValueFormatter<TEnum> : IEnumFormatter<TEnum>, IDisposab
 
     public string GetValue(TEnum value, LanguageInfo language)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         CheckTranslations();
 
         if (_translations.TryGetValue(language.Code, out IReadOnlyDictionary<TEnum, string> table))
@@ -53,7 +55,7 @@ public sealed class EnumValueFormatter<TEnum> : IEnumFormatter<TEnum>, IDisposab
 
         if (!language.IsDefault && _translations.TryGetValue(_languageService.DefaultLanguageCode, out table))
         {
-            return table.TryGetValue(value, out string translation) ? translation : value.ToString();
+            return table.TryGetValue(value, out string translation) ? translation : EnumUtility.GetNameSafe(value);
         }
 
         IReadOnlyDictionary<TEnum, string>? dict = _translations.Values.FirstOrDefault();
@@ -77,6 +79,8 @@ public sealed class EnumValueFormatter<TEnum> : IEnumFormatter<TEnum>, IDisposab
         {
             return;
         }
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         IEnumTranslationStorage<TEnum>? storage = _storage;
 

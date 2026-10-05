@@ -1,12 +1,10 @@
 ﻿using Microsoft.Extensions.Configuration;
-using System;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Presets;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Kits.Loadouts;
-using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Users;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Cooldowns;
@@ -275,7 +273,7 @@ partial class KitSelectionUI
             try
             {
                 Kit? oldKit = player.Component<KitPlayerComponent>().GetActiveEffectiveKit()?.CachedKit;
-                requested = await _kitRequestService.RequestAsync(player, kit, new RequestCommandResultHandler(_chatService, _configuration, _requestTranslations), player.DisconnectToken);
+                requested = await _kitRequestService.RequestAsync(player, kit, new RequestCommandResultHandler(_serviceProvider, _chatService, _configuration, _requestTranslations), player.DisconnectToken);
                 if (oldKit != null)
                 {
                     await UpdateKitAsync(default, oldKit, player, player.DisconnectToken);
@@ -491,7 +489,7 @@ partial class KitSelectionUI
                         break;
 
                     _ = CloseAsync(player);
-                    _squadMenu.OpenUI(player, new SquadMenuUI.KitRequestState(kit, new RequestCommandResultHandler(_chatService, _configuration, _requestTranslations)));
+                    _squadMenu.OpenUI(player, new SquadMenuUI.KitRequestState(kit, new RequestCommandResultHandler(_serviceProvider, _chatService, _configuration, _requestTranslations)));
                     break;
 
                 case PurchaseButtonState.OpenDiscordForBoosts:
@@ -638,6 +636,8 @@ partial class KitSelectionUI
 
     private bool TryGetTargetKit(Func<KitInfo, UnturnedButton> selector, UnturnedButton button, out Class @class, out int kitIndex, [NotNullWhen(true)] out KitInfo? kitInfo)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ReadOnlySpan<char> name = button.Name.Span;
         if (name.Length >= 12 && name[4] == 'P')
         {

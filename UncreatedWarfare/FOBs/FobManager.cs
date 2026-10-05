@@ -126,6 +126,8 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
 
     public BunkerFob RegisterBunkerFob(IBuildable fobBuildable)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GridLocation griddy = new GridLocation(fobBuildable.Position);
         string fobName = $"{NATOPhoneticAlphabetHelper.GetProperCase(griddy.LetterX)}-{griddy.Y + 1}";
 
@@ -135,6 +137,8 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
     }
     public bool DeregisterFob(IFob fob, IBuildableDestroyedEvent? buildableDestroyedEvent = null)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         IFob? existing = _fobs.FindAndRemove(f => f == fob);
         if (existing == null)
             return false;
@@ -158,6 +162,8 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
     }
     public IFob RegisterFob(IFob fob)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _fobs.Add(fob);
         _logger.LogDebug("Registered new FOB: " + fob);
         _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FobRegistered { Fob = fob });
@@ -165,6 +171,8 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
     }
     public void RegisterFobEntity(IFobEntity entity)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (_entities.Contains(entity))
         {
             _logger.LogWarning($"FOB Entity registered twice: {entity}");
@@ -176,6 +184,8 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
     }
     public bool DeregisterFobEntity(IFobEntity entity)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         IFobEntity? existing = _entities.FindAndRemove(f => f == entity);
         if (existing == null)
             return false;
@@ -204,6 +214,8 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
     public TFobType? FindNearestFob<TFobType>(Team team, Vector3 position, Func<TFobType, bool>? selector = null)
         where TFobType : IFob, ITransformObject
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         return _fobs
             .OfType<TFobType>()
             .Where(f => f.Team == team && (selector == null || selector(f)))
@@ -212,6 +224,8 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
 
     public ResourceFob? FindNearestResourceFob(Team team, Vector3 position)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         return _fobs.OfType<ResourceFob>().Where(f =>
             f.Team == team &&
             MathUtility.WithinRange(position, f.Position, f.EffectiveRadius)
@@ -220,6 +234,8 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
 
     public BunkerFob? FindNearestBunkerFob(Team team, Vector3 position, bool includeUnbuilt = true)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         return _fobs.OfType<BunkerFob>().Where(f =>
             f.Team == team &&
             MathUtility.WithinRange(position, f.Position, f.EffectiveRadius) &&
@@ -229,6 +245,8 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
 
     public BunkerFob? FindNearestBunkerFob(CSteamID teamGroup, Vector3 position, bool includeUnbuilt = true)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         return _fobs.OfType<BunkerFob>().Where(f =>
             f.Team.GroupId == teamGroup
             && MathUtility.WithinRange(position, f.Position, f.EffectiveRadius)
@@ -245,12 +263,17 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
 
     public TEntity? GetBuildableFobEntity<TEntity>(IBuildable buildable) where TEntity : IBuildableFobEntity
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         return _entities.OfType<TEntity>().FirstOrDefault(f =>
             f.Buildable.Equals(buildable)
         );
     }
+
     public EmplacementEntity? GetEmplacementFobEntity(InteractableVehicle emplacementVehicle)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         return _entities.OfType<EmplacementEntity>().FirstOrDefault(f =>
             f.Vehicle.Vehicle.instanceID == emplacementVehicle.instanceID
         );
@@ -258,6 +281,8 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
     
     public TrackingList<SupplyCrate> FindNearbyFobCreationCrates(Vector3 vector3, Team team)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         return Entities
             .OfType<SupplyCrate>()
             .Where(e => e.Type == CrateType.FobCreation && e.Team == team && e.IsWithinRadius(vector3))

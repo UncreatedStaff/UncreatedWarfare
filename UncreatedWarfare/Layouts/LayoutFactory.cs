@@ -1,10 +1,8 @@
 using Autofac.Builder;
 using DanielWillett.ReflectionTools;
-using Humanizer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileSystemGlobbing;
 using Microsoft.Extensions.FileSystemGlobbing.Abstractions;
-using System;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -479,6 +477,8 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
 
     private FileInfo? TryResolveStartupLayout()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         string? startupLayout = _systemConfig["tests:startup_layout"];
         if (string.IsNullOrWhiteSpace(startupLayout))
         {
@@ -708,6 +708,8 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
 
     private void RegisterDefaultServices(ContainerBuilder bldr, LayoutInfo layoutInfo)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // Layout
         IRegistrationBuilder<Layout, SimpleActivatorData, SingleRegistrationStyle> layoutRegistration
             = bldr.Register<WarfareModule, Layout>(wf => wf.GetActiveLayout());
@@ -786,6 +788,8 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
     /// </summary>
     private Action<ContainerBuilder> GetServiceChildLifetimeFactory(LayoutInfo layoutInfo, IConfiguration serviceInfo, IConfiguration componentInfo, IList<IDisposable> disposableConfiguration)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         List<(string?, Type?)> types = serviceInfo.GetChildren()
             .Select(x => (x.Value, ContextualTypeResolver.ResolveType(x.Value, typeof(ILayoutServiceConfigurer))))
             .ToList();
@@ -893,6 +897,8 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
 
     public LayoutInfo? SelectLayoutByName(string layoutPath, bool thisMapOnly = true)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         string path = Path.Combine(_layoutDir, !layoutPath.EndsWith(".yml", StringComparison.OrdinalIgnoreCase) ? layoutPath + ".yml" : layoutPath);
         if (!thisMapOnly || YamlUtility.CheckMatchesMapFilter(path))
         {
@@ -972,6 +978,8 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
     /// <exception cref="InvalidOperationException">No layouts are configured.</exception>
     public LayoutInfo SelectRandomLayout(bool seeding = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         List<LayoutInfo> layouts = GetBaseLayoutFiles()
             .Select(x => ReadLayoutInfo(x.FullName, false, expectedSeedingState: seeding))
             .Where(x => x != null)
@@ -1075,6 +1083,8 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
     /// </summary>
     public void ApplyVariation(ref IConfiguration configuration, string context, string baseFilePath)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         List<LayoutVariationInfo>? variations = ReadVariations(context, baseFilePath, configuration);
         if (variations is not { Count: > 0 })
             return;
@@ -1093,6 +1103,8 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
     /// </summary>
     public List<LayoutVariationInfo>? ReadVariations(string context, string baseFilePath, IConfiguration configSection)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         IConfigurationSection variationInclude = configSection.GetSection("IncludedVariations");
         IConfigurationSection variationExclude = configSection.GetSection("ExcludedVariations");
 
@@ -1165,6 +1177,8 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
     /// </summary>
     public List<FileInfo> GetBaseLayoutFiles(string? forMap = null)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         forMap ??= Provider.map;
 
         DirectoryInfo layoutDirectory = new DirectoryInfo(_layoutDir);
@@ -1490,6 +1504,8 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
 
     void IEventListener<PlayerJoined>.HandleEvent(PlayerJoined e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ulong loadoutId = _warfare.IsLayoutActive() ? _warfare.GetActiveLayout().LayoutId : 0;
         if (e.Player.Save.LastGameId == loadoutId)
             return;

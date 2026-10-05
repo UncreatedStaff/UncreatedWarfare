@@ -1,5 +1,3 @@
-using System;
-
 namespace Uncreated.Warfare.Players.Cooldowns;
 
 public class CooldownTypeConfiguration

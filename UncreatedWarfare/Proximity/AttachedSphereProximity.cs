@@ -109,6 +109,8 @@ public class AttachedSphereProximity : IAttachedSphereProximity, IFormattable
     /// <inheritdoc />
     public bool TestPoint(in Vector3 position)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         Vector3 worldPos = AttachmentRoot == null ? Vector3.zero : AttachmentRoot.InverseTransformPoint(position);
@@ -118,6 +120,8 @@ public class AttachedSphereProximity : IAttachedSphereProximity, IFormattable
     /// <inheritdoc />
     public bool TestPoint(in Vector2 position)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         Vector3 worldPos = AttachmentRoot == null ? Vector3.zero : AttachmentRoot.InverseTransformPoint(position);

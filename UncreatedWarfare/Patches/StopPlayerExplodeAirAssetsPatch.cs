@@ -92,6 +92,8 @@ internal sealed class StopPlayerExplodeAirAssetsPatch : IHarmonyPatch
 
     private static bool OnHitPlayer(InteractableVehicle vehicle, Player hitPlayer)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (hitPlayer == null)
             return false;
 

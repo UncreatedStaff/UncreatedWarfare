@@ -113,6 +113,8 @@ public class DefaultFlagListUIEvents :
 
     void IEventListener<IFlagsNeedUIUpdateEvent>.HandleEvent(IFlagsNeedUIUpdateEvent e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         bool ticketsOnly = false;
         foreach (LanguageSet set in e.EnumerateApplicableSets(_translationService, ref ticketsOnly))
         {

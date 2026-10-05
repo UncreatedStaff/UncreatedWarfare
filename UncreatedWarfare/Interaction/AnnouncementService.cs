@@ -29,6 +29,8 @@ public class AnnouncementService : IHostedService, IDisposable
         if (_translations.Translations.Count == 0)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _index = (_index + 1) % _translations.Translations.Count;
 
         Translation translation = _translations.Translations.Values.ElementAt(_index);

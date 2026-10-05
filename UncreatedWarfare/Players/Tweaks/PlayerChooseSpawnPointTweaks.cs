@@ -1,4 +1,3 @@
-using System;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
@@ -24,6 +23,8 @@ public class PlayerChooseSpawnPointTweaks :
     [EventListener(RequireActiveLayout = true)]
     public void HandleEvent(PlayerChooseSpawnAfterLogin e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Team lastPlayedTeam = _layout.TeamManager.GetTeam(new CSteamID(e.PlayerSave.TeamId));
 
         // spawn back on the battlefield where they last logged off if they are rejoining a round and do not need a new spawn point
@@ -68,6 +69,8 @@ public class PlayerChooseSpawnPointTweaks :
     [EventListener(RequireActiveLayout = true)]
     public void HandleEvent(PlayerChooseSpawnAfterDeath e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // respawn in main if the player has a team
         if (e.Player.Team != Team.NoTeam)
         {

@@ -67,6 +67,8 @@ public class BarricadeStateStore : ILayoutHostedService, IDisposable
     {
         await UniTask.SwitchToMainThread(token);
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int existingRecordIndex = _dataStore.Data.FindIndex(s => s.BarricadeAsset.MatchAsset(asset) && (faction == null || string.Equals(s.FactionId, faction.FactionId)));
 
         BarricadeStateSave newSave = new BarricadeStateSave
@@ -97,6 +99,8 @@ public class BarricadeStateStore : ILayoutHostedService, IDisposable
     {
         await UniTask.SwitchToMainThread(token);
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int removed = _dataStore.Data.RemoveAll(s => s.BarricadeAsset.Guid == save.BarricadeAsset.Guid);
 
         _dataStore.Save();
@@ -115,6 +119,8 @@ public class BarricadeStateStore : ILayoutHostedService, IDisposable
     /// <returns></returns>
     public BarricadeStateSave? FindBarricadeSave(ItemPlaceableAsset matchingAsset, FactionInfo? matchingfactionInfo = null)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (matchingfactionInfo is { IsDefaultFaction: false })
         {
             BarricadeStateSave? save = _dataStore.Data.FirstOrDefault(s => s.BarricadeAsset.MatchAsset(matchingAsset)
@@ -132,6 +138,8 @@ public class BarricadeStateStore : ILayoutHostedService, IDisposable
     public async UniTask SaveAsync(CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread(token);
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         _dataStore.Save();
     }

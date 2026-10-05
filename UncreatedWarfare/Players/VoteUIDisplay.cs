@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using System;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Data;
 using Uncreated.Warfare.Configuration;
@@ -53,6 +52,8 @@ public abstract class VoteUIDisplay<TData> : UnturnedUI, IVoteDisplay where TDat
 
     public void VoteStarted(in VoteSettings settings, Func<WarfarePlayer, bool>? playerSelector)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         HasVote = true;
         VoteSettings = settings;
         _playerSelector = playerSelector;
@@ -73,16 +74,22 @@ public abstract class VoteUIDisplay<TData> : UnturnedUI, IVoteDisplay where TDat
 
     private void OnVotedYes(WarfarePlayer player, ref bool handled)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         VoteManager.RegisterVote(player.Steam64, PlayerVoteState.Yes);
     }
 
     private void OnVotedNo(WarfarePlayer player, ref bool handled)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         VoteManager.RegisterVote(player.Steam64, PlayerVoteState.No);
     }
 
     public void VoteFinished(IVoteResult result)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         HasVote = false;
 
         if (_subscribedToEvents)
@@ -112,6 +119,8 @@ public abstract class VoteUIDisplay<TData> : UnturnedUI, IVoteDisplay where TDat
 
     public void PlayerJoinedVote(WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (_playerSelector != null && !_playerSelector(player))
             throw new InvalidOperationException("Player does not meet player selector requirements.");
 
@@ -120,6 +129,8 @@ public abstract class VoteUIDisplay<TData> : UnturnedUI, IVoteDisplay where TDat
 
     public void PlayerLeftVote(WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (GetData<TData>(player.Steam64) is not { HasVoteUI: true } data)
             return;
         
@@ -133,6 +144,8 @@ public abstract class VoteUIDisplay<TData> : UnturnedUI, IVoteDisplay where TDat
 
     public void PlayerVoteUpdated(CSteamID playerId, PlayerVoteState newVote, PlayerVoteState oldVote)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         foreach (LanguageSet set in TranslationService.SetOf.PlayersWhere(PlayerIsVoting()))
         {
             SendToPlayers(set);

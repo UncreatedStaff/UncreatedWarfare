@@ -46,6 +46,8 @@ public class FlareEmitter : MonoBehaviour
 
     private void OnFlareKeyPressed(WarfarePlayer player, ref bool handled)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (player.UnturnedPlayer.movement.getVehicle() != Vehicle.Vehicle || player.UnturnedPlayer.movement.getSeat() != 0)
             return;
 
@@ -54,6 +56,8 @@ public class FlareEmitter : MonoBehaviour
     }
     public void ReloadFlares()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         TotalFlaresLeft = Vehicle.Info.Type switch
         {
             VehicleType.AttackHeli => StartingFlaresAttackHeli,
@@ -67,6 +71,8 @@ public class FlareEmitter : MonoBehaviour
     
     public void TryDropFlares()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (Time.time - _timeLastFlareDrop < FlareCooldown || TotalFlaresLeft < 0)
             return;
 
@@ -84,6 +90,8 @@ public class FlareEmitter : MonoBehaviour
     }
     public void ReceiveMissileWarning()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (Vehicle.VehicleHUD == null)
             return;
         
@@ -104,6 +112,8 @@ public class FlareEmitter : MonoBehaviour
     [UsedImplicitly]
     private void FixedUpdate()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (TotalFlaresLeft <= 0 || _flareBurst <= 0 || Time.time - _timeLastFlareSpawned < 0.2f)
             return;
         

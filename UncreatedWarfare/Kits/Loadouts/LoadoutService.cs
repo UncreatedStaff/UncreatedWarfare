@@ -446,6 +446,8 @@ public partial class LoadoutService
         if (_loadoutItemsConfiguration == null || kit.Class == Class.Unarmed)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         IReadOnlyList<IItem> items = _loadoutItemsConfiguration.GetDefaultsForClass(kit.Class);
         
         if (kit.Items == null)

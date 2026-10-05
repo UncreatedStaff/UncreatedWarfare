@@ -133,6 +133,8 @@ public class FlagObjective : IDisposable, IObjective
     //  we have to separate the setting and event in some cases
     internal void SetCurrentContestState(in FlagContestState state, bool invokeEvent = true)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         FlagContestState oldState = CurrentContestState;
         CurrentContestState = state;
         if (oldState.Equals(in state) || !invokeEvent)

@@ -56,6 +56,8 @@ public class PlacedAmmoBagComponent : MonoBehaviour, IAmmoStorage, IManualOnDest
 
     public void SubtractAmmo(float ammoCount)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         AmmoCount -= ammoCount;
         if (AmmoCount <= 0)
         {

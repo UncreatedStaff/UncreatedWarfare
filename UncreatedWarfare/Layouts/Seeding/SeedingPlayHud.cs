@@ -65,6 +65,8 @@ internal class SeedingPlayHud : UnturnedUI, IEventListener<PlayerJoined>, IHudUI
 
     public void UpdateStage()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
         GetLogger().LogInformation("Sending to all players...");
 
@@ -144,6 +146,8 @@ internal class SeedingPlayHud : UnturnedUI, IEventListener<PlayerJoined>, IHudUI
 
     public void SendToPlayer(WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GetLogger().LogInformation("Sending to player...");
         if (_hudManager.IsHidden(player))
             return;
@@ -180,6 +184,8 @@ internal class SeedingPlayHud : UnturnedUI, IEventListener<PlayerJoined>, IHudUI
 
     public void UpdateProgress()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (!_isEnabled || _hudManager.IsHiddenForAllPlayers)
@@ -243,6 +249,8 @@ internal class SeedingPlayHud : UnturnedUI, IEventListener<PlayerJoined>, IHudUI
 
     private void SendFullToPlayer(WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!_isEnabled || _hudManager.IsHidden(player))
             return;
 

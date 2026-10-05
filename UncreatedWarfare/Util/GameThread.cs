@@ -30,6 +30,10 @@ public static class GameThread
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void AssertCurrent()
     {
+#if PROFILING && DEBUG
+        using IDisposable? profiler = ProfilerUtil.Profile();
+#endif
+
         if (_isCurrent)
             return;
 
@@ -43,6 +47,10 @@ public static class GameThread
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void AssertCurrent(string feature)
     {
+#if PROFILING && DEBUG
+        using IDisposable? profiler = ProfilerUtil.Profile();
+#endif
+
         if (_isCurrent)
             return;
 

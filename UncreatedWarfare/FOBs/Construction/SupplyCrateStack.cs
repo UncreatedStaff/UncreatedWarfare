@@ -126,6 +126,8 @@ public class SupplyCrateStack : IDisposable
         if (_crates.Count == 0)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Bounds bounds = _crates[0].Bounds;
 
         for (int i = 1; i < _crates.Count; i++)
@@ -145,6 +147,8 @@ public class SupplyCrateStack : IDisposable
     {
         if (_worldIconManager == null)
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         SupplyCrate firstCrate = Crates[0].Crate;
         if (Crates.Count == 1)
@@ -221,6 +225,8 @@ public class SupplyCrateStack : IDisposable
 #if FALLING_EFFECT_DEBUG_LOGGING
         EffectUtility.ClearDebugEffect();
 #endif
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         level = -1;
         index = -1;
@@ -373,6 +379,8 @@ public class SupplyCrateStack : IDisposable
 
     public StackedSupplyCrate AddCrate(SupplyCrate supplyCrate, int level, int index)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         StackedSupplyCrate crate = new StackedSupplyCrate(level, index, supplyCrate)
         {
             RelativePosition = ColliderObject.transform.InverseTransformPoint(supplyCrate.Buildable.Position - GetBuildableOffset(supplyCrate.Buildable.Asset)),
@@ -409,6 +417,8 @@ public class SupplyCrateStack : IDisposable
         {
             return;
         }
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         LogMessage($"Removing crate ({crate.Level}, {crate.Index}).");
         crate.IsRemoved = true;

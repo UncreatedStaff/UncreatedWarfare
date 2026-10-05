@@ -178,6 +178,8 @@ public class PointsService : IEventListener<PlayerTeamChanged>, IEarlyLevelHoste
     /// <exception cref="InvalidOperationException">Called before level started loading, config hasn't been loaded yet.</exception>
     public WarfareRank? GetRankFromLevel(int level)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         --level;
         CheckLoaded();
 
@@ -193,6 +195,8 @@ public class PointsService : IEventListener<PlayerTeamChanged>, IEarlyLevelHoste
     /// <exception cref="InvalidOperationException">Called before level started loading, config hasn't been loaded yet.</exception>
     public WarfareRank GetRankFromExperience(double experience)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         CheckLoaded();
 
         if (experience < 0)
@@ -213,6 +217,8 @@ public class PointsService : IEventListener<PlayerTeamChanged>, IEarlyLevelHoste
     /// <exception cref="InvalidOperationException">Called before level started loading, config hasn't been loaded yet.</exception>
     public WarfareRank? GetRankByName(string name)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         CheckLoaded();
 
         for (WarfareRank? rank = _startingRank; rank != null; rank = rank.Next)
@@ -237,6 +243,8 @@ public class PointsService : IEventListener<PlayerTeamChanged>, IEarlyLevelHoste
     /// <exception cref="InvalidOperationException">Called before level started loading, config hasn't been loaded yet.</exception>
     public ResolvedEventInfo GetAdminEvent(in LanguageSet set, double? xp, double? credits, double? reputation)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         CheckLoaded();
 
         return new ResolvedEventInfo(default, xp, credits, reputation)

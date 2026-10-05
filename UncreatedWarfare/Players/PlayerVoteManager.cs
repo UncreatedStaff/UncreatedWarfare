@@ -75,6 +75,8 @@ public class PlayerVoteManager : IPlayerVoteManager, IDisposable, IEventListener
 
         await UniTask.SwitchToMainThread(startCancellationToken);
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         AssertNotDisposed();
 
         lock (_voteSync)
@@ -138,6 +140,8 @@ public class PlayerVoteManager : IPlayerVoteManager, IDisposable, IEventListener
 
     private void OnTimerCompleted(ILoopTicker ticker, TimeSpan timeSinceStart, TimeSpan deltaTime)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Interlocked.CompareExchange(ref _voteInfo.Timer, null, ticker)?.Dispose();
 
         lock (_voteSync)
@@ -154,6 +158,8 @@ public class PlayerVoteManager : IPlayerVoteManager, IDisposable, IEventListener
         AssertNotDisposed();
 
         await UniTask.SwitchToMainThread(token);
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         AssertNotDisposed();
 
@@ -179,6 +185,8 @@ public class PlayerVoteManager : IPlayerVoteManager, IDisposable, IEventListener
 
     private void EndVoteIntl()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // assume: game thread, locked _voteSync
         AssertVoting();
 
@@ -225,6 +233,8 @@ public class PlayerVoteManager : IPlayerVoteManager, IDisposable, IEventListener
 
     private void CancelVote()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // assume: game thread
         lock (_voteSync)
         {
@@ -247,6 +257,8 @@ public class PlayerVoteManager : IPlayerVoteManager, IDisposable, IEventListener
 
     private void CleanupVote()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // assume: locked _voteSync
         IsVoting = false;
         VoteStart = DateTime.MinValue;
@@ -275,6 +287,8 @@ public class PlayerVoteManager : IPlayerVoteManager, IDisposable, IEventListener
     /// <inheritdoc />
     public PlayerVoteState GetVoteState(CSteamID player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         AssertNotDisposed();
 
         ConcurrentDictionary<ulong, PlayerVoteState>? states = _voteInfo.PendingVotes;
@@ -289,6 +303,8 @@ public class PlayerVoteManager : IPlayerVoteManager, IDisposable, IEventListener
     /// <inheritdoc />
     public int GetVoteCount(PlayerVoteState vote)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         AssertNotDisposed();
         AssertVoting();
         return vote switch
@@ -303,6 +319,8 @@ public class PlayerVoteManager : IPlayerVoteManager, IDisposable, IEventListener
     /// <inheritdoc />
     public PlayerVoteState RegisterVote(CSteamID player, PlayerVoteState vote)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         AssertNotDisposed();
 
         PlayerVoteState old = UpdatePlayerVote(player, vote);
@@ -364,6 +382,8 @@ public class PlayerVoteManager : IPlayerVoteManager, IDisposable, IEventListener
 
     private PlayerVoteState UpdatePlayerVote(CSteamID player, PlayerVoteState vote)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ConcurrentDictionary<ulong, PlayerVoteState>? states = _voteInfo.PendingVotes;
         if (states == null || !IsVoting)
         {

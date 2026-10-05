@@ -1,4 +1,3 @@
-using System;
 using System.Globalization;
 using System.Text;
 using Uncreated.Warfare.Interaction.Requests;
@@ -59,6 +58,8 @@ public class VehicleBaySignInstanceProvider : ISignInstanceProvider, IRequestabl
 
     public string Translate(ITranslationValueFormatter formatter, IServiceProvider serviceProvider, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Spawn ??= _spawnerService.GetSpawner(_barricade.instanceID);
         Vehicle ??= Spawn?.VehicleInfo;
 
@@ -80,6 +81,8 @@ public class VehicleBaySignInstanceProvider : ISignInstanceProvider, IRequestabl
 
     private void TranslateVehicleBaySign(StringBuilder bldr, WarfareVehicleInfo info, VehicleSpawner spawner, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         string name = info.ShortName ?? info.VehicleAsset.GetAsset()?.FriendlyName ?? info.VehicleAsset.ToString();
         bldr.AppendColorized(name, VbsNameColor)
             .Append('\n')

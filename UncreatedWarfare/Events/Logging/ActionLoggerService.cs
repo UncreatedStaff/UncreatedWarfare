@@ -144,6 +144,7 @@ public sealed class ActionLoggerService : IEventListener<IActionLoggableEvent>, 
 
     public void AddAction(in ActionLogEntry entry)
     {
+        // todo: separate logger thread?
         lock (_sync)
         {
             if (_currentLogWriter == null)

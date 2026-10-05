@@ -266,6 +266,8 @@ public class PlayerInjureComponent : MonoBehaviour,
     /// <exception cref="GameThreadException"/>
     public void Injure(ref DamagePlayerParameters parameters)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
         WarfarePlayer player = _playerService.GetOnlinePlayer(parameters.player);
         CSteamID killerId = parameters.killer;
@@ -321,6 +323,8 @@ public class PlayerInjureComponent : MonoBehaviour,
         if (State != PlayerHealthState.Injured)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         RemoveInjureModifiers();
         PendingDeathInfo = null;
 
@@ -345,6 +349,8 @@ public class PlayerInjureComponent : MonoBehaviour,
 
     private void AddInjureModifiers(ref DamagePlayerParameters parameters)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Player player = Player.UnturnedPlayer;
         player.equipment.dequip();
 
@@ -389,6 +395,8 @@ public class PlayerInjureComponent : MonoBehaviour,
 
     private void RemoveInjureModifiers()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _isInjured = false;
         _injureStart = 0f;
         if (_markerCoroutine != null)
@@ -543,7 +551,7 @@ public class PlayerInjureComponent : MonoBehaviour,
 
         Revive(e.Medic);
 
-        if (e.Player.Team != e.Medic.Team)
+        if (e.Player.Team.IsOpponent(e.Medic.Team))
             return;
 
         // prevent injure/revive spamming to farm XP
@@ -574,6 +582,8 @@ public class PlayerInjureComponent : MonoBehaviour,
     [EventListener(Priority = -100)]
     void IEventListener<DamagePlayerRequested>.HandleEvent(DamagePlayerRequested e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ref DamagePlayerParameters parameters = ref e.Parameters;
         if (_isInjured)
         {

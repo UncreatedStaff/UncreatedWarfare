@@ -5,6 +5,7 @@ using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players.Unlocks;
+using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
@@ -15,11 +16,13 @@ internal sealed class KitSetLevelCommand : IExecutableCommand
 {
     private readonly KitCommandTranslations _translations;
     private readonly IKitDataStore _kitDataStore;
+    private readonly WarfareModule _module;
     public required CommandContext Context { get; init; }
 
-    public KitSetLevelCommand(IKitDataStore kitDataStore, TranslationInjection<KitCommandTranslations> translations)
+    public KitSetLevelCommand(IKitDataStore kitDataStore, WarfareModule module, TranslationInjection<KitCommandTranslations> translations)
     {
         _kitDataStore = kitDataStore;
+        _module = module;
         _translations = translations.Value;
     }
 
@@ -57,10 +60,12 @@ internal sealed class KitSetLevelCommand : IExecutableCommand
                     && type == typeof(LevelUnlockRequirement)
                 );
 
-                string data = JsonSerializer.Serialize(new LevelUnlockRequirement
+                LevelUnlockRequirement requirement = new LevelUnlockRequirement
                 {
                     UnlockLevel = level
-                }, ConfigurationSettings.JsonCondensedSerializerSettings);
+                };
+
+                string data = JsonSerializer.Serialize(requirement, ConfigurationSettings.JsonCondensedSerializerSettings);
 
                 if (index == -1)
                 {

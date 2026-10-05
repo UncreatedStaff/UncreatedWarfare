@@ -1,7 +1,5 @@
 using DanielWillett.ReflectionTools;
 using SDG.Framework.Utilities;
-using System;
-using System.Collections.Generic;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -44,6 +42,8 @@ public class LanguageSets
 
     public LanguageSetEnumerator PlayersWhere(Func<WarfarePlayer, bool>? selector)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         IReadOnlyList<WarfarePlayer> playerList = GameThread.IsCurrent ? _playerService.OnlinePlayers : _playerService.GetThreadsafePlayerList();
 
         bool pool = GameThread.IsCurrent;
@@ -102,6 +102,8 @@ public class LanguageSets
 
     public LanguageSetEnumerator PlayersIn(IEnumerable<WarfarePlayer> set)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         bool pool = GameThread.IsCurrent;
 
         List<LanguageSet> sets = pool ? ListPool<LanguageSet>.claim() : new List<LanguageSet>(4);

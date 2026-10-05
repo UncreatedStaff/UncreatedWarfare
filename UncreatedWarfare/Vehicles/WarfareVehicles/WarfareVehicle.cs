@@ -125,6 +125,8 @@ public class WarfareVehicle : IDisposable, ITransformObject, IEquatable<WarfareV
 
     internal void UnlinkFromSpawn(VehicleSpawner spawn)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (spawn == null)
@@ -145,6 +147,8 @@ public class WarfareVehicle : IDisposable, ITransformObject, IEquatable<WarfareV
 
     internal void LinkToSpawn(VehicleSpawner spawn)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (spawn == null)

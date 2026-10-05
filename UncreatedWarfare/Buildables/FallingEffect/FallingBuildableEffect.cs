@@ -35,6 +35,8 @@ public class FallingBuildableEffect<TArgs> : FallingEffect<TArgs> where TArgs : 
 
     protected override void OnSettle()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (_args.ShouldConvert != null && !_args.ShouldConvert.Invoke(this))
         {
             LogMessage("Convert blocked by ShouldConvert handler.");
@@ -70,6 +72,8 @@ public class FallingBuildableEffect<TArgs> : FallingEffect<TArgs> where TArgs : 
 
     protected virtual void TransformSpawnPosition(ref Vector3 position, ref Quaternion rotation)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!BuildableExtensions.TryGetBuildableBounds(_args.Buildable, out Bounds bounds))
             return;
 

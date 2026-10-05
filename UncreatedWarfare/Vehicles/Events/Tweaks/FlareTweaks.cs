@@ -1,4 +1,3 @@
-using System;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
@@ -12,6 +11,8 @@ public class FlareTweaks :
 {
     public void HandleEvent(EnterVehicle e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!e.Vehicle.Info.Type.IsAircraft() || e.Vehicle.VehicleHUD == null)
             return;
         
@@ -23,11 +24,15 @@ public class FlareTweaks :
 
     public void HandleEvent(ExitVehicle e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         e.Vehicle.VehicleHUD?.HideForPlayer(e.Player);
     }
 
     public void HandleEvent(VehicleSwappedSeat e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!e.Vehicle.Info.Type.IsAircraft() || e.Vehicle.VehicleHUD == null)
             return;
         

@@ -109,6 +109,7 @@ public class TwoSidedTeamManager : ITeamManager<Team>
 
         return Team.NoTeam;
     }
+
     public LayoutRole GetLayoutRole(Team team)
     {
         if (_blufor > -1 && team == _teams[_blufor])
@@ -239,6 +240,8 @@ public class TwoSidedTeamManager : ITeamManager<Team>
     /// <inheritdoc />
     public virtual Vector4? GetSpawnPointWhenRespawningAtMain(IPlayer player, Team team, ZoneStore globalZoneStore)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Zone? zone = SpawnAtWarRoom ? globalZoneStore.SearchZone(ZoneType.WarRoom, team.Faction) : null;
         if (zone == null)
         {
@@ -267,6 +270,8 @@ public class TwoSidedTeamManager : ITeamManager<Team>
     /// <inheritdoc />
     public Team? FindTeam(string? teamSearch)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (string.IsNullOrWhiteSpace(teamSearch))
         {
             return null;
@@ -306,6 +311,8 @@ public class TwoSidedTeamManager : ITeamManager<Team>
 
     private void DecideTeams(out TwoSidedTeamRole team1Role, out TwoSidedTeamRole team2Role)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         TwoSidedTeamRole role1 = Teams![0].Role;
         TwoSidedTeamRole role2 = Teams![1].Role;
 
@@ -358,6 +365,8 @@ public class TwoSidedTeamManager : ITeamManager<Team>
 
     private void CreateInGameGroups()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         object? groupsFieldValue = typeof(GroupManager)
             .GetField("knownGroups", BindingFlags.Static | BindingFlags.NonPublic)?
             .GetValue(null);

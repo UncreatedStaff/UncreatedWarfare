@@ -119,6 +119,8 @@ public class PlayerService : IPlayerService
 
     internal void ReinitializeScopedPlayerComponentServices()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         IServiceProvider serviceProvider = _module.ScopedProvider.Resolve<IServiceProvider>();
         foreach (WarfarePlayer player in OnlinePlayers)
         {
@@ -138,6 +140,8 @@ public class PlayerService : IPlayerService
 
     internal WarfarePlayer CreateWarfarePlayer(Player player, in PlayerTaskData taskData)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         lock (_onlinePlayersDictionary)
         {
             if (_onlinePlayersDictionary.ContainsPlayer(player))
@@ -167,6 +171,8 @@ public class PlayerService : IPlayerService
 
     internal void FinishConnectingPlayer(WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         IServiceProvider serviceProvider = _module.ScopedProvider.Resolve<IServiceProvider>();
 
         // copy so components dont mess with it
@@ -195,6 +201,8 @@ public class PlayerService : IPlayerService
 
     internal WarfarePlayer OnPlayerLeft(WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         lock (_onlinePlayersDictionary)
         {
             RemoveComponents(player);
@@ -225,6 +233,8 @@ public class PlayerService : IPlayerService
 
     private IPlayerComponent[] AddComponents(Player player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         IPlayerComponent[] components = new IPlayerComponent[PlayerComponents.Length];
         for (int i = 0; i < PlayerComponents.Length; i++)
         {
@@ -253,6 +263,8 @@ public class PlayerService : IPlayerService
 
     private static void RemoveComponents(WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         foreach (IPlayerComponent component in player.Components)
         {
             if (component is IDisposable disposable)
@@ -269,6 +281,8 @@ public class PlayerService : IPlayerService
 
     internal PlayerTaskData StartPendingPlayerTasks(PlayerPending args, CancellationTokenSource src, CancellationToken token)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ILifetimeScope scope = _module.IsLayoutActive()
             ? _module.ScopedProvider.BeginLifetimeScope()
             : _module.ServiceProvider.BeginLifetimeScope();
@@ -409,6 +423,8 @@ public class PlayerService : IPlayerService
         if (value == null)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (GameThread.IsCurrent)
         {
             if (_eventSubscriptions.Exists(x => x.Equals(value)))
@@ -441,6 +457,8 @@ public class PlayerService : IPlayerService
 
         if (value == null)
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         if (GameThread.IsCurrent)
         {

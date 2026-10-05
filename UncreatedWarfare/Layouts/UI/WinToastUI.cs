@@ -19,6 +19,8 @@ public class WinToastUI : UnturnedUI
 
     public static void SendToastCallback(WarfarePlayer player, in ToastMessage message, ToastMessageInfo info, UnturnedUI ui, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         WinToastUI winUi = (WinToastUI)ui;
         winUi.SendToPlayer(player.Connection);
         if (message.Argument != null)

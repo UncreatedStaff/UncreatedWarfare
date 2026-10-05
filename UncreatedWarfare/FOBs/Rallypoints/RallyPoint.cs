@@ -93,6 +93,8 @@ public class RallyPoint : BaseFob, IBuildableFob, IDisposable, IFobStrategyMapTa
     }
     public static bool CheckBurned(IPlayerService playerService, Vector3 rallyPointPosition, Team team)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         return playerService.OnlinePlayers.Any(p => p.Team != team && MathUtility.WithinRange(p.Position, rallyPointPosition, BurnRadius));
     }
     public bool IsVisibleToPlayer(WarfarePlayer player) => Squad.ContainsPlayer(player);

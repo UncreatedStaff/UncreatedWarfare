@@ -1,4 +1,3 @@
-using System;
 using System.Linq;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
@@ -10,7 +9,6 @@ using Uncreated.Warfare.Layouts.UI;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Translations;
-using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Layouts.Flags;
 
@@ -42,6 +40,8 @@ public class DefaultCaptureUIFlagEvents :
 
     private void UpdateUIForPlayers(FlagObjective flag)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         foreach (LanguageSet set in _translationService.SetOf.PlayersIn(flag.Players))
         {
             if (!set.Team.IsValid)
@@ -59,6 +59,8 @@ public class DefaultCaptureUIFlagEvents :
 
     public virtual CaptureUIState EvaluateCaptureUI(FlagObjective flag, LanguageSet languageSet)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Team team = languageSet.Team;
 
         SingleLeaderContest contest = flag.Contest;
@@ -131,6 +133,8 @@ public class DefaultCaptureUIFlagEvents :
         if (_layout.ActivePhase is not ActionPhase)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         IFlagRotationService? flagRotationService = _layout.ServiceProvider.ResolveOptional<IFlagRotationService>();
         if (flagRotationService == null)
         {
@@ -167,6 +171,8 @@ public class DefaultCaptureUIFlagEvents :
         if (_layout.ActivePhase is not ActionPhase)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         LanguageSet set = new LanguageSet(e.Player);
         CaptureUIState state = EvaluateCaptureUI(e.Flag, set);
         _ui.UpdateCaptureUI(set, in state);
@@ -176,6 +182,8 @@ public class DefaultCaptureUIFlagEvents :
     {
         if (_layout.ActivePhase is not ActionPhase)
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         _ui.HideCaptureUI(e.Player);
     }

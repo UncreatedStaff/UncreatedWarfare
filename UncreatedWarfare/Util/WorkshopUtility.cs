@@ -18,6 +18,8 @@ internal static class WorkshopUtility
     /// <returns>Whether or not the mod was able to be added (meaning it wasn't already there).</returns>
     public static bool AddModIdToServerMenu(PublishedFileId_t file, bool advertise = true)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         ulong workshopId = file.m_PublishedFileId;
@@ -42,6 +44,8 @@ internal static class WorkshopUtility
     /// <returns>Whether or not the mod was there to remove.</returns>
     public static bool RemoveModIdFromServerMenu(PublishedFileId_t file, bool advertise = true)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ulong workshopId = file.m_PublishedFileId;
 
         List<ulong> list = Provider.getServerWorkshopFileIDs();
@@ -62,6 +66,8 @@ internal static class WorkshopUtility
     /// <exception cref="GameThreadException"/>
     public static void UpdateGameServerAdvertisement()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         List<ulong> ids = Provider.getServerWorkshopFileIDs();

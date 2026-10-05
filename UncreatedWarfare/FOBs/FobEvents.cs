@@ -42,6 +42,8 @@ public partial class FobManager :
 {
     void IEventListener<PlaceBarricadeRequested>.HandleEvent(PlaceBarricadeRequested e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (e.Asset is not ItemTrapAsset trap)
         {
             ShovelableInfo? shovelable = Configuration.Shovelables.FirstOrDefault(x => x.Foundation.MatchAsset(e.Asset));
@@ -79,6 +81,8 @@ public partial class FobManager :
 
     void IEventListener<TriggerTrapRequested>.HandleEvent(TriggerTrapRequested e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ItemTrapAsset asset = (ItemTrapAsset)e.Barricade.asset;
         Vector3 pos = asset.isExplosive
             ? e.Barricade.GetServersideData().point
@@ -105,6 +109,8 @@ public partial class FobManager :
     [EventListener(RequireNextFrame = true)]
     void IEventListener<IBuildablePlacedEvent>.HandleEvent(IBuildablePlacedEvent e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Team team = _teamManager.GetTeam(e.Buildable.Group);
         if (!team.IsValid)
             return;
@@ -162,6 +168,8 @@ public partial class FobManager :
 
     private void TryRegisterEntity(IBuildable buildable, Team team, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (_entities.Any(x => x is IBuildableFobEntity b && b.Buildable.Equals(buildable)))
         {
             _logger.LogDebug($"Buildable {buildable} already registered as an entity.");
@@ -227,6 +235,8 @@ public partial class FobManager :
     [EventListener(MustRunInstantly = true)]
     void IEventListener<IBuildableDestroyedEvent>.HandleEvent(IBuildableDestroyedEvent e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         IBuildableFob? fob = FindBuildableFob<IBuildableFob>(e.Buildable);
 
         if (BuildableExtensions.TryGetBuildableBounds(e.Buildable.Asset, out Bounds buildableBounds))
@@ -292,6 +302,8 @@ public partial class FobManager :
 
     private void UpdateNearbySupplyCrateSupports(Vector3 buildablePosition, float radius)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         radius *= radius;
         foreach (SupplyCrate crate in _entities.OfType<SupplyCrate>())
         {
@@ -311,6 +323,8 @@ public partial class FobManager :
 
     private bool CheckValidSupplyCrateDropLocation(SupplyCrateInfo supplyCrateInfo, WarfarePlayer player, Team team, Vector3 estimatedDropPosition)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Zone? mainBase = _zoneStore.FindClosestZone(estimatedDropPosition, ZoneType.MainBase, Configuration.MinFobDistanceFromMain);
         if (mainBase != null)
         {
@@ -370,6 +384,8 @@ public partial class FobManager :
             e.Cancel();
             return;
         }
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         SupplyCrateInfo? supplyCrateInfo = Configuration.SupplyCrates.FirstOrDefault(s => s.SupplyItemAsset.MatchAsset(e.Asset));
         if (supplyCrateInfo == null)
@@ -474,6 +490,8 @@ public partial class FobManager :
         if (supplyCrateInfo == null)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Team team = e.Player.Team;
         if (!CheckValidSupplyCrateDropLocation(supplyCrateInfo, e.Player, team, e.LandingPoint))
         {
@@ -516,6 +534,8 @@ public partial class FobManager :
 
     void IEventListener<VehicleSpawned>.HandleEvent(VehicleSpawned e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ShovelableInfo? emplacementShoveable = Configuration.Shovelables.FirstOrDefault(s => s.Emplacement != null && s.Emplacement.Vehicle.MatchAsset(e.Vehicle.Vehicle.asset));
 
         if (emplacementShoveable == null)
@@ -526,11 +546,12 @@ public partial class FobManager :
             return;
 
         RegisterFobEntity(new EmplacementEntity(e.Vehicle, team, emplacementShoveable.Foundation));
-
     }
 
     void IEventListener<VehicleDespawned>.HandleEvent(VehicleDespawned e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         EmplacementEntity? emplacement = GetEmplacementFobEntity(e.Vehicle.Vehicle);
         if (emplacement == null)
             return;
@@ -542,6 +563,8 @@ public partial class FobManager :
     void IEventListener<IDamageBuildableRequestedEvent>.HandleEvent(IDamageBuildableRequestedEvent e, IServiceProvider serviceProvider)
     {
         // note this shouldn't run in IBuildableDamagedEvent because that doesn't run if the buildable is destroyed
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         IDamageableFob? correspondingFob = FindBuildableFob<IDamageableFob>(e.Buildable);
         if (correspondingFob == null)
@@ -559,10 +582,13 @@ public partial class FobManager :
 
     void IEventListener<IBuildableDamagedEvent>.HandleEvent(IBuildableDamagedEvent e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ResourceFob? correspondingFob = FindBuildableFob<ResourceFob>(e.Buildable);
         correspondingFob?.InvokeHealthUpdated();
     }
 
+    /*
     private const float MaxBoxRadius = 1.5f;
     private static readonly Collider?[] ColliderBuffer = new Collider?[1];
     private static Vector3 FindDropPositionForSupplyCrate(InteractableVehicle vehicle, Vector3 playerSeatPosition)
@@ -601,7 +627,7 @@ public partial class FobManager :
 
         return backPos;
     }
-
+    
     private static readonly RaycastHit[] HitArray = new RaycastHit[32];
     private static Vector3 RaycastFindEmptySpot(InteractableVehicle vehicle, Vector3 origin, Vector3 direction, float maxDistance, out bool didHit)
     {
@@ -629,4 +655,5 @@ public partial class FobManager :
 
         return origin + direction * (hitDistance - (MaxBoxRadius / 2 + 0.1f));
     }
+    */
 }

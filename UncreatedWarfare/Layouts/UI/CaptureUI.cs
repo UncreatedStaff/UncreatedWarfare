@@ -1,4 +1,3 @@
-using System;
 using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Data;
@@ -9,7 +8,6 @@ using Uncreated.Warfare.Layouts.Flags;
 using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
@@ -52,6 +50,8 @@ public class CaptureUI : UnturnedUI, IHudUIListener
 
     public void UpdateCaptureUI(LanguageSet set, in CaptureUIState state)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         Color32 color = state.GetColor();
@@ -115,12 +115,16 @@ public class CaptureUI : UnturnedUI, IHudUIListener
     
     public void HideCaptureUI(LanguageSet set)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         while (set.MoveNext())
             HideCaptureUI(set.Next);
     }
 
     public void HideCaptureUI(WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         CaptureUIData data = GetOrAddData(player);

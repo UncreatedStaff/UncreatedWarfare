@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using System;
 using System.Linq;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
@@ -44,6 +43,8 @@ internal sealed class GuidedMissileLaunchTweaks :
     
     public void HandleEvent(ProjectileSpawned e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (e.Player == null)
             return;
 
@@ -67,6 +68,8 @@ internal sealed class GuidedMissileLaunchTweaks :
 
     public void HandleEvent(VehicleSpawned e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         foreach (Passenger? passenger in e.Vehicle.Vehicle.turrets)
         {
             if (Array.Exists(_groundAAMissiles, a => a.Id == passenger.turret.itemID))

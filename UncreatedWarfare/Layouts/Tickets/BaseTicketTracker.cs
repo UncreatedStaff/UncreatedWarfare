@@ -1,4 +1,3 @@
-using System;
 using Uncreated.Warfare.Events.Models.Tickets;
 using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Layouts.Teams;
@@ -6,6 +5,7 @@ using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Layouts.Tickets;
+
 public abstract class BaseTicketTracker : ILayoutHostedService, ITicketTracker
 {
     private readonly Dictionary<Team, int> _ticketMap;
@@ -41,8 +41,9 @@ public abstract class BaseTicketTracker : ILayoutHostedService, ITicketTracker
             TicketTracker = this
         };
 
-        _ = WarfareModule.EventDispatcher.DispatchEventAsync(args, default);
+        _ = WarfareModule.EventDispatcher.DispatchEventAsync(args, CancellationToken.None);
     }
+
     public void IncrementTickets(Team team, int tickets)
     {
         GameThread.AssertCurrent();
@@ -50,6 +51,8 @@ public abstract class BaseTicketTracker : ILayoutHostedService, ITicketTracker
         // todo: id prefer a better way to keep tickets from running in main phases
         if (!team.IsValid || Layout.ActivePhase is not ActionPhase)
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         int newTicketCount;
         if (!_ticketMap.TryGetValue(team, out int oldTickets))

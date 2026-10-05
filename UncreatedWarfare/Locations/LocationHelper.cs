@@ -9,6 +9,8 @@ public static class LocationHelper
     /// </summary>
     public static string GetClosestLocationName(Vector3 point)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         LocationDevkitNode? node = null;
         float smallest = 0f;
         foreach (LocationDevkitNode existingNode in LocationDevkitNodeSystem.Get().GetAllNodes())

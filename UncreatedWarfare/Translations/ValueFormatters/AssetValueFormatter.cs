@@ -1,4 +1,3 @@
-using System;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Logging.Formatting;
 using Uncreated.Warfare.Translations.Addons;
@@ -8,6 +7,8 @@ public class AssetValueFormatter : IValueFormatter<Asset>
 {
     public static string Format(Asset asset, ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         bool rarity = (parameters.Options & TranslationOptions.NoRichText) != 0
                       && (AssetLink.AssetLinkFriendly.Match(in parameters) || AssetLink.AssetLinkDescriptive.Match(in parameters));
 

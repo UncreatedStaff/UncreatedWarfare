@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Configuration;
-using System;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Kits;
@@ -47,6 +46,8 @@ public class WarTableDoorTweak :
     {
         if (!_teleportDoors.ContainsAsset(e.Object.asset))
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         if (!_zoneStore.IsInsideZone(e.Player.Position, ZoneType.WarRoom, e.Player.Team.Faction))
         {
@@ -108,6 +109,8 @@ public class WarTableDoorTweak :
 
     private void UpdateFlag(WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (player.Component<DeploymentComponent>().CurrentDeployment is Zone { Type: ZoneType.MainBase })
         {
             // already deploying

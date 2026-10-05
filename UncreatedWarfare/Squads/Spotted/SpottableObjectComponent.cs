@@ -109,6 +109,8 @@ public class SpottableObjectComponent : MonoBehaviour, IManualOnDestroy
     [SuppressMessage("CodeQuality", "IDE0051")]
     private void Awake()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ref SpotterTypeStats stats = ref Unsafe.NullRef<SpotterTypeStats>();
 
         ILifetimeScope serviceProvider = WarfareModule.Singleton.ServiceProvider;
@@ -209,6 +211,8 @@ public class SpottableObjectComponent : MonoBehaviour, IManualOnDestroy
     /// </summary>
     public bool IsLaserTarget(Team team)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (_spotters is not { Count: > 0 })
             return false;
 
@@ -232,6 +236,8 @@ public class SpottableObjectComponent : MonoBehaviour, IManualOnDestroy
 
     private static ref SpotterTypeStats FindTypeStats(SpottedType type)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         for (int i = TypeStats.Length - 1; i >= 0; --i)
         {
             ref SpotterTypeStats stats = ref TypeStats[i];
@@ -244,6 +250,8 @@ public class SpottableObjectComponent : MonoBehaviour, IManualOnDestroy
 
     private static ref SpotterTypeStats FindTypeStats(VehicleType vehicle)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // try by index first
         if ((int)vehicle <= TypeStats.Length)
         {
@@ -264,6 +272,8 @@ public class SpottableObjectComponent : MonoBehaviour, IManualOnDestroy
 
     public bool TryAddSpotter(ISpotter spotter, float duration = float.NaN)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (spotter.Team is null || !spotter.Team.IsValid)
@@ -312,6 +322,8 @@ public class SpottableObjectComponent : MonoBehaviour, IManualOnDestroy
             if (_spotters is not { Count: > 0 })
                 yield break;
 
+            using IDisposable? profiler = ProfilerUtil.Profile();
+
             bool anyRemoved = false;
             float lowestExpireTime = float.MaxValue;
 
@@ -342,6 +354,8 @@ public class SpottableObjectComponent : MonoBehaviour, IManualOnDestroy
 
     public void RemoveAllSpotters()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (_spotters == null)
             return;
 
@@ -356,6 +370,8 @@ public class SpottableObjectComponent : MonoBehaviour, IManualOnDestroy
 
     public bool RemoveSpotter(ISpotter spotter)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (_spotters == null)
             return false;
 
@@ -389,6 +405,8 @@ public class SpottableObjectComponent : MonoBehaviour, IManualOnDestroy
 
     private void UpdateIcons()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (_worldIconManager == null)
         {
             _singleTeamActiveIcon = null;

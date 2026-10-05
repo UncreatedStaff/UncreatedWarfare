@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using System;
 using System.Linq;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Kits.Items;
@@ -117,6 +116,8 @@ public class KitLayoutService
     /// </summary>
     public void TryReverseLayoutTransformations(WarfarePlayer player, Kit kitWithItems)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         IKitItem[] items = kitWithItems.Items;

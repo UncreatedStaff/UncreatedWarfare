@@ -12,6 +12,8 @@ partial class EventDispatcher
     /// </summary>
     private void ObjectManagerOnQuestObjectUsed(Player player, InteractableObject obj)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ObjectInfo foundObject = LevelObjectUtility.FindObject(obj.transform);
 
         if (!foundObject.HasValue)

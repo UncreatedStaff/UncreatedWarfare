@@ -1,9 +1,8 @@
 using SDG.Framework.Utilities;
-using System;
 using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Translations;
-                                          // if this is erroring ignore it, seems to be a glitch in VS as ref structs can implement interfaces
+
 public ref struct LanguageSetEnumerator : IEnumerator<LanguageSet>
 {
     private readonly bool _pooled;
@@ -97,6 +96,8 @@ public ref struct LanguageSetEnumerator : IEnumerator<LanguageSet>
 
         internal Cache(in LanguageSetEnumerator enumerator)
         {
+            using IDisposable? profiler = ProfilerUtil.Profile();
+
             Sets = enumerator._list?.ToArray();
             WarfarePlayer[]? players = enumerator._players?.ToArray();
 

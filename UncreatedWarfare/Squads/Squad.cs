@@ -1,6 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Collections.Immutable;
 using Uncreated.Warfare.Events.Models.Squads;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
@@ -14,7 +12,6 @@ namespace Uncreated.Warfare.Squads;
 
 public class Squad : ITranslationArgument
 {
-    // todo: something is wrong with squads, a few times errors are being thrown for players not being in squads or being in more than one
     public const int MaxMembers = 6;
     private readonly List<WarfarePlayer> _members;
     private readonly SquadManager _squadManager;
@@ -24,7 +21,7 @@ public class Squad : ITranslationArgument
     /// </summary>
     public byte TeamIdentificationNumber { get; }
     public Team Team { get; }
-    public IReadOnlyList<WarfarePlayer> Members { get; }
+    public ImmutableArray<WarfarePlayer> Members { get; private set; }
     public WarfarePlayer Leader => _members[0];
     public bool IsFull => _members.Count >= MaxMembers;
     public bool IsLocked { get; private set; }
@@ -32,7 +29,7 @@ public class Squad : ITranslationArgument
     internal Squad(Team team, string squadName, byte teamIdentificationNumber, SquadManager squadManager)
     {
         _members = new List<WarfarePlayer>();
-        Members = _members.AsReadOnly();
+        Members = ImmutableArray<WarfarePlayer>.Empty;
         Name = squadName;
         TeamIdentificationNumber = teamIdentificationNumber;
         Team = team;
@@ -53,8 +50,14 @@ public class Squad : ITranslationArgument
     internal void AddMemberWithoutNotify(WarfarePlayer player)
     {
         _members.Add(player);
+        UpdatePublicMembers();
         player.Component<SquadPlayerComponent>().ChangeSquad(this);
         player.Save.SquadTeamIdentificationNumber = TeamIdentificationNumber;
+    }
+
+    private void UpdatePublicMembers()
+    {
+        Members = [ .. _members ];
     }
 
     public bool TryAddMember(WarfarePlayer player)
@@ -73,16 +76,16 @@ public class Squad : ITranslationArgument
 
     public bool CanJoinSquad(WarfarePlayer player)
     {
-        if (Members.Count >= MaxMembers || Members.Contains(player))
+        if (_members.Count >= MaxMembers || _members.Contains(player))
             return false;
 
         if (!IsLocked)
             return true;
 
-        if (Members.Count == 0)
+        if (_members.Count == 0)
             return false;
 
-        WarfarePlayer leader = Members[0];
+        WarfarePlayer leader = _members[0];
         if (leader.UnturnedPlayer.channel.owner.playerID.group == player.UnturnedPlayer.channel.owner.playerID.group)
         {
             // same steam group
@@ -120,6 +123,7 @@ public class Squad : ITranslationArgument
 
         _members[0] = member;
         _members[index] = leader;
+        UpdatePublicMembers();
 
         bool didUpdateName = false;
         if (Name.Equals($"{leader.Names.CharacterName}'s Squad", StringComparison.Ordinal))
@@ -152,6 +156,7 @@ public class Squad : ITranslationArgument
         }
 
         _members.RemoveAt(index);
+        UpdatePublicMembers();
         player.Save.SquadTeamIdentificationNumber = 0;
         player.Component<SquadPlayerComponent>().ClearSquad();
         _ = WarfareModule.EventDispatcher.DispatchEventAsync(new SquadMemberLeft { Squad = this, Player = player });
@@ -206,6 +211,7 @@ public class Squad : ITranslationArgument
         }
 
         _members.Clear();
+        Members = ImmutableArray<WarfarePlayer>.Empty;
     }
 
     public static readonly SpecialFormat FormatColorName = new SpecialFormat("Colored Squad Name", "c");
@@ -219,13 +225,8 @@ public class Squad : ITranslationArgument
             : Name;
     }
 
-    public override int GetHashCode()
-    {
-        return HashCode.Combine(Team.Id, Name);
-    }
-
     public override string ToString()
     {
-        return $"sq-{TeamIdentificationNumber} \"{Name}\" @ {Team.Faction.Name} ({Members.Count}/{MaxMembers} members)";
+        return $"sq-{TeamIdentificationNumber} \"{Name}\" @ {Team.Faction.Name} ({_members.Count}/{MaxMembers} members)";
     }
 }

@@ -57,6 +57,8 @@ public class ItemTrackingPlayerComponent :
             return false;
         }
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         for (int i = 0; i < ItemDropTransformations.Count; ++i)
         {
             ItemDropTransformation t = ItemDropTransformations[i];
@@ -118,6 +120,8 @@ public class ItemTrackingPlayerComponent :
         if (jar == null)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Item item = jar.item;
 
         for (int i = 0; i < ItemTransformations.Count; ++i)
@@ -142,6 +146,8 @@ public class ItemTrackingPlayerComponent :
             origY = byte.MaxValue;
             return false;
         }
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         for (int i = 0; i < ItemDropTransformations.Count; ++i)
         {
@@ -177,7 +183,9 @@ public class ItemTrackingPlayerComponent :
     {
         if (e.Item == null || IsPossiblyCorrupted || !e.WasDroppedFromInventory)
             return;
-        
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         for (int i = 0; i < ItemTransformations.Count; ++i)
         {
             ItemTransformation t = ItemTransformations[i];
@@ -197,6 +205,8 @@ public class ItemTrackingPlayerComponent :
     {
         if (!e.AutoFindFreeSpace || IsPossiblyCorrupted)
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         // replace item from where it was dropped if possible
         for (int i = 0; i < ItemDropTransformations.Count; i++)
@@ -222,6 +232,8 @@ public class ItemTrackingPlayerComponent :
     {
         if (e.IsSecondaryExecution || e.NewX == e.OldX && e.NewY == e.OldY && e.NewPage == e.OldPage || IsPossiblyCorrupted)
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         byte origX = byte.MaxValue, origY = byte.MaxValue;
         Page origPage = (Page)byte.MaxValue;
@@ -287,6 +299,8 @@ public class ItemTrackingPlayerComponent :
     {
         if (e.Item == null)
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         if (!e.PickedUp || e.PickUpPage == (Page)byte.MaxValue || (byte)e.PickUpPage >= PlayerInventory.STORAGE)
         {

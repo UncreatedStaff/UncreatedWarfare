@@ -1,4 +1,3 @@
-using System;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Players.Cooldowns;
@@ -17,12 +16,16 @@ internal class CombatCooldownTweak : IEventListener<PlayerDamaged>, IEventListen
     /// <inheritdoc />
     public void HandleEvent(PlayerDamaged e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _cooldownManager.StartCooldown(e.Player, KnownCooldowns.Combat);
     }
 
     /// <inheritdoc />
     public void HandleEvent(PlayerDied e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _cooldownManager.RemoveCooldown(e.Player, KnownCooldowns.Combat);
     }
 }

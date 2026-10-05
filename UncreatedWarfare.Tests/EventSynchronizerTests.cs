@@ -1,15 +1,12 @@
 using Cysharp.Threading.Tasks;
 using DanielWillett.ReflectionTools;
-using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NUnit.Framework;
 using System;
-using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
-using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Tests.Utility;
@@ -115,7 +112,7 @@ internal class EventSynchronizerTests
         
         SynchronizationEntry entryPre = await _eventSynchronizer.EnterEvent(mPre);
         SwitchToMainThread();
-        _eventSynchronizer.ExitEvent(entryPre);
+        _eventSynchronizer.ExitEvent(entryPre!);
 
         GlobalSyncEventModel m1 = new GlobalSyncEventModel();
         PerPlayerSyncEventModel m2 = new PerPlayerSyncEventModel { Player = player1 };
@@ -174,7 +171,7 @@ internal class EventSynchronizerTests
         {
             WarfarePlayer pl = await TestHelpers.AddPlayer(i, _serviceProvider);
             PerPlayerSyncEventModel perPlayerArgs = new PerPlayerSyncEventModel { Player = pl };
-            _eventSynchronizer.ExitEvent(await _eventSynchronizer.EnterEvent(perPlayerArgs));
+            _eventSynchronizer.ExitEvent((await _eventSynchronizer.EnterEvent(perPlayerArgs))!);
             player ??= pl;
         }
 

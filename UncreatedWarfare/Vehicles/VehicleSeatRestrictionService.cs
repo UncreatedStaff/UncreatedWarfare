@@ -55,6 +55,8 @@ public class VehicleSeatRestrictionService :
     /// <remarks>Cooldowns are not considered.</remarks>
     public VehicleChangeSeatsResult TryEnterSeat(WarfareVehicle vehicle, WarfarePlayer player, byte seat)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (player.IsOnDuty)
             return new VehicleChangeSeatsResult(null, ChangeSeatsResult.Success);
         
@@ -126,6 +128,8 @@ public class VehicleSeatRestrictionService :
     /// <remarks>Cooldowns are not considered.</remarks>
     public VehicleChangeSeatsResult TrySwapSeat(WarfareVehicle vehicle, WarfarePlayer player, byte toSeat, byte fromSeat = byte.MaxValue)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (player.IsOnDuty)
             return new VehicleChangeSeatsResult(null, ChangeSeatsResult.Success);
         
@@ -177,6 +181,8 @@ public class VehicleSeatRestrictionService :
     /// <remarks>Cooldowns are not considered.</remarks>
     public ChangeSeatsResult TryExitSeat(WarfareVehicle vehicle, WarfarePlayer player, byte fromSeat = byte.MaxValue)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (player.IsOnDuty)
             return ChangeSeatsResult.Success;
         
@@ -210,6 +216,8 @@ public class VehicleSeatRestrictionService :
 
     void IEventListener<EnterVehicleRequested>.HandleEvent(EnterVehicleRequested e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!e.IgnoreInteractCooldown && IsOnInteractCooldown(e.Player, e.Vehicle.Vehicle))
         {
             e.Cancel();
@@ -252,6 +260,8 @@ public class VehicleSeatRestrictionService :
 
     void IEventListener<VehicleSwapSeatRequested>.HandleEvent(VehicleSwapSeatRequested e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!e.IgnoreInteractCooldown && IsOnInteractCooldown(e.Player, e.Vehicle.Vehicle))
         {
             e.Cancel();
@@ -286,6 +296,8 @@ public class VehicleSeatRestrictionService :
 
     void IEventListener<ExitVehicleRequested>.HandleEvent(ExitVehicleRequested e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!e.IgnoreInteractCooldown && IsOnInteractCooldown(e.Player, e.Vehicle.Vehicle))
         {
             e.Cancel();
@@ -310,6 +322,8 @@ public class VehicleSeatRestrictionService :
 
     private static int? FindAvailableNonDriverSeat(InteractableVehicle vehicle)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         for (int seat = 0; seat < vehicle.passengers.Length; seat++)
         {
             Passenger passenger = vehicle.passengers[seat];
@@ -327,6 +341,8 @@ public class VehicleSeatRestrictionService :
 
     private static int? FindAvailablePassengerSeat(InteractableVehicle vehicle, WarfareVehicleInfo info)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         for (int seat = 0; seat < vehicle.passengers.Length; seat++)
         {
             Passenger passenger = vehicle.passengers[seat];
@@ -349,6 +365,8 @@ public class VehicleSeatRestrictionService :
 
     private static bool OnlineOwnerIsNotInVehicle(InteractableVehicle vehicle)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         for (int seat = 0; seat < vehicle.passengers.Length; seat++)
         {
             Passenger passenger = vehicle.passengers[seat];
@@ -361,6 +379,8 @@ public class VehicleSeatRestrictionService :
 
     private bool ShouldCheckIfOwnerInVehicle(WarfarePlayer enteringPlayer, InteractableVehicle vehicle, WarfareVehicleInfo info)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (vehicle.lockedOwner == CSteamID.Nil)
             return false;
 
@@ -394,6 +414,8 @@ public class VehicleSeatRestrictionService :
 
     private bool CanAbandonDriverSeat(WarfarePlayer exitingPlayer, WarfareVehicle warfareVehicle, int? newSeatIndex = null)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (_zoneStore == null)
             return true;
 
@@ -420,6 +442,8 @@ public class VehicleSeatRestrictionService :
 
     private static bool MaxAllowedCrewReached(InteractableVehicle vehicle, WarfareVehicleInfo info)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!info.Crew.MaxAllowedCrew.HasValue)
             return false;
 

@@ -64,11 +64,13 @@ public class SquadSignInstanceProvider : ISignInstanceProvider, IRequestable<Squ
     public string Translate(ITranslationValueFormatter formatter, IServiceProvider serviceProvider, LanguageInfo language,
         CultureInfo culture, WarfarePlayer? player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (SquadNumber is < 1 or > SquadManager.MaxSquadCount)
             return "Invalid Sign";
         
         Squad? squad = _squadManager.Squads.FirstOrDefault(s => s.Team == Team && s.TeamIdentificationNumber == SquadNumber);
-        if (squad == null || /* about to get disbanded */ squad.Members.Count == 0)
+        if (squad == null || /* about to get disbanded */ squad.Members.Length == 0)
         {
             return _translations.EmptySquadSignTranslation.Translate(SquadNumber, language, culture, TimeZoneInfo.Utc);
         }
@@ -79,7 +81,7 @@ public class SquadSignInstanceProvider : ISignInstanceProvider, IRequestable<Squ
             .Append("<b>")
             .AppendColorized(_translations.SquadSignHeader.Translate(SquadNumber, language, culture, TimeZoneInfo.Utc), "#9effc6")
             .Append("  ")
-            .AppendColorized($"({squad.Members.Count}/{Squad.MaxMembers})", "#ffffff")
+            .AppendColorized($"({squad.Members.Length}/{Squad.MaxMembers})", "#ffffff")
             .AppendLine();
         AppendName(squad, out bool hasExtraLine);
         StringBuilder.Append("</b>");

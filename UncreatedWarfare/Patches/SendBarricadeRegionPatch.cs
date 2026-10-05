@@ -66,6 +66,8 @@ internal sealed class SendBarricadeRegionPatch : IHarmonyPatch
     /// </summary>
     private static bool Prefix(SteamPlayer client, BarricadeRegion region, byte x, byte y, NetId parentNetId, float sortOrder)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (SendMultipleBarricades == null)
             return true;
 

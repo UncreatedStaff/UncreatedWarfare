@@ -543,6 +543,8 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
     {
         GameThread.AssertCurrent();
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Kit? kit = _cachedDefaultKit;
         if (kit == null)
         {
@@ -657,6 +659,8 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         KitPlayerComponent playerComponent = player.Component<KitPlayerComponent>();
         if (playerComponent.ActiveKit is { IsLowAmmo: true })
             return true;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         // check if any clothes are missing or the wrong item
         IKitItem[] items = kit.Items;
@@ -813,6 +817,8 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
 
     private void GiveKitMainThread(WarfarePlayer player, KitBestowData kitBestowData, List<KitLayoutTransformation>? layouts, List<KitHotkey>? hotkeys, bool invokeEvent)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!player.IsOnline)
             throw new OperationCanceledException("Player disconnected.");
 
@@ -843,6 +849,8 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
 
     private void ApplyHotkeys(WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         HotkeyPlayerComponent hotkeyComponent = player.Component<HotkeyPlayerComponent>();
 
         if (hotkeyComponent.HotkeyBindings == null)

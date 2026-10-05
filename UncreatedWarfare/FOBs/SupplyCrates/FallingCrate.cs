@@ -50,6 +50,8 @@ public class FallingCrate : FallingBuildable
     /// <inheritdoc />
     protected override void GetHitTransform(out Vector3 position, out Quaternion rotation)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (ItemData.item.GetAsset<ItemPlaceableAsset>() is not { } asset
             || !BuildableExtensions.TryGetBuildableBounds(asset, out Bounds bounds))
         {
@@ -90,7 +92,9 @@ public class FallingCrate : FallingBuildable
     }
 
     private void HandlePlaced(IBuildable buildable)
-    {                                                                                                          
+    {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         SupplyCrate supplyCrate = new SupplyCrate(
             _supplyCrateInfo,
             buildable,

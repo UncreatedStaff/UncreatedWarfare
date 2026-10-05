@@ -39,6 +39,8 @@ public class ChatService
     /// </summary>
     public void Send(WarfarePlayer player, string text, Color color, EChatMode mode, string? iconUrl, bool richText, WarfarePlayer? fromPlayer = null)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (richText)
         {
             Color? c = TranslationFormattingUtility.ExtractColor(text, out int index, out int length);
@@ -1621,6 +1623,8 @@ public class ChatService
     /// </summary>
     private void SendRawMessage(string text, Color color, EChatMode mode, string? iconURL, bool richText, WarfarePlayer recipient, WarfarePlayer? fromPlayer)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         iconURL ??= string.Empty;
@@ -1668,6 +1672,8 @@ public class ChatService
     /// </summary>
     private void SendRawMessageBatch(string text, Color color, EChatMode mode, string? iconURL, bool richText, PooledTransportConnectionList transportConnections, WarfarePlayer? fromPlayer)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         iconURL ??= string.Empty;

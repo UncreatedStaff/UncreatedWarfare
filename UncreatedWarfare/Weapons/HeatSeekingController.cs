@@ -53,6 +53,8 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
     [UsedImplicitly]
     private void FixedUpdate()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (Time.time - _timeOfLastScan >= AquisitionFrequency)
         {
             ScanForTargets();
@@ -62,6 +64,8 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
     public void Initialize(float horizontalRange, float verticalRange, IAssetLink<EffectAsset>? lockOnEffect, float aquisitionTime, float timeOutTime, ILogger logger)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _vehicle = GetComponentInParent<InteractableVehicle>();
         _horizontalRange = horizontalRange;
         _verticalRange = verticalRange;
@@ -85,6 +89,8 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
     }
     public void Initialize(float range, IAssetLink<EffectAsset> lockOnEffect, float aquisitionTime, float timeOutTime, ILogger logger)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _vehicle = GetComponentInParent<InteractableVehicle>();
         _horizontalRange = range;
         _aquisitionTime = aquisitionTime;
@@ -117,6 +123,8 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
     public Player? GetGunner(InteractableVehicle vehicle)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (vehicle.turrets == null)
             return null;
         foreach (Passenger turret in vehicle.turrets)
@@ -131,6 +139,8 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
     private void ScanForTargets()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Transform? newTarget = null;
 
         Player? gunner = GetGunner(_vehicle);
@@ -228,6 +238,8 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
     private void LockOn(Transform? newTarget, Player? gunner)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         bool noAmmo = gunner != null && gunner.equipment.state[10] == 0;
 
         UseableGun? gun = gunner?.equipment.useable as UseableGun;
@@ -296,6 +308,8 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
     public bool IsInRange(Vector3 target)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (_verticalRange is null)
             return (target - transform.position).sqrMagnitude < Math.Pow(_horizontalRange, 2);
 
@@ -314,6 +328,8 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
     private void OnDestroy()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         for (int i = MissilesInFlight.Count - 1; i >= 0; i--)
         {
             HeatSeekingMissileComponent missile = MissilesInFlight[i];

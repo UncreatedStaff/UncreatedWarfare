@@ -35,6 +35,8 @@ public static class YamlUtility
     /// <remarks><see langword="true"/> if either there is no map filter or if the current map is included in the map filter, otherwise <see langword="false"/>.</remarks>
     public static bool CheckMatchesMapFilterAndReadWeight(string filePath, string map, out double weight)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         try
         {
             using StreamReader streamReader = new StreamReader(filePath);

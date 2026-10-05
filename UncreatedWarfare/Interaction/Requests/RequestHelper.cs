@@ -79,6 +79,8 @@ public static class RequestHelper
             throw new ArgumentException($"Request result handler type must implement {Accessor.ExceptionFormatter.Format<IRequestResultHandler>()}.");
         }
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Type requestSourceType = requestable.GetType();
 
         // get value of IRequestable< ? > for 'requestable'
@@ -110,6 +112,8 @@ public static class RequestHelper
 
     public static IRequestable<object>? GetRequestable(Transform transform, SignInstancer signInstancer)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         IRequestable<object>? requestable = ContainerHelper.FindComponent<IRequestable<object>>(transform);
         if (requestable != null || !transform.CompareTag("Barricade") && !transform.CompareTag("Vehicle"))
         {

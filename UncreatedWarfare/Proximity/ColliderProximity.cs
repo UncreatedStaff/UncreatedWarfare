@@ -115,6 +115,8 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<WarfarePlayer
     [UsedImplicitly]
     private void FixedUpdate()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         for (int i = _players.Count - 1; i >= 0; --i)
         {
             WarfarePlayer player = _players[i];
@@ -128,6 +130,8 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<WarfarePlayer
     [UsedImplicitly]
     private void OnTriggerStay(Collider collider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         WarfarePlayer? player = _playerService.GetOnlinePlayerOrNull(DamageTool.getPlayer(collider.transform));
         if (player != null)
         {
@@ -149,6 +153,8 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<WarfarePlayer
 
     private void OnPlayerStay(WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Vector3 position = player.Position;
         for (int i = 0; i < _players.Count; ++i)
         {
@@ -185,6 +191,8 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<WarfarePlayer
     [UsedImplicitly]
     private void OnTriggerExit(Collider collider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         WarfarePlayer? player = _playerService.GetOnlinePlayerOrNull(DamageTool.getPlayer(collider.transform));
         if (player == null)
             return;
@@ -201,6 +209,8 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<WarfarePlayer
 
     public bool Contains(WarfarePlayer obj)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (obj == null)
             return false;
 
@@ -215,11 +225,15 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<WarfarePlayer
 
     public bool TestPoint(in Vector3 position)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         return _proximity.TestPoint(in position);
     }
 
     public bool TestPoint(in Vector2 position)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         return _proximity.TestPoint(in position);
     }
 
@@ -290,6 +304,8 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<WarfarePlayer
     /// <inheritdoc />
     public Vector3 GetNearestPointOnBorder(in Vector3 fromLocation)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (_proximity is not INearestPointProximity p)
             throw new NotSupportedException("Expected INearestPointProximity.");
 

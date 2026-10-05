@@ -303,3 +303,17 @@ Parameters:
       - Name: i
         Alias: instant
         Description: "Instantly start the map instead of queuing it after the current layout."
+  # /wdev profile <enable|disable|flush>
+  - Name: profile
+    Type: Verbatim
+    Description: Manage the manual profiler system.
+    Parameters:
+      - Name: enable
+        Type: Verbatim
+        Description: Enable profiling.
+      - Name: disable
+        Type: Verbatim
+        Description: Disable profiling.
+      - Name: flush
+        Type: Verbatim
+        Description: Flush profiling data to the file initially.

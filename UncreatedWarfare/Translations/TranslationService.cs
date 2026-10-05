@@ -1,9 +1,7 @@
 using DanielWillett.ReflectionTools;
-using Humanizer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using StackCleaner;
-using System;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
@@ -21,7 +19,6 @@ using Uncreated.Warfare.Plugins;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Translations.Languages;
 using Uncreated.Warfare.Translations.Storage;
-using YamlDotNet.Core.Tokens;
 using CompressionLevel = System.IO.Compression.CompressionLevel;
 
 namespace Uncreated.Warfare.Translations;

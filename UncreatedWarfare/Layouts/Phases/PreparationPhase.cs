@@ -52,6 +52,8 @@ public class PreparationPhase : BasePhase<PhaseTeamSettings>, IDisposable
     /// </summary>
     protected void StartBroadcastingStagingUI()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         TranslationList? globalTranslationList = null;
         if (Name is { Count: > 0 })
         {

@@ -49,6 +49,8 @@ public class SkillsetPlayerComponent : IPlayerComponent, IDisposable
         if (!Player.IsOnline)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Skill[][] skills = Player.UnturnedPlayer.skills.skills;
         if ((int)speciality >= skills.Length)
             throw new ArgumentOutOfRangeException(nameof(speciality), "Speciality index is out of range.");
@@ -97,6 +99,8 @@ public class SkillsetPlayerComponent : IPlayerComponent, IDisposable
         if (!Player.IsOnline)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Skill[][] skills = Player.UnturnedPlayer.skills.skills;
         if (skillset.SpecialityIndex >= skills.Length)
             throw new ArgumentOutOfRangeException(nameof(skillset), "Speciality index is out of range.");
@@ -127,6 +131,8 @@ public class SkillsetPlayerComponent : IPlayerComponent, IDisposable
         GameThread.AssertCurrent();
         if (!Player.IsOnline)
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         ImmutableArray<Skillset> def = _config.DefaultSkillsets;
         Skillset[] arr = skillsets as Skillset[] ?? skillsets.ToArray();
@@ -182,6 +188,8 @@ public class SkillsetPlayerComponent : IPlayerComponent, IDisposable
     /// <exception cref="ArgumentOutOfRangeException"/>
     public int GetMaxSkillLevel(EPlayerSpeciality speciality, byte skill)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Skill[][] skills = Player.UnturnedPlayer.skills.skills;
         if (speciality < 0 || (int)speciality >= PlayerSkills.SPECIALITIES)
             throw new ArgumentOutOfRangeException(nameof(speciality));
@@ -198,6 +206,8 @@ public class SkillsetPlayerComponent : IPlayerComponent, IDisposable
     /// </summary>
     public byte GetDefaultSkillLevel(EPlayerSpeciality speciality, byte skill)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Skill[][] skills = Player.UnturnedPlayer.skills.skills;
         if ((int)speciality >= skills.Length)
             throw new ArgumentOutOfRangeException(nameof(speciality), "Speciality index is out of range.");

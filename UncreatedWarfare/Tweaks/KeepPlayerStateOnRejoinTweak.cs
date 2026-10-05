@@ -33,6 +33,8 @@ internal sealed class KeepPlayerStateOnRejoinTweak : IAsyncEventListener<PlayerJ
     [EventListener(MustRunInstantly = true)]
     void IEventListener<PlayerJoined>.HandleEvent(PlayerJoined e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (e.SaveData.LastGameId != _layout.LayoutId)
         {
             WriteDebugLog("Giving default kit");

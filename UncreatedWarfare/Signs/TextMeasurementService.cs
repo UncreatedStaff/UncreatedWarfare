@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using TMPro;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
@@ -91,8 +89,9 @@ public class TextMeasurementService : IDisposable, ILayoutHostedService
 
     public TMP_LineInfo[]? MeasureText(string text, float preferredFontSize, SignMetrics metrics)
     {
-        GameThread.AssertCurrent();
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
+        GameThread.AssertCurrent();
 
         if (metrics.SignSettings == null)
             return null;
@@ -118,6 +117,8 @@ public class TextMeasurementService : IDisposable, ILayoutHostedService
 
     public int SplitLines(string text, float preferredFontSize, SignMetrics metrics, Span<Range> outRanges)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         TMP_LineInfo[]? info = MeasureText(text, preferredFontSize, metrics);
         if (info == null)
         {

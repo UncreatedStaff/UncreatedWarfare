@@ -1,5 +1,4 @@
-﻿using System;
-using System.Globalization;
+﻿using System.Globalization;
 
 namespace Uncreated.Warfare.Proximity;
 
@@ -52,6 +51,8 @@ public class AABBProximity : IAABBProximity, IFormattable
     /// <inheritdoc />
     public bool TestPoint(in Vector3 position)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Vector3 extents = _bounds.extents;
         Vector3 center = _bounds.center;
 
@@ -63,6 +64,8 @@ public class AABBProximity : IAABBProximity, IFormattable
     /// <inheritdoc />
     public bool TestPoint(in Vector2 position)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Vector3 extents = _bounds.extents;
         Vector3 center = _bounds.center;
 

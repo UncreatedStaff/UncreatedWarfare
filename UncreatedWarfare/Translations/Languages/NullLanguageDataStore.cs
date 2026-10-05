@@ -1,8 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using Uncreated.Warfare.Models.Localization;
+﻿using Uncreated.Warfare.Models.Localization;
 
 namespace Uncreated.Warfare.Translations.Languages;
+
 public class NullLanguageDataStore : ICachableLanguageDataStore
 {
     public Task Initialize(CancellationToken token = default) => Task.CompletedTask;

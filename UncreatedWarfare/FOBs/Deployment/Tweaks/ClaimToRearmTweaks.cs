@@ -95,6 +95,8 @@ public class ClaimToRearmTweaks :
         if (!buildable.IsAlive)
             return null;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // could be a thrown ammo bag
         IAmmoStorage? ammoStorage = ContainerHelper.FindComponent<IAmmoStorage>(buildable.Model);
         if (ammoStorage != null)

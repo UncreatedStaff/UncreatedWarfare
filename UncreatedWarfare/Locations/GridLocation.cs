@@ -105,6 +105,8 @@ public readonly struct GridLocation : ITranslationArgument, IEquatable<GridLocat
             if (!Level.isInitialized)
                 throw new NotSupportedException("Not ran on an active server.");
 
+            using IDisposable? profiler = ProfilerUtil.Profile();
+
             int index = Index is 0 or > SubgridAmount * SubgridAmount
                 ? Mathf.CeilToInt(SubgridAmount * SubgridAmount / 2f) // middle subgrid
                 : Index;
@@ -217,6 +219,8 @@ public readonly struct GridLocation : ITranslationArgument, IEquatable<GridLocat
     {
         if (!Level.isInitialized)
             throw new NotSupportedException("Not ran on an active server.");
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         int subgridPosX, subgridPosY;
         bool isOutOfGridBounds;

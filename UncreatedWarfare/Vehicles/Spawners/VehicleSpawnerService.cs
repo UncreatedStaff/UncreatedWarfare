@@ -1,6 +1,5 @@
 using DanielWillett.ReflectionTools;
 using DanielWillett.SpeedBytes;
-using System;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
@@ -165,6 +164,8 @@ public class VehicleSpawnerService : ILayoutHostedService, IDisposable
 
     public void ReloadSpawners(IReadOnlyList<VehicleSpawnerInfo> records)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (!_module.IsLayoutActive())
@@ -256,6 +257,8 @@ public class VehicleSpawnerService : ILayoutHostedService, IDisposable
 
     private void ReadSpawnerBuildableMap()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         lock (SpawnerBuildableMap)
         {
             SpawnerBuildableMap.Clear();
@@ -317,6 +320,8 @@ public class VehicleSpawnerService : ILayoutHostedService, IDisposable
 
     private void WriteSpawnerBuildableMap()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         lock (SpawnerBuildableMap)
         {
             string? dir = Path.GetDirectoryName(_spawnerBuildableMapFile);

@@ -112,6 +112,8 @@ public class SignInstancer : ILayoutHostedService,
     /// <exception cref="GameThreadException"/>
     public string GetSignText(BarricadeDrop drop, LanguageInfo language, CultureInfo culture)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (drop.interactable is not InteractableSign sign)
@@ -135,6 +137,8 @@ public class SignInstancer : ILayoutHostedService,
     /// <exception cref="GameThreadException"/>
     public string GetSignText(BarricadeDrop drop, WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (drop.interactable is not InteractableSign sign)
@@ -158,6 +162,8 @@ public class SignInstancer : ILayoutHostedService,
     /// <exception cref="GameThreadException"/>
     public int UpdateSigns()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         int ct = 0;
@@ -175,6 +181,8 @@ public class SignInstancer : ILayoutHostedService,
     /// <exception cref="GameThreadException"/>
     public int UpdateSigns<TProvider>() where TProvider : class, ISignInstanceProvider
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         int ct = 0;
@@ -192,6 +200,8 @@ public class SignInstancer : ILayoutHostedService,
     /// <exception cref="GameThreadException"/>
     public int UpdateSigns<TProvider>(Func<InteractableSign, TProvider, bool> selector) where TProvider : class, ISignInstanceProvider
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         int ct = 0;
@@ -230,6 +240,8 @@ public class SignInstancer : ILayoutHostedService,
     /// <exception cref="GameThreadException"/>
     public int UpdateSigns(LanguageSet set)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         int ct = 0;
@@ -258,6 +270,8 @@ public class SignInstancer : ILayoutHostedService,
     /// <exception cref="GameThreadException"/>
     public int UpdateSigns<TProvider>(LanguageSet set) where TProvider : class, ISignInstanceProvider
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         bool hasCanBatch = false, canBatch = false;
@@ -285,6 +299,8 @@ public class SignInstancer : ILayoutHostedService,
     /// <exception cref="GameThreadException"/>
     public int UpdateSigns<TProvider>(LanguageSet set, Func<InteractableSign, TProvider, bool> selector) where TProvider : class, ISignInstanceProvider
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         bool hasCanBatch = false, canBatch = false;
@@ -312,6 +328,8 @@ public class SignInstancer : ILayoutHostedService,
     /// <exception cref="GameThreadException"/>
     public void UpdateSign(BarricadeDrop barricade)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (barricade.interactable is not InteractableSign sign || !BarricadeManager.tryGetRegion(barricade.model, out byte x, out byte y, out ushort plant, out _))
@@ -348,6 +366,8 @@ public class SignInstancer : ILayoutHostedService,
 
     private void ResetAllSigns(bool changeText = true)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         foreach (BarricadeInfo barricade in BarricadeUtility.EnumerateBarricades())
@@ -368,6 +388,8 @@ public class SignInstancer : ILayoutHostedService,
 
     private void BroadcastUpdate(LanguageSet set, ISignInstanceProvider provider, in BarricadeInfo barricade, InteractableSign sign, ref bool canBatch, ref bool hasCanBatch, ref string? batchTranslate)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         NetId netId = sign.GetNetId();
 
         if (!hasCanBatch)
@@ -409,6 +431,8 @@ public class SignInstancer : ILayoutHostedService,
 
     private bool TryGetProviderType(string text, out int index)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         for (int i = 0; i < _types.Length; ++i)
         {
             ref SignInstanceData data = ref _types[i];
@@ -459,6 +483,8 @@ public class SignInstancer : ILayoutHostedService,
         {
             return;
         }
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         ref SignInstanceData data = ref _types[dataIndex];
 

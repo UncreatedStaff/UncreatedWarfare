@@ -531,6 +531,8 @@ public class MapSwitchService : IEventListener<PlayerJoined>
             {
                 await UniTask.NextFrame();
             }
+
+            TerrainUtility.Invalidate();
         }
         finally
         {

@@ -8,7 +8,7 @@ namespace Uncreated.Warfare.Players;
 public struct OfflinePlayer : IPlayer
 {
     private PlayerNames _names;
-    private Color32 _teamColor;
+    private readonly Color32 _teamColor;
     public readonly CSteamID Steam64 => _names.Steam64;
 
     public OfflinePlayer(CSteamID steam64, Team? team = null)

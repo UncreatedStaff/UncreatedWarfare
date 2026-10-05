@@ -42,6 +42,8 @@ public class SquadManager :
     /// <remarks>Used for automatically creating squads if you request a squadleader kit.</remarks>
     public string GetUniqueSquadName(Team playerTeam)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         for (char letter = 'A'; letter <= 'Z'; ++letter)
         {
             string name = NATOPhoneticAlphabetHelper.GetProperCase(letter);
@@ -59,6 +61,8 @@ public class SquadManager :
 
     public bool AreSquadLimited(Team team, out int requiredTeammatesForMoreSquads)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int squadsCount = Squads.Count(x => x.Team == team);
 
         float friendlyCount = _playerService.OnlinePlayers.Count(p => p.Team == team);
@@ -82,6 +86,8 @@ public class SquadManager :
     /// </summary>
     public bool CanCreateNewSquad(Team team)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int numberOfExistingSquads = Squads.Count(s => s.Team == team);
         int numberOfTeammates = _playerService.OnlinePlayers.Count(p => p.Team == team);
 
@@ -91,6 +97,8 @@ public class SquadManager :
 
     public Squad CreateSquad(WarfarePlayer squadLeader, string squadName)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // this limit is for the SQL database column
         if (squadName.Length > 32)
             throw new ArgumentOutOfRangeException(nameof(squadName));
@@ -136,6 +144,8 @@ public class SquadManager :
 
     public bool DisbandSquad(Squad squad)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         Squad? existing = _squads.FindAndRemove(s => s == squad);
@@ -157,7 +167,9 @@ public class SquadManager :
     {
         if (!e.Player.IsInSquad())
             return;
-        
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         e.Player.GetSquad()!.RemoveMember(e.Player);
     }
 
@@ -166,18 +178,19 @@ public class SquadManager :
         if (e.IsNewPlayer)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Squad? previouslyJoinedSquad = Squads.FirstOrDefault(s => s.Team == e.Player.Team && s.TeamIdentificationNumber == e.SaveData.SquadTeamIdentificationNumber);
-        if (previouslyJoinedSquad == null)
-            return;
-        
-        previouslyJoinedSquad.TryAddMember(e.Player);
+        previouslyJoinedSquad?.TryAddMember(e.Player);
     }
 
     public void HandleEvent(PlayerLeft e, IServiceProvider serviceProvider)
     {
         if (!e.Player.IsInSquad())
             return;
-        
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         e.Player.GetSquad()!.RemoveMember(e.Player);
     }
 }

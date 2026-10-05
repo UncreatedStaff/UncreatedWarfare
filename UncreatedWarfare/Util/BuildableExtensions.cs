@@ -27,6 +27,8 @@ public static class BuildableExtensions
         if (buildable == null)
             throw new ArgumentNullException(nameof(buildable));
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (buildable.Model != null && buildable.Alive)
@@ -65,6 +67,8 @@ public static class BuildableExtensions
     /// <returns><see langword="true"/> if the barricade state was replicated, otherwise <see langword="false"/>.</returns>
     public static bool SetOwnerOrGroup(this IBuildable obj, IServiceProvider serviceProvider, CSteamID? owner = null, CSteamID? group = null)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         switch (obj.Drop)
         {
             case BarricadeDrop bdrop:
@@ -83,6 +87,8 @@ public static class BuildableExtensions
 
     internal static void SetDestroyInfo(Transform buildableTransform, IBaseBuildableDestroyedEvent args, Func<IDestroyInfo, bool>? whileAction)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
         buildableTransform.GetComponents(WorkingDestroyInfo);
         try
@@ -102,6 +108,8 @@ public static class BuildableExtensions
 
     internal static void SetSalvageInfo(Transform buildableTransform, EDamageOrigin damageOrigin, CSteamID? salvager, bool? isSalvaged, Func<ISalvageInfo, bool>? whileAction)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
         buildableTransform.GetComponents(WorkingSalvageInfo);
         try
@@ -131,6 +139,8 @@ public static class BuildableExtensions
     /// <exception cref="GameThreadException"/>
     public static IBuildable? GetBuildableFromRootTransform(Transform transform)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (transform == null)
@@ -173,6 +183,8 @@ public static class BuildableExtensions
     /// <exception cref="Exception">Failed to place buildable for some reason.</exception>
     public static IBuildable DropBuildable(ItemPlaceableAsset asset, Vector3 position, Quaternion rotation, CSteamID owner = default, CSteamID group = default, int health = -1, byte[]? state = null)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (asset == null)
@@ -272,6 +284,8 @@ public static class BuildableExtensions
     /// <exception cref="Exception">Failed to place buildable for some reason.</exception>
     public static IBuildable ReplaceBuildable(this IBuildable buildable, ItemPlaceableAsset asset, bool destroyOld = true, int health = -1, byte[]? state = null)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (buildable == null)
@@ -376,6 +390,8 @@ public static class BuildableExtensions
     /// <remarks>Note that these bounds are rotated so that up is actually up.</remarks>
     public static bool TryGetBuildableBounds(ItemPlaceableAsset buildableAsset, out Bounds localBounds)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameObject? model = buildableAsset switch
         {
             ItemBarricadeAsset barricade => barricade.barricade,
@@ -388,6 +404,8 @@ public static class BuildableExtensions
 
     internal static bool TryGetObjectBounds(GameObject? model, Asset asset, out Bounds localBounds)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         localBounds = default;
 
         if (asset.GUID == Guid.Empty)

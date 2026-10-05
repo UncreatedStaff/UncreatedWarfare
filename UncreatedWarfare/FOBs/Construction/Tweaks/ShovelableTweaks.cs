@@ -43,6 +43,8 @@ internal class ShovelableTweaks :
         if (_assetConfiguration.GetAssetLink<ItemPlaceableAsset>("Buildables:Gameplay:FobUnbuilt").MatchAsset(e.Asset))
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ShovelableInfo? shovelableInfo = _fobManager.Configuration.Shovelables
             .FirstOrDefault(s => s.Foundation.MatchAsset(e.Asset));
 
@@ -124,6 +126,8 @@ internal class ShovelableTweaks :
     {
         if (!_assetConfiguration.GetAssetLink<ItemAsset>("Items:EntrenchingTool").MatchAsset(e.Asset))
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         IBuildable? buildable = BuildableExtensions.GetBuildableFromRootTransform(e.InputInfo.transform);
         if (buildable == null)

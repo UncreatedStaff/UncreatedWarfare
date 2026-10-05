@@ -25,6 +25,8 @@ public class MapMarkerTweaks : IEventListener<PlayerDropMarkerRequested>, IEvent
 
     public void HandleEvent(PlayerDropMarkerRequested e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (e.Player.IsOnDuty || !e.IsNewMarkerBeingPlaced)
             return;
 
@@ -43,6 +45,8 @@ public class MapMarkerTweaks : IEventListener<PlayerDropMarkerRequested>, IEvent
     [EventListener(MustRunInstantly = true)]
     public void HandleEvent(SquadLeaderUpdated e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!e.OldLeader.IsOnline
             || !e.OldLeader.UnturnedPlayer.quests.isMarkerPlaced
             || e.OldLeader.UnturnedPlayer.quests.markerTextOverride == null)
@@ -59,6 +63,8 @@ public class MapMarkerTweaks : IEventListener<PlayerDropMarkerRequested>, IEvent
     [EventListener(MustRunInstantly = true)]
     public void HandleEvent(SquadMemberLeft e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // remove marker from old leader
         if (e.Player.IsOnline && e.Player.UnturnedPlayer.quests.isMarkerPlaced && e.Player.UnturnedPlayer.quests.markerTextOverride != null)
         {

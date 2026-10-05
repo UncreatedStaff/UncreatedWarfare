@@ -13,6 +13,7 @@ using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
@@ -99,6 +100,8 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
 
     public string Translate(ITranslationValueFormatter formatter, IServiceProvider serviceProvider, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // reuse the same string builder since this'll be called a lot
 
         if (LoadoutNumber >= 0)
@@ -162,6 +165,8 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
 
     private void TranslateKitSign(StringBuilder bldr, Kit kit, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         string kitName = kit.GetDisplayName(language, true, removeNewLine: true);
 
         // if the name has a newline we want to skip the empty line so all the text is roughly the same size
@@ -192,6 +197,8 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
 
     private void AppendAvailability(StringBuilder bldr, WarfarePlayer player, Kit kit)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         KitPlayerComponent kitPlayerComponent = player.Component<KitPlayerComponent>();
         CurrentKitState? activeKit = kitPlayerComponent.GetActiveEffectiveKit();
         if (activeKit != null && activeKit.Key == kit.Key)
@@ -222,6 +229,8 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
 
     private void AppendCost(StringBuilder bldr, Kit kit, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         string cost;
         if (kit.RequiresServerBoost)
         {
@@ -291,6 +300,8 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
 
     private void TranslateLoadoutSign(StringBuilder bldr, int loadoutIndex, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         KitPlayerComponent? kitPlayerComponent = player?.Component<KitPlayerComponent>();
 
         Kit? kit = kitPlayerComponent?.Loadouts.ElementAtOrDefault(loadoutIndex - 1);
@@ -308,6 +319,8 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
 
     private void TranslateLoadoutSign(StringBuilder bldr, Kit kit, LanguageInfo language, CultureInfo culture, WarfarePlayer player, KitPlayerComponent kitPlayerComponent)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         string kitName = kit.GetDisplayName(language, true, removeNewLine: false);
 
         bool isFavorited = player != null && kitPlayerComponent.IsKitFavorited(kit.Key);
@@ -351,6 +364,8 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
 
     private void TranslateFavoriteSign(StringBuilder bldr, int favoriteIndex, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         KitPlayerComponent? kitPlayerComponent = player?.Component<KitPlayerComponent>();
         Kit? kit = kitPlayerComponent?.GetFavoriteAtIndex(favoriteIndex);
 
@@ -373,6 +388,8 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
 
     private void AppendName(string kitName, Color32 color, out bool hasExtraLine)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Span<Range> outRanges = stackalloc Range[2]; // max 2 lines
         int nameSplits = _measurementService.SplitLines(kitName, 1.3f, _signMetrics, outRanges);
 
@@ -471,6 +488,9 @@ public class KitSignTranslations : TranslationCollection
 
     [TranslationData("Shown on a kit sign when the player has not purchased the kit with credits.", IsPriorityTranslation = false)]
     public readonly Translation<int> KitCreditCost = new Translation<int>("<#b8ffc1>C</color> <#fff>{0}</color>", TranslationOptions.TMProSign);
+
+    [TranslationData("Shown on a kit sign when the player is not high enough level to use a kit.", IsPriorityTranslation = false)]
+    public readonly Translation<WarfareRank> KitLevelCost = new Translation<WarfareRank>("<#f0a31c>REQ.</color> <#f4cd57>{0}</color>", TranslationOptions.TMProSign, WarfareRank.FormatAbbreviation);
 
     [TranslationData("Shown on an unused loadout sign.", "The number of the loadout sign.")]
     public readonly Translation<int> LoadoutNumber = new Translation<int>("<b><#7878ff>LOADOUT #{0}</color></b>", TranslationOptions.TMProSign);

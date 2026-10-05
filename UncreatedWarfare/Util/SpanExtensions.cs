@@ -9,6 +9,8 @@ public static class SpanExtensions
     /// </summary>
     public static unsafe string Concat(this ReadOnlySpan<char> span, ReadOnlySpan<char> span2)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Concat2SpanState state = default;
         state.Span1Ptr = &span;
         state.Span2Ptr = &span2;
@@ -31,6 +33,8 @@ public static class SpanExtensions
     /// </summary>
     public static unsafe string Concat(this ReadOnlySpan<char> span, ReadOnlySpan<char> span2, ReadOnlySpan<char> span3)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Concat3SpanState state = default;
         state.Span1Ptr = &span;
         state.Span2Ptr = &span2;
@@ -49,6 +53,8 @@ public static class SpanExtensions
     /// </summary>
     public static unsafe string Concat(this ReadOnlySpan<char> span, char span2, ReadOnlySpan<char> span3, ReadOnlySpan<char> span4)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Concat3SpanState state = default;
         state.Span1Ptr = &span;
         state.Span2Ptr = &span3;
@@ -78,6 +84,8 @@ public static class SpanExtensions
     /// </summary>
     public static unsafe string Concat(this ReadOnlySpan<char> span, char combine, ReadOnlySpan<char> span2)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Concat2SpanState state = default;
         state.Span1Ptr = &span;
         state.Span2Ptr = &span2;
@@ -96,6 +104,8 @@ public static class SpanExtensions
     /// </summary>
     public static unsafe string Concat(this ReadOnlySpan<char> span, string str)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ConcatSpan2StringState state = default;
         state.Span = &span;
         state.String = str;
@@ -118,6 +128,8 @@ public static class SpanExtensions
     /// </summary>
     public static int IndexOf<T>(this ReadOnlySpan<T> span, ReadOnlySpan<T> value, int startIndex) where T : IEquatable<T>
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int index = span[startIndex..].IndexOf(value);
         if (index < 0)
             return -1;
@@ -129,6 +141,8 @@ public static class SpanExtensions
     /// </summary>
     public static int IndexOf<T>(this ReadOnlySpan<T> span, T value, int startIndex) where T : IEquatable<T>
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int index = span[startIndex..].IndexOf(value);
         if (index < 0)
             return -1;
@@ -144,6 +158,8 @@ public static class SpanExtensions
 #endif
             ReadOnlySpan<T> span, ReadOnlySpan<T> value) where T : IEquatable<T>
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int amt = 0;
         int lastIndex = -value.Length;
         while ((lastIndex = span.IndexOf(value, lastIndex + value.Length)) >= 0)
@@ -165,6 +181,8 @@ public static class SpanExtensions
 #endif
             ReadOnlySpan<T> span, T value) where T : IEquatable<T>
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int amt = 0;
         int lastIndex = -1;
         while ((lastIndex = span.IndexOf(value, lastIndex + 1)) >= 0)
@@ -185,6 +203,8 @@ public static class SpanExtensions
     /// <remarks>Will return as many ranges as <paramref name="ranges"/> can fit. To get a maximum, use <c>span.Count(<paramref name="separator"/>) + 1</c>.</remarks>
     public static int Split(this ReadOnlySpan<char> span, Span<Range> ranges, char separator, bool trimOuter = false, bool trimEachEntry = false, StringSplitOptions options = StringSplitOptions.None)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int startIndex = 0;
         int endIndex = span.Length - 1;
 

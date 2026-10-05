@@ -49,6 +49,8 @@ public sealed class FobConfiguration : BaseAlternateConfigurationFile
     [MemberNotNull(nameof(Shovelables))]
     protected override void HandleChange(bool isMapChange)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         List<SupplyCrateInfo>? supplyCrates = UnderlyingConfiguration.GetSection("SupplyCrates").Get<List<SupplyCrateInfo>>();
         supplyCrates?.ForEach(crate =>
         {

@@ -49,6 +49,10 @@ public class AbandonService
         await UniTask.SwitchToMainThread(token);
 
         List<InteractableVehicle> candidates = new List<InteractableVehicle>(16);
+#if PROFILING
+        using (IDisposable? _ = ProfilerUtil.Profile("Gather candidates")) {
+#endif
+
         for (int i = 0; i < VehicleManager.vehicles.Count; ++i)
         {
             InteractableVehicle vehicle = VehicleManager.vehicles[i];
@@ -68,6 +72,9 @@ public class AbandonService
                 candidates.Add(vehicle);
             }
         }
+#if PROFILING
+        }
+#endif
 
         UniTask<bool>[] tasks = new UniTask<bool>[candidates.Count];
 

@@ -1,6 +1,4 @@
-﻿using SDG.NetTransport;
-using System;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Patches;
 
@@ -31,6 +29,8 @@ public static class EffectUtility
     /// </summary>
     public static void TriggerEffect(EffectAsset asset, bool reliable, ModifyTriggerEffectParameters callback)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (asset == null)
@@ -62,6 +62,8 @@ public static class EffectUtility
     /// </summary>
     public static void TriggerEffect(EffectAsset asset, ITransportConnection connection, Vector3 position, bool reliable)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (asset == null)
@@ -93,6 +95,8 @@ public static class EffectUtility
     /// </summary>
     public static void TriggerEffect(EffectAsset asset, PooledTransportConnectionList connections, Vector3 position, bool reliable)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (asset == null)
@@ -124,6 +128,8 @@ public static class EffectUtility
     /// </summary>
     public static void TriggerEffect(EffectAsset asset, float range, Vector3 position, bool reliable)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (asset == null || range < 0)
@@ -156,6 +162,8 @@ public static class EffectUtility
     /// </summary>
     public static void TriggerEffect(EffectAsset asset, ITransportConnection connection, Vector3 position, Color color, bool reliable)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (asset == null)
@@ -187,6 +195,8 @@ public static class EffectUtility
     /// </summary>
     public static void TriggerEffect(EffectAsset asset, Color color, bool reliable, ModifyTriggerEffectParameters callback)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (asset == null)
@@ -217,6 +227,8 @@ public static class EffectUtility
     /// </summary>
     public static void TriggerEffect(EffectAsset asset, PooledTransportConnectionList connections, Vector3 position, Color color, bool reliable)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (asset == null)
@@ -248,6 +260,8 @@ public static class EffectUtility
     /// </summary>
     public static void TriggerEffect(EffectAsset asset, float range, Vector3 position, Color color, bool reliable)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (asset == null || range < 0)

@@ -10,6 +10,8 @@ public class TimerDelay : ILayoutDelay<LayoutDelayContext>
 
     public TimeSpan GetTimeLeft(LayoutDelayContext context)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (AffectedTeam != LayoutRole.NotApplicable && AffectedTeam != context.AffectedTeam)
             return TimeSpan.Zero;
 

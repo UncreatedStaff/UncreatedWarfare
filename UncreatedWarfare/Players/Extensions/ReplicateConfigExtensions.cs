@@ -16,6 +16,8 @@ public static class ReplicateConfigExtensions
         public IDisposable? ReplicateConfigChange<TState>(ModifyModeConfig<TState> apply, ModifyModeConfig<TState> undo)
             where TState : struct
         {
+            using IDisposable? profiler = ProfilerUtil.Profile();
+
             GameThread.AssertCurrent();
 
             if (!player.IsOnline)
@@ -40,6 +42,8 @@ public static class ReplicateConfigExtensions
         [MustUseReturnValue, Pure]
         public IDisposable? ReplicateConfigChange(ModifyModeConfig apply, ModifyModeConfig undo)
         {
+            using IDisposable? profiler = ProfilerUtil.Profile();
+
             GameThread.AssertCurrent();
 
             if (!player.IsOnline)

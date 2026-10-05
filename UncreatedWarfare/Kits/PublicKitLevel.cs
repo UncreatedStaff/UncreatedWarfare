@@ -24,6 +24,8 @@ public readonly record struct PublicKitLevel(Class Class, int Level)
     /// </summary>
     public bool AppliesTo(string kitId)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ReadOnlySpan<char> digits = SliceDigitsFromKitId(kitId);
 
         if (!int.TryParse(digits, NumberStyles.None, CultureInfo.InvariantCulture, out int level) || level != Level)
@@ -56,6 +58,8 @@ public readonly record struct PublicKitLevel(Class Class, int Level)
         if (kitId == null)
             return false;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ReadOnlySpan<char> digits = SliceDigitsFromKitId(kitId);
 
         if (!int.TryParse(digits, NumberStyles.None, CultureInfo.InvariantCulture, out int level) || level == 0)
@@ -84,6 +88,8 @@ public readonly record struct PublicKitLevel(Class Class, int Level)
         string? abbreviation = @class.GetKitIdAbbreviation();
         if (abbreviation == null)
             throw new ArgumentException("Expected a kit with a normal class.", nameof(kit));
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         ReadOnlySpan<char> digits = SliceDigitsFromKitId(kit.Id);
 

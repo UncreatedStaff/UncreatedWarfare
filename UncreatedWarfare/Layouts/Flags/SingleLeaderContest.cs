@@ -100,6 +100,8 @@ public class SingleLeaderContest
         if (team == Leader && LeaderPoints == MaxPossiblePoints)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (Leader == team || Leader == Team.NoTeam)
             IncrementPointsClamp(points);
         else

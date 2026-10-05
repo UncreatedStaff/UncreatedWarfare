@@ -66,6 +66,8 @@ public class VehicleService :
 
     public async UniTask<bool> TryMovePlayerToEmptySeat(WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (SendSwapVehicleSeats == null)
         {
             return false;
@@ -144,6 +146,8 @@ public class VehicleService :
 
     public WarfareVehicle RegisterWarfareVehicle(InteractableVehicle vehicle)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         WarfareVehicle warfareVehicle;
         lock (_vehicles)
         {
@@ -166,6 +170,8 @@ public class VehicleService :
 
     public WarfareVehicle? DeregisterWarfareVehicle(InteractableVehicle vehicle)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         lock (_vehicles)
         {
             uint instId = vehicle.instanceID;
@@ -198,6 +204,8 @@ public class VehicleService :
 
     private WarfareVehicle GetVehicleLocked(InteractableVehicle vehicle)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         uint instId = vehicle.instanceID;
         // ReSharper disable InconsistentlySynchronizedField
         for (int i = 0; i < _vehicles.Count; ++i)
@@ -268,6 +276,8 @@ public class VehicleService :
     {
         await UniTask.SwitchToMainThread(token);
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         VehicleAsset asset = vehicle.GetAssetOrFail(nameof(vehicle));
 
         ApplyUpwardsRotationOffset(asset, ref rotation);
@@ -305,6 +315,8 @@ public class VehicleService :
 
     internal void ApplyUpwardsRotationOffset(VehicleAsset asset, ref Quaternion rotation)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // most of our helicopters are rotated backwards slightly to make them fly forwards more when facing straight up
         // This reverses that rotation so it doesn't spawn rotated
 
@@ -345,6 +357,8 @@ public class VehicleService :
 
     public void RefillTrunkItems(WarfareVehicle warfareVehicle, IReadOnlyCollection<WarfareVehicleInfo.TrunkItem> trunkItems, bool dropItemsOnGroundIfNoSpace = true)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Items? items = warfareVehicle.Vehicle.trunkItems;
         if (items == null || trunkItems.Count == 0)
             return;
@@ -380,6 +394,8 @@ public class VehicleService :
     {
         await UniTask.SwitchToMainThread(token);
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         PrepareToDeleteVehicle(vehicle);
         VehicleManager.askVehicleDestroy(vehicle);
     }
@@ -389,6 +405,8 @@ public class VehicleService :
     public async UniTask<int> DeleteAllVehiclesAsync(CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread(token);
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         int count = VehicleManager.vehicles.Count;
         for (int i = 0; i < count; i++)
@@ -403,6 +421,8 @@ public class VehicleService :
 
     private void PrepareToDeleteVehicle(InteractableVehicle vehicle)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // keep storage items from dropping on destroy
         BarricadeRegion region = BarricadeManager.getRegionFromVehicle(vehicle);
         if (region != null)

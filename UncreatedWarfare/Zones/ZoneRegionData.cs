@@ -1,8 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using Uncreated.Warfare.Util;
+﻿using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Zones;
+
 public class ZoneRegionData : IDisposable
 {
     private readonly ZoneRegion _region;
@@ -28,6 +27,8 @@ public class ZoneRegionData : IDisposable
     /// </summary>
     public TComponent GetOrAdd<TComponent>() where TComponent : new()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         lock (_types)
         {
             if (!_types.TryGetValue(typeof(TComponent), out object component))
@@ -44,6 +45,8 @@ public class ZoneRegionData : IDisposable
     /// </summary>
     public TComponent GetOrAdd<TComponent>(IServiceProvider serviceProvider) where TComponent : class
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         lock (_types)
         {
             if (!_types.TryGetValue(typeof(TComponent), out object component))

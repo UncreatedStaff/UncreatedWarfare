@@ -54,6 +54,8 @@ public class WarfarePluginLoader
 
     internal void LoadPlugins()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         string pluginDir = Path.Combine(_warfare.HomeDirectory, "Plugins");
         
         Directory.CreateDirectory(pluginDir);
@@ -101,6 +103,8 @@ public class WarfarePluginLoader
 
     internal void ConfigureServices(ContainerBuilder bldr)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         bldr.RegisterInstance(this)
             .As<WarfarePluginLoader>()
             .OwnedByLifetimeScope();
@@ -184,6 +188,8 @@ public class WarfarePluginLoader
 
     private object[] InjectParameters(ParameterInfo[] parameters, Type type, ContainerBuilder bldr, WarfarePlugin plugin, ref bool configuredConfig)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         object[] args = parameters.Length == 0 ? Array.Empty<object>() : new object[parameters.Length];
         for (int i = 0; i < args.Length; ++i)
         {
@@ -253,6 +259,8 @@ public class WarfarePluginLoader
 
     private ConstructorInfo? GetValidServiceConfigurerConstructor(Type type, out ParameterInfo[]? expectedParameters)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ConstructorInfo[] ctors = type.GetConstructors(BindingFlags.Public | BindingFlags.Instance);
 
         int index = Array.FindIndex(ctors, x => x.IsDefinedSafe<ActivatorUtilitiesConstructorAttribute>());
@@ -299,6 +307,8 @@ public class WarfarePluginLoader
     // create optional plugin configuration if required
     private IConfigurationRoot GetOrCreateConfigurationForPlugin(ContainerBuilder bldr, WarfarePlugin plugin, out WarfarePluginConfiguration configWrapper)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         IConfigurationRoot config = CreateConfigurationForPlugin(plugin);
 
         plugin.Configuration = config;
@@ -315,6 +325,8 @@ public class WarfarePluginLoader
     {
         if (plugin.Configuration != null)
             return plugin.Configuration;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         ReadOnlySpan<char> asmLocation = plugin.AssemblyLocation.AsSpan();
 

@@ -1,33 +1,61 @@
-using System;
+using Microsoft.Extensions.DependencyInjection;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Requests;
 using Uncreated.Warfare.Models.Localization;
-using Uncreated.Warfare.Vehicles.WarfareVehicles;
+using Uncreated.Warfare.Signs;
+using Uncreated.Warfare.Stats;
+using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Players.Unlocks;
 
 public class LevelUnlockRequirement : UnlockRequirement
 {
+    [JsonIgnore] private PointsService? _pointsService;
+    [JsonIgnore] private KitSignTranslations? _kitSignTranslations;
+    [JsonIgnore] private RequestKitsTranslations? _requestKitsTranslations;
+    [JsonIgnore] private RequestVehicleTranslations? _requestVehicleTranslations;
+
     [JsonPropertyName("unlock_level")]
     public int UnlockLevel { get; set; } = -1;
 
     /// <inheritdoc />
+    public override void Initialize(IServiceProvider serviceProvider)
+    {
+        _pointsService = serviceProvider.GetRequiredService<PointsService>();
+        _kitSignTranslations = serviceProvider.GetRequiredService<TranslationInjection<KitSignTranslations>>().Value;
+        _requestKitsTranslations = serviceProvider.GetRequiredService<TranslationInjection<RequestKitsTranslations>>().Value;
+        _requestVehicleTranslations = serviceProvider.GetRequiredService<TranslationInjection<RequestVehicleTranslations>>().Value;
+        base.Initialize(serviceProvider);
+    }
+
+    /// <inheritdoc />
     public override bool CanAccessFast(WarfarePlayer player)
     {
-        return false;// todo player.Level.Level >= UnlockLevel;
+        if (_pointsService == null)
+            throw new InvalidOperationException("Not initialized.");
+
+        WarfareRank rank = _pointsService.GetRankFromExperience(player.CachedPoints.XP);
+        return rank.Level >= UnlockLevel;
     }
 
     /// <inheritdoc />
     public override string GetSignText(WarfarePlayer? player, LanguageInfo language, CultureInfo culture)
     {
-        if (UnlockLevel == 0)
-            return "not implemented";
+        if (_kitSignTranslations == null || _pointsService == null)
+            throw new InvalidOperationException("Not initialized.");
 
-        // int lvl = Points.GetLevel(player.CachedXP);
-        return "not implemented"; // todo T.KitRequiredLevel.Translate(player, false, LevelData.GetRankAbbreviation(UnlockLevel), lvl >= UnlockLevel ? UCWarfare.GetColor("kit_level_available") : UCWarfare.GetColor("kit_level_unavailable"));
+        WarfareRank? rank = _pointsService.GetRankFromLevel(UnlockLevel);
+        if (rank == null)
+            return $"ERROR UNKNOWN RANK {UnlockLevel}";
+
+        return player == null
+            ? _kitSignTranslations.KitLevelCost.Translate(rank, language, culture, TimeZoneInfo.Utc)
+            : _kitSignTranslations.KitLevelCost.Translate(rank, player);
     }
 
     /// <inheritdoc />
@@ -43,31 +71,39 @@ public class LevelUnlockRequirement : UnlockRequirement
     /// <inheritdoc />
     public override object Clone()
     {
-        return new LevelUnlockRequirement { UnlockLevel = UnlockLevel };
+        return new LevelUnlockRequirement
+        {
+            _pointsService = _pointsService,
+            _kitSignTranslations = _kitSignTranslations,
+            _requestKitsTranslations = _requestKitsTranslations,
+            _requestVehicleTranslations = _requestVehicleTranslations,
+            UnlockLevel = UnlockLevel
+        };
     }
 
     /// <inheritdoc />
-    public override Exception RequestKitFailureToMeet(CommandContext ctx, Kit kit)
+    public override Exception RequestFailureToMeet(CommandContext ctx, IRequestable<object> requestable)
     {
-        // LevelData data = new LevelData(Points.GetLevelXP(UnlockLevel));
-        return ctx.Reply(ctx.CommonTranslations.NotImplemented/* T.RequestKitLowLevel, data */);
-    }
+        if (_pointsService == null)
+            throw new InvalidOperationException("Not initialized.");
 
-    /// <inheritdoc />
-    public override Exception RequestVehicleFailureToMeet(CommandContext ctx, WarfareVehicleInfo data)
-    {
-        // LevelData data2 = new LevelData(Points.GetLevelXP(UnlockLevel));
-        return ctx.Reply(ctx.CommonTranslations.NotImplemented/* T.RequestVehicleMissingLevels, data2 */);
-    }
+        WarfareRank? rank = _pointsService.GetRankFromLevel(UnlockLevel);
+        if (rank == null)
+            return ctx.ReplyString($"Not level {UnlockLevel} (unknown rank tell devs).");
 
-#if false
-    /// <inheritdoc />
-    public override Exception RequestTraitFailureToMeet(CommandContext ctx, TraitData trait)
-    {
-        LevelData data = new LevelData(Points.GetLevelXP(UnlockLevel));
-        return ctx.Reply(T.RequestTraitLowLevel, trait, data);
+        return requestable switch
+        {
+            Kit => _requestKitsTranslations == null
+                ? throw new InvalidOperationException("Not initialized.")
+                : ctx.Reply(_requestKitsTranslations.RequestNotLevel, rank),
+
+            VehicleSpawner => _requestVehicleTranslations == null
+                ? throw new InvalidOperationException("Not initialized.")
+                : ctx.Reply(_requestVehicleTranslations.RequestNotLevel, rank),
+
+            _ => ctx.ReplyString($"Unhandled unlock level, tell devs. You need level {rank.Name} to use this object.")
+        };
     }
-#endif
 
     /// <inheritdoc />
     public override bool Equals(object? obj)

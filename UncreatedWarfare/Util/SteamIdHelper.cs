@@ -36,6 +36,8 @@ public static class SteamIdHelper
     /// </summary>
     public static bool TryParseSteamId(string str, out CSteamID steamId)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (str.Length > 2 && str[0] is 'N' or 'n' or 'O' or 'o' or 'L' or 'l' or 'z' or 'Z')
         {
             if (str.Equals("Nil", StringComparison.InvariantCultureIgnoreCase) ||
@@ -221,6 +223,8 @@ public static class SteamIdHelper
     /// </summary>
     public static ValueTask<CSteamID?> TryParseSteamIdOrUrl(string str, ISteamApiService? steamApiService, CancellationToken token = default)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (string.IsNullOrWhiteSpace(str))
             return default;
 

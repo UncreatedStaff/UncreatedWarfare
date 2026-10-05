@@ -83,6 +83,8 @@ internal sealed class ElectricalGridCalculationPatches : IHarmonyPatch
 
     private static bool ReceiveToggleObjectBinaryStateRequestPrefix(in ServerInvocationContext context, byte x, byte y, ushort index, bool isUsed)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!Regions.checkSafe(x, y) || LevelObjects.objects == null)
             return false;
 
@@ -118,6 +120,8 @@ internal sealed class ElectricalGridCalculationPatches : IHarmonyPatch
 
     private static bool CalculateIsConnectedToPowerPrefix(InteractablePower __instance, ref bool __result)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ElectricalGridService? handler = WarfareModule.Singleton.ServiceProvider.ResolveOptional<ElectricalGridService>();
 
         if (handler is not { Enabled: true })

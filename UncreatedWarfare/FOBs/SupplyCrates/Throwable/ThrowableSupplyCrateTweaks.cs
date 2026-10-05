@@ -15,6 +15,8 @@ public class ThrowableSupplyCrateTweaks : IEventListener<ThrowableSpawned>
 {
     public void HandleEvent(ThrowableSpawned e,  IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         FobManager? fobManager = serviceProvider.GetService<FobManager>();
         if (fobManager == null)
             return;

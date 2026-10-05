@@ -1,25 +1,27 @@
-using System;
-using System.Collections.Generic;
+using Microsoft.Extensions.DependencyInjection;
 using System.Globalization;
 using System.Text.Json;
 using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Kits.Requests;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Translations;
-using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Players.Unlocks;
 
 public class QuestUnlockRequirement : UnlockRequirement, IEquatable<QuestUnlockRequirement>
 {
-    private readonly RequestTranslations _reqTranslations;
+    private RequestTranslations? _reqTranslations;
+    // private QuestService? _questService;
     public Guid QuestId { get; set; }
     public Guid[] UnlockPresets { get; set; } = Array.Empty<Guid>();
 
-    public QuestUnlockRequirement(TranslationInjection<RequestTranslations> reqTranslations)
+    /// <inheritdoc />
+    public override void Initialize(IServiceProvider serviceProvider)
     {
-        _reqTranslations = reqTranslations.Value;
+        base.Initialize(serviceProvider);
+        _reqTranslations = serviceProvider.GetRequiredService<TranslationInjection<RequestTranslations>>().Value;
     }
 
     /// <inheritdoc />
@@ -27,7 +29,7 @@ public class QuestUnlockRequirement : UnlockRequirement, IEquatable<QuestUnlockR
     {
         for (int i = 0; i < UnlockPresets.Length; i++)
         {
-            // todo if (!player.QuestComplete(UnlockPresets[i]))
+            // todo if (!_questService.HasCompletedQuest(UnlockPresets[i]))
             //     return false;
         }
         return true;
@@ -78,8 +80,9 @@ public class QuestUnlockRequirement : UnlockRequirement, IEquatable<QuestUnlockR
     /// <inheritdoc />
     public override object Clone()
     {
-        QuestUnlockRequirement req = new QuestUnlockRequirement(new TranslationInjection<RequestTranslations>(_reqTranslations))
+        QuestUnlockRequirement req = new QuestUnlockRequirement
         {
+            _reqTranslations = _reqTranslations,
             QuestId = QuestId,
             UnlockPresets = new Guid[UnlockPresets.Length]
         };
@@ -88,42 +91,20 @@ public class QuestUnlockRequirement : UnlockRequirement, IEquatable<QuestUnlockR
     }
 
     /// <inheritdoc />
-    public override Exception RequestKitFailureToMeet(CommandContext ctx, Kit kit)
+    public override Exception RequestFailureToMeet(CommandContext ctx, IRequestable<object> requestable)
     {
-        if (Assets.find(QuestId) is not QuestAsset asset)
+        if (_reqTranslations == null)
+            throw new InvalidOperationException("Not initialized.");
+
+        QuestAsset? asset = Assets.find<QuestAsset>(QuestId);
+
+        if (asset != null && ctx.Player != null)
         {
-            return ctx.Reply(_reqTranslations.RequestKitQuestIncomplete, null!);
+            QuestService.ServerTrackQuest(ctx.Player, asset);
         }
 
-        // todo QuestManager.TryAddQuest(ctx.Player, asset);
-        return ctx.Reply(_reqTranslations.RequestKitQuestIncomplete, asset);
+        return ctx.Reply(_reqTranslations.RequestKitQuestIncomplete, asset!);
     }
-
-    /// <inheritdoc />
-    public override Exception RequestVehicleFailureToMeet(CommandContext ctx, WarfareVehicleInfo data)
-    {
-        if (Assets.find(QuestId) is not QuestAsset asset)
-        {
-            return ctx.Reply(_reqTranslations.RequestVehicleQuestIncomplete, null!);
-        }
-
-        // todo QuestManager.TryAddQuest(ctx.Player, asset);
-        return ctx.Reply(_reqTranslations.RequestVehicleQuestIncomplete, asset);
-    }
-
-#if false
-    /// <inheritdoc />
-    public override Exception RequestTraitFailureToMeet(CommandContext ctx, TraitData trait)
-    {
-        if (Assets.find(QuestId) is not QuestAsset asset)
-        {
-            return ctx.Reply(T.RequestTraitQuestIncomplete, trait, null!);
-        }
-
-        // todo QuestManager.TryAddQuest(ctx.Player, asset);
-        return ctx.Reply(T.RequestTraitQuestIncomplete, trait, asset);
-    }
-#endif
 
     /// <inheritdoc />
     public override bool Equals(object? obj)

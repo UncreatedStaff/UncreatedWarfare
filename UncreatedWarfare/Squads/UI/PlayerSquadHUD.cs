@@ -67,6 +67,8 @@ public class PlayerSquadHUD : UnturnedUI,
     [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     public void HandleEvent(PlayerKitChanged e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Squad? squad = e.Player.GetSquad();
         if (squad == null)
             return;
@@ -100,6 +102,8 @@ public class PlayerSquadHUD : UnturnedUI,
 
     private void UpdateForPlayers(Squad squad, int playerIndex = -1)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // update for one or more players at once.
         // playerIndex = -1 means the whole squad, otherwise update for a specific player in the squad
 
@@ -107,17 +111,17 @@ public class PlayerSquadHUD : UnturnedUI,
         if (player != null ? _hudManager.IsHidden(player) : _hudManager.IsHiddenForAllPlayers)
             return;
 
-        string squadName = $"{squad.Name}  {squad.Members.Count}/{Squad.MaxMembers}";
+        string squadName = $"{squad.Name}  {squad.Members.Length}/{Squad.MaxMembers}";
         string idNumber = squad.TeamIdentificationNumber.ToString();
         int member = 0;
 
-        for (; member < squad.Members.Count; ++member)
+        for (; member < squad.Members.Length; ++member)
             _memberTextBuffer[member] = GetMemberNameText(squad.Members[member]);
 
         for (; member < _memberTextBuffer.Length; ++member)
             _memberTextBuffer[member] = null;
 
-        int max = playerIndex >= 0 ? playerIndex + 1 : squad.Members.Count;
+        int max = playerIndex >= 0 ? playerIndex + 1 : squad.Members.Length;
         for (int m = Math.Max(0, playerIndex); m < max; ++m)
         {
             player = squad.Members[m];

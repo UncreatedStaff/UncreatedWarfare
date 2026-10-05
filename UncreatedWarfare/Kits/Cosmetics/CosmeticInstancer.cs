@@ -94,6 +94,8 @@ public class CosmeticInstancer : IAsyncEventListener<PlayerDutyStatusChanged>, I
     {
         GameThread.AssertCurrent();
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ClothingItem item = new ClothingItem(onPlayer.UnturnedPlayer.clothing, type);
         quality = item.Quality;
         state = item.State;
@@ -146,6 +148,8 @@ public class CosmeticInstancer : IAsyncEventListener<PlayerDutyStatusChanged>, I
         if (!_isEnabledIntl)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         for (int c = 0; c < ClothingItem.Count; ++c)
@@ -162,6 +166,8 @@ public class CosmeticInstancer : IAsyncEventListener<PlayerDutyStatusChanged>, I
     {
         if (!_isEnabledIntl)
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         GameThread.AssertCurrent();
 
@@ -209,6 +215,8 @@ public class CosmeticInstancer : IAsyncEventListener<PlayerDutyStatusChanged>, I
     {
         if (!_isEnabledIntl)
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         bool enemies = player.Save.ViewEnemyCosmetics;
         bool friendlies = player.Save.ViewFriendlyCosmetics;
@@ -276,6 +284,8 @@ public class CosmeticInstancer : IAsyncEventListener<PlayerDutyStatusChanged>, I
     {
         GameThread.AssertCurrent();
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!IsEnabled || !ShouldInstance(type, player))
         {
             if (ItemUtility.HasClothingRpc(type))
@@ -299,6 +309,8 @@ public class CosmeticInstancer : IAsyncEventListener<PlayerDutyStatusChanged>, I
     /// <inheritdoc cref="SetClothing"/>
     internal void SetClothingShortcut(ClothingType type, WarfarePlayer player, ItemClothingAsset? clothing, byte quality, byte[] state, bool playEffect)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         PlayerClothing playerClothing = player.UnturnedPlayer.clothing;
         ClothingItem item = new ClothingItem(playerClothing, type);
         if (clothing != null && !item.ValidAsset(clothing))
@@ -359,6 +371,8 @@ public class CosmeticInstancer : IAsyncEventListener<PlayerDutyStatusChanged>, I
 
     private void SendClothingToClientForPlayer(ClothingType type, WarfarePlayer player, ItemClothingAsset? clothing, byte quality, byte[] state, bool playEffect, bool shouldInstance)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Guid guid = clothing?.GUID ?? Guid.Empty;
 
         ClothingItem item = new ClothingItem(player.UnturnedPlayer.clothing, type);

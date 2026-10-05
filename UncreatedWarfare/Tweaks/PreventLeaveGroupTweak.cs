@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using System;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Interaction;
@@ -13,9 +12,10 @@ public class PreventLeaveGroupTweak : IAsyncEventListener<PlayerLeaveGroupReques
 {
     public const string LeaveGroupPermissionName = "warfare::features.leavegroup";
     public static readonly PermissionLeaf LeaveGroupPermission = new(LeaveGroupPermissionName);
-    public async UniTask HandleEventAsync(PlayerLeaveGroupRequested e, IServiceProvider serviceProvider,
-        CancellationToken token = default)
+    public async UniTask HandleEventAsync(PlayerLeaveGroupRequested e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         UserPermissionStore? permissionStore = serviceProvider.GetService<UserPermissionStore>();
         if (permissionStore == null)
             return;

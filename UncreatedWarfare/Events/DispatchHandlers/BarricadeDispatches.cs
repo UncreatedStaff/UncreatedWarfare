@@ -1,4 +1,3 @@
-using System;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Models.Barricades;
@@ -20,6 +19,8 @@ partial class EventDispatcher
     {
         if (!shouldAllow)
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         InteractableVehicle? vehicle = null;
         BarricadeRegion? region = null;
@@ -89,6 +90,8 @@ partial class EventDispatcher
         {
             if (!args.OriginalPlacer.IsOnline)
                 return;
+
+            using IDisposable? profiler = ProfilerUtil.Profile();
 
             // check if the item hasn't been moved in invetory for some reason
             PlayerInventory inventory = args.OriginalPlacer.UnturnedPlayer.inventory;
@@ -174,6 +177,8 @@ partial class EventDispatcher
     /// </summary>
     private void BarricadeManagerOnBarricadeSpawned(BarricadeRegion region, BarricadeDrop drop)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         BarricadeData data = drop.GetServersideData();
 
         IBuildable buildable = new BuildableBarricade(drop);
@@ -227,6 +232,8 @@ partial class EventDispatcher
         if (!shouldAllow)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         DestroyerComponent.AddOrUpdate(barricade.model.gameObject, instigatorClient.playerID.steamID.m_SteamID, true, EDamageOrigin.Unknown);
 
         WarfarePlayer player = _playerService.GetOnlinePlayer(instigatorClient);
@@ -279,6 +286,8 @@ partial class EventDispatcher
                 ItemBarricadeAsset asset = args.Barricade.asset;
                 if (asset.isUnpickupable)
                     return;
+
+                using IDisposable? profiler = ProfilerUtil.Profile();
 
                 // re-apply ISalvageInfo components
                 BuildableExtensions.SetSalvageInfo(args.Transform, EDamageOrigin.Unknown, args.Steam64, true, null);
@@ -396,6 +405,8 @@ partial class EventDispatcher
         if (_ignoreBarricadeManagerOnDamageBarricadeRequested)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         BarricadeDrop? drop = BarricadeManager.FindBarricadeByRootTransform(barricadeTransform);
         if (drop == null)
         {
@@ -440,6 +451,8 @@ partial class EventDispatcher
         {
             if (args.Barricade == null || args.Barricade.GetServersideData().barricade.isDead)
                 return;
+
+            using IDisposable? profiler = ProfilerUtil.Profile();
 
             _ignoreBarricadeManagerOnDamageBarricadeRequested = true;
             try

@@ -305,6 +305,9 @@ public class RequestKitsTranslations : TranslationCollection
 
     [TranslationData("Modal cancel button text for when a player is asked if they want to purchase a kit that they don't yet own.")]
     public readonly Translation ModalConfirmPurchaseKitCancelButton = new Translation("Cancel", TranslationOptions.TMProUI);
+
+    [TranslationData("Sent when a player tries to request a kit but isn't high enough level.")]
+    public readonly Translation<WarfareRank> RequestNotLevel = new Translation<WarfareRank>("You must be at least <#f4cd57>{0}</color> to use this kit.", arg0Fmt: WarfareRank.FormatName);
 }
 
 public class RequestVehicleTranslations : TranslationCollection
@@ -341,4 +344,8 @@ public class RequestVehicleTranslations : TranslationCollection
 
     [TranslationData("Sent when a player is asset banned over all vehicles for a set time.")]
     public readonly Translation<string, TimeSpan> AssetBanned = new Translation<string, TimeSpan>("Asset banned from: <#ddd>{0}</color> for another <#fff>{1}</color>", arg1Fmt: TimeAddon.Create(TimeSpanFormatType.Short));
+
+    [TranslationData("Sent when a player tries to request a vehicle but isn't high enough level.")]
+    public readonly Translation<WarfareRank> RequestNotLevel = new Translation<WarfareRank>("You must be at least <#f4cd57>{0}</color> to request this vehicle.", arg0Fmt: WarfareRank.FormatName);
+
 }

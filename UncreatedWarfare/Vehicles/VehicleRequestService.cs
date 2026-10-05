@@ -113,6 +113,12 @@ public class VehicleRequestService :
             return false;
         }
 
+        InteractableVehicle? vehicle = spawn.LinkedVehicle;
+
+#if PROFILING
+        using (IDisposable? _ = ProfilerUtil.Profile("Main thread checks")) {
+#endif
+
         // asset ban
         if (existingAssetBan != null && existingAssetBan.IsAssetBanned(vehicleInfo.Type, true, true))
         {
@@ -135,7 +141,6 @@ public class VehicleRequestService :
             return false;
         }
 
-        InteractableVehicle? vehicle = spawn.LinkedVehicle;
         if (vehicle == null || vehicle.isDead || vehicle.isExploded || vehicle.isDrowned || !vehicle.asset.canBeLocked)
         {
             resultHandler.MissingRequirement(player, spawn, _reqTranslations.NotAvailable.Translate(player));
@@ -196,6 +201,10 @@ public class VehicleRequestService :
             resultHandler.MissingRequirement(player, spawn, _reqTranslations.AnotherVehicleAlreadyOwned.Translate(v.asset, player));
             return false;
         }
+
+#if PROFILING
+        } // end of profiler using
+#endif
 
         if (vehicleInfo.UnlockRequirements != null)
         {
@@ -268,6 +277,8 @@ public class VehicleRequestService :
 
     private void DropStartingItems(WarfareVehicleInfo vehicleInfo, WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         foreach (IAssetLink<ItemAsset> item in vehicleInfo.StartingItems)
         {
             if (item.TryGetAsset(out ItemAsset? asset))

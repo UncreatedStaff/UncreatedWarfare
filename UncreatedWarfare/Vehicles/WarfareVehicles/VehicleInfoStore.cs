@@ -2,7 +2,6 @@ using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Primitives;
-using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -43,6 +42,8 @@ public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementP
     /// <inheritdoc />
     ValueTask<int> IWhitelistExceptionProvider.GetWhitelistAmount(IAssetContainer assetContainer)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int num = 0;
         foreach (WarfareVehicleInfo vehicle in _vehicles)
         {
@@ -147,6 +148,8 @@ public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementP
     /// </summary>
     private void ReloadUnwatchedFiles()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         string[] files = Directory.GetFiles(_fileProvider.Root, "*.yml", SearchOption.AllDirectories);
 
         List<IDisposable> newDisposables = new List<IDisposable>();

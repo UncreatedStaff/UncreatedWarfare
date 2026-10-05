@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using System;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Uncreated.Framework.UI;
@@ -102,6 +101,8 @@ public class FobHUD :
 
     private void CloseUI(WarfarePlayer player, UIData data)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!data.HasUI)
             return;
 
@@ -127,6 +128,8 @@ public class FobHUD :
     private void UpdateForPlayer(WarfarePlayer player)
     {
         GameThread.AssertCurrent();
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         UIData data = GetOrAddData(player);
         if (_hudManager.IsHidden(player))
@@ -216,13 +219,15 @@ public class FobHUD :
     private void SendSquadPosition(WarfarePlayer player)
     {
         Squad? squad = player.GetSquad();
-        int index = squad == null ? 0 : Math.Clamp(squad.Members.Count, 0, LogicSquadMemberPositions.Length - 1);
+        int index = squad == null ? 0 : Math.Clamp(squad.Members.Length, 0, LogicSquadMemberPositions.Length - 1);
 
         LogicSquadMemberPositions[index].Show(player);
     }
 
     void IEventListener<IPlayerNeedsFobUIUpdateEvent>.HandleEvent(IPlayerNeedsFobUIUpdateEvent e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (e.Player != null)
             UpdateForPlayer(e.Player);
     }
@@ -231,6 +236,8 @@ public class FobHUD :
     {
         if (e.Fob == null)
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         foreach (WarfarePlayer player in _playerService.OnlinePlayers.Where(e.Fob.IsVisibleToPlayer))
         {
@@ -241,6 +248,8 @@ public class FobHUD :
     [EventListener(MustRunInstantly = true)]
     void IEventListener<SquadMemberJoined>.HandleEvent(SquadMemberJoined e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         foreach (WarfarePlayer player in e.Squad.Members)
         {
             UpdateSquadPosition(player);
@@ -250,6 +259,8 @@ public class FobHUD :
     [EventListener(MustRunInstantly = true)]
     void IEventListener<SquadMemberLeft>.HandleEvent(SquadMemberLeft e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         foreach (WarfarePlayer player in e.Squad.Members)
         {
             UpdateSquadPosition(player);

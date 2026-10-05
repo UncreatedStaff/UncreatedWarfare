@@ -1,7 +1,4 @@
-using System;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace Uncreated.Warfare.Util;
@@ -54,6 +51,8 @@ public static class StringUtility
     /// <remarks>Based on https://en.wikipedia.org/wiki/Levenshtein_distance#Iterative_with_two_matrix_rows.</remarks>
     public static unsafe int LevenshteinDistance(char* a, int aChars, char* b, int bChars, CultureInfo formatProvider, LevenshteinOptions options = default)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (a == b || aChars == 0 && bChars == 0)
         {
             return 0;
@@ -222,6 +221,8 @@ public static class StringUtility
     /// <param name="byteLength">The length in UTF-8 bytes of the truncated text.</param>
     public static ReadOnlySpan<char> TruncateUtf8Bytes(ReadOnlySpan<char> text, int maximumBytes, out int byteLength)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (maximumBytes < 0)
         {
             byteLength = Encoding.UTF8.GetByteCount(text);
@@ -278,6 +279,8 @@ public static class StringUtility
 #pragma warning disable CS8500
     private static unsafe string RemoveManyIntl(ReadOnlySpan<char> source, bool caseSensitive, ReadOnlySpan<char> replaceables, string? noOpReturn)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int occurances = 0;
         int lastIndex = -1;
         while (lastIndex + 1 < source.Length)

@@ -45,6 +45,8 @@ public sealed class TimeAddon : IArgumentAddon
     private TimeAddon() { }
     public string ApplyAddon(ITranslationValueFormatter formatter, string text, TypedReference value, in ValueFormatParameters args)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         TimeSpan ts;
 
         if (__reftype(value) == typeof(object))

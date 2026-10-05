@@ -50,6 +50,8 @@ public class ZoneRegion : IDisposable
     {
         get
         {
+            using IDisposable? profiler = ProfilerUtil.Profile();
+
             if (_teamCounts != null)
                 return _teamCounts;
 
@@ -80,6 +82,8 @@ public class ZoneRegion : IDisposable
     {
         get
         {
+            using IDisposable? profiler = ProfilerUtil.Profile();
+
             if (_data != null)
                 return _data;
 
@@ -124,6 +128,8 @@ public class ZoneRegion : IDisposable
 
     internal ZoneRegion(ZoneProximity[] zones, ITeamManager<Team> teamManager)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (zones.Length == 0)
             throw new ArgumentException("A zone group must consist of at least one zone.", nameof(zones));
 
@@ -179,6 +185,8 @@ public class ZoneRegion : IDisposable
 
     private void OnObjectExitedAnyZone(IEventBasedProximity<WarfarePlayer> prox, WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // check to make sure they're not already in another part of the cluster
         if (_zones.Length > 0)
         {
@@ -213,6 +221,7 @@ public class ZoneRegion : IDisposable
 
     private void OnObjectEnteredAnyZone(IEventBasedProximity<WarfarePlayer> prox, WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         if (!_players.AddIfNotExists(player))
             return;
@@ -223,6 +232,8 @@ public class ZoneRegion : IDisposable
 
     private void UpdateTeamCounts()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (_teamCounts == null)
             return;
 
@@ -242,6 +253,8 @@ public class ZoneRegion : IDisposable
     /// </summary>
     public bool TestPoint(Vector3 position)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         for (int i = 0; i < _zones.Length; ++i)
         {
             ref ZoneProximity proximity = ref _zones[i];
@@ -259,6 +272,8 @@ public class ZoneRegion : IDisposable
     /// </summary>
     public bool TestPoint(Vector2 position)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         for (int i = 0; i < _zones.Length; ++i)
         {
             ref ZoneProximity proximity = ref _zones[i];
@@ -295,6 +310,8 @@ public class ZoneRegion : IDisposable
 
     private void DisposeIntl()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ZoneRegionData? data = Interlocked.Exchange(ref _data, null);
 
         lock (_players)

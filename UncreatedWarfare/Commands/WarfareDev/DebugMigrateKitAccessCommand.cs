@@ -5,12 +5,12 @@ using Uncreated.Warfare.Kits;
 namespace Uncreated.Warfare.Commands;
 
 [Command("migratekitaccess"), SubCommandOf(typeof(WarfareDevCommand))]
-internal sealed class DebugMigrateKitAccess : IExecutableCommand
+internal sealed class DebugMigrateKitAccessCommand : IExecutableCommand
 {
     private readonly IKitAccessService _kitAccessService;
     public required CommandContext Context { get; init; }
 
-    public DebugMigrateKitAccess(IKitAccessService kitAccessService)
+    public DebugMigrateKitAccessCommand(IKitAccessService kitAccessService)
     {
         _kitAccessService = kitAccessService;
     }

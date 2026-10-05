@@ -31,6 +31,8 @@ public class DefaultTeamSelectorBehavior : ITeamSelectorBehavior
         if (Teams == null)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         for (int i = 0; i < Teams.Length; ++i)
         {
             List<WarfarePlayer>.Enumerator enumerator = _playerService.OnlinePlayers.GetEnumerator();
@@ -57,6 +59,8 @@ public class DefaultTeamSelectorBehavior : ITeamSelectorBehavior
         if (currentTeam >= Teams.Length)
             throw new ArgumentOutOfRangeException(nameof(index));
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         CalculateTeamMetrics(currentTeam, out double variance, out _, out double mean);
 
         int playerCount = Teams[index].PlayerCount;
@@ -76,6 +80,8 @@ public class DefaultTeamSelectorBehavior : ITeamSelectorBehavior
 
     private void CalculateTeamMetrics(int teamIndexToRemoveOneFrom, out double variance, out int minTeam, out double mean)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // calculate std dev and range of player counts
         int maxTeam = -1; minTeam = -1;
         double total = 0;

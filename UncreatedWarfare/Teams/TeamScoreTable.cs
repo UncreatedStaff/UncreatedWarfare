@@ -54,6 +54,8 @@ public class TeamScoreTable
     /// </summary>
     public void DistributeUniformly()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         double amount = MaxScore / _scores.Length;
         lock (_scores)
         {
@@ -71,6 +73,8 @@ public class TeamScoreTable
     /// </summary>
     public void Distribute(params double[] ratio)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (ratio.Length < 1 + _scores.Length)
             throw new ArgumentException($"Incorrect number of ratio values. Expected {1 + _scores.Length}.", nameof(ratio));
 
@@ -104,6 +108,8 @@ public class TeamScoreTable
     /// </summary>
     public void NeutralizeScores()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         lock (_scores)
         {
             for (int i = 0; i < _scores.Length; ++i)
@@ -120,6 +126,8 @@ public class TeamScoreTable
     /// </summary>
     public void MaximizeTeam(Team? team)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (team == null || !team.IsValid)
         {
             NeutralizeScores();
@@ -154,6 +162,8 @@ public class TeamScoreTable
     /// <exception cref="ArgumentOutOfRangeException">Unknown team.</exception>
     public double DecrementPoints(Team? team, double amount, bool toNeutral)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (amount < 0)
         {
             return -IncrementPoints(team, -amount);
@@ -272,6 +282,8 @@ public class TeamScoreTable
     /// <exception cref="ArgumentOutOfRangeException">Unknown team.</exception>
     public double IncrementPoints(Team? team, double amount)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (amount < 0)
         {
             return -DecrementPoints(team, -amount, true);
@@ -359,6 +371,8 @@ public class TeamScoreTable
     /// </summary>
     public string ToGraph(bool scaleToMaximum = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         /*
            Creates a graph like this for testing and visualization:
            |                       

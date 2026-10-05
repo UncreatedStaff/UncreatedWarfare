@@ -290,12 +290,12 @@ public class KillEnemies : QuestTemplate<KillEnemies, KillEnemies.Tracker, KillE
             }
 
             // squads
-            if (_needsSquad && Player.GetSquad() is not { Members.Count: > 1 })
+            if (_needsSquad && Player.GetSquad() is not { Members.Length: > 1 })
             {
                 return;
             }
             
-            if (_squadMustBeFull && Player.GetSquad() is not { Members.Count: Squad.MaxMembers })
+            if (_squadMustBeFull && Player.GetSquad() is not { Members.Length: Squad.MaxMembers })
             {
                 return;
             }

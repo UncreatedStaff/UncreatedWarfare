@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using System;
+using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Requests;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Costs;
@@ -13,14 +15,20 @@ namespace Uncreated.Warfare.Interaction.Requests;
 /// </summary>
 public class RequestCommandResultHandler : IRequestResultHandler
 {
+    private readonly IServiceProvider _serviceProvider;
     private readonly ChatService _chatService;
     private readonly IConfiguration _systemConfig;
     private readonly RequestTranslations _translations;
 
     public bool CanUseIMGUI => true;
     
-    public RequestCommandResultHandler(ChatService chatService, IConfiguration systemConfig, TranslationInjection<RequestTranslations> translations)
+    public RequestCommandResultHandler(
+        IServiceProvider serviceProvider,
+        ChatService chatService,
+        IConfiguration systemConfig,
+        TranslationInjection<RequestTranslations> translations)
     {
+        _serviceProvider = serviceProvider;
         _chatService = chatService;
         _systemConfig = systemConfig;
         _translations = translations.Value;
@@ -76,7 +84,8 @@ public class RequestCommandResultHandler : IRequestResultHandler
 
     public void MissingUnlockRequirement(WarfarePlayer player, IRequestable<object> value, UnlockRequirement unlockRequirement)
     {
-        _chatService.Send(player, _translations.RequestError, unlockRequirement.ToString());
+        CommandContext ctx = CommandContext.CreateTemporary(player, _serviceProvider);
+        unlockRequirement.RequestFailureToMeet(ctx, value);
     }
 
     public void VehicleDelayed(WarfarePlayer player, IRequestable<object> value, TimeSpan timeLeft)

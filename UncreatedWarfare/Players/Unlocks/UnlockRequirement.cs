@@ -1,10 +1,8 @@
-using System;
 using System.Globalization;
 using System.Text.Json;
 using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Models.Localization;
-using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Players.Unlocks;
 
@@ -52,15 +50,9 @@ public abstract class UnlockRequirement : ICloneable
     /// <inheritdoc />
     public abstract object Clone();
 
-    // todo this is not a good way to handle this
-    public virtual Exception RequestKitFailureToMeet(CommandContext ctx, Kit kit)
+    public virtual Exception RequestFailureToMeet(CommandContext ctx, IRequestable<object> requestable)
     {
-        WarfareModule.Singleton.GlobalLogger.LogWarning("Unhandled kit requirement type: " + GetType().Name);
-        return ctx.SendUnknownError();
-    }
-    public virtual Exception RequestVehicleFailureToMeet(CommandContext ctx, WarfareVehicleInfo data)
-    {
-        WarfareModule.Singleton.GlobalLogger.LogWarning("Unhandled vehicle requirement type: " + GetType().Name);
+        WarfareModule.Singleton.GlobalLogger.LogWarning("Unhandled requestable requirement type: " + GetType().Name);
         return ctx.SendUnknownError();
     }
 }

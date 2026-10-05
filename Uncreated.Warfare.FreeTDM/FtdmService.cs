@@ -17,6 +17,7 @@ using Uncreated.Warfare.Lobby;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
+using Uncreated.Warfare.Profiling;
 using Uncreated.Warfare.Proximity;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Translations;
@@ -122,11 +123,10 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
 
     private void OnUpdate()
     {
-        if (TestStopCheckingCommand.StopChecking)
-            return;
-
         if (!IsInActionPhase || _playAreaCollider == null || _friendlyZoneColliders == null)
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         float time = Time.realtimeSinceStartup;
         foreach (WarfarePlayer player in _playerService.OnlinePlayers)
@@ -205,6 +205,8 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
 
     private void HandlePlayerEntersEnemySpawnOrTriesToReenterSpawn(WarfarePlayer player, Team enemySpawnTeam, IProximity spawn)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         bool isFriendly = enemySpawnTeam.IsFriendly(player.Team);
 
         if (isFriendly && AllowReenterSpawn || player.IsOnDuty)
@@ -238,6 +240,8 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
 
     private static void HandlePlayerEntersPlayArea(IEventBasedProximity<WarfarePlayer> prox, WarfarePlayer obj)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         float lastUI = obj.Component<FtdmPlayerComponent>().LastOutOfBoundsUIUpdate;
         if (!float.IsNaN(lastUI) && Time.realtimeSinceStartup - lastUI <= OutOfBoundsWarningTime)
         {
@@ -247,6 +251,8 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
 
     private void PlayerEnteredSpawnZone(IEventBasedProximity<WarfarePlayer> prox, WarfarePlayer obj)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (_friendlyZoneColliders == null || obj.IsDisconnecting)
             return;
 
@@ -301,6 +307,8 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
 
     private void PlayerExitedSpawnZone(IEventBasedProximity<WarfarePlayer> prox, WarfarePlayer obj)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (_friendlyZoneColliders == null)
             return;
 
@@ -312,6 +320,8 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
 
     UniTask ILayoutPhaseListener<ActionPhase>.OnPhaseStarted(ActionPhase phase, CancellationToken token)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Zone? playArea = _zoneStore.SearchZone(_teamManager.Location.PlayArea);
         if (playArea == null)
         {

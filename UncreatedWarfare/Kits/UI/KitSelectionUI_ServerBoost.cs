@@ -1,5 +1,4 @@
-﻿using System;
-using Uncreated.Framework.UI.Presets;
+﻿using Uncreated.Framework.UI.Presets;
 using Uncreated.Warfare.Moderation.Discord;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Util;
@@ -33,6 +32,8 @@ partial class KitSelectionUI
 
     private void UpdateNitroBoostKits(WarfarePlayer player, KitSelectionUIData? data, GuildStatusResult guildStatus, bool isNitroBoosting, bool publicKits, bool listKits)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (data == null)

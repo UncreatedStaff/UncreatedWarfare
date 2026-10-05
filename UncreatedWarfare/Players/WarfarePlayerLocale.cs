@@ -34,6 +34,8 @@ public class WarfarePlayerLocale
         get;
         set
         {
+            using IDisposable? profiler = ProfilerUtil.Profile();
+
             value.Steam64 = Player.Steam64.m_SteamID;
 
             LanguageService? langService = _serviceProvider.GetService<LanguageService>();
@@ -133,6 +135,8 @@ public class WarfarePlayerLocale
     {
         if (!Player.IsOnline || _eventDispatcher == null)
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         // ReSharper disable once ConstantConditionalAccessQualifier
         if (GameThread.IsCurrent)

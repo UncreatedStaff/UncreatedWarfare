@@ -1257,7 +1257,7 @@ public partial class DatabaseInterface : IHostedService
 
         return result;
     }
-    private int AppendReadColumns(StringBuilder sb, Type type, bool baseOnly)
+    private static int AppendReadColumns(StringBuilder sb, Type type, bool baseOnly)
     {
         sb.Append(MySqlSnippets.AliasedColumnList("main", Columns));
         int flag = 0;

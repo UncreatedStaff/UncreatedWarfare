@@ -165,6 +165,8 @@ public class KitRearmService : BaseAlternateConfigurationFile // WARNING: not re
     {
         GameThread.AssertCurrent();
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         float ammoLeft = ammoStorage.AmmoCount;
         if (float.IsFinite(ammoLeft))
         {
@@ -255,6 +257,8 @@ public class KitRearmService : BaseAlternateConfigurationFile // WARNING: not re
 
     protected virtual float GetRearmCost(WarfarePlayer? player, Team team, Kit kit)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         float totalRearmCost = 0;

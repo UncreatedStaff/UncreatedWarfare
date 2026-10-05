@@ -12,7 +12,7 @@ public sealed class PluralAddon : IArgumentAddon
     public string DisplayName { get; }
 
     /// <summary>
-    /// This argument will become plural when <paramref name="argIndex"/> isn't one if it's numeric.
+    /// This argument will become plural when <paramref name="argIndex"/> isn't equal to <c>1</c> (if it's numeric).
     /// </summary>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="argIndex"/> is less than zero.</exception>
     public static PluralAddon WhenArgument(int argIndex)
@@ -48,6 +48,8 @@ public sealed class PluralAddon : IArgumentAddon
 
     public string ApplyAddon(ITranslationValueFormatter formatter, string text, TypedReference value, in ValueFormatParameters args)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!args.Language.SupportsPluralization)
             return text;
 

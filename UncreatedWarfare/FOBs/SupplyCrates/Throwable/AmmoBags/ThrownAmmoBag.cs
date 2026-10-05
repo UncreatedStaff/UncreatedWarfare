@@ -46,6 +46,8 @@ public class ThrownAmmoBag : ThrownSupplyCrate
 
     private void OnThrowableDestroyed()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (_layout is { IsActive: false } || _isInMain)
         {
             RespawnThrowableItem();

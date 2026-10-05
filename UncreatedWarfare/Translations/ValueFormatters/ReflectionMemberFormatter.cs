@@ -1,6 +1,5 @@
 ﻿using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
-using System;
 using System.Reflection;
 
 namespace Uncreated.Warfare.Translations.ValueFormatters;
@@ -17,6 +16,8 @@ public class ReflectionMemberFormatter :
 {
     public string Format(ITranslationValueFormatter formatter, MemberInfo value, in ValueFormatParameters parameters)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         return value switch
         {
             Type t => Accessor.Formatter.Format(t),
@@ -70,6 +71,8 @@ public class ReflectionMemberFormatter :
 
     public string Format(ITranslationValueFormatter formatter, object value, in ValueFormatParameters parameters)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         return value switch
         {
             IMemberDefinition def => def.Format(Accessor.Formatter),

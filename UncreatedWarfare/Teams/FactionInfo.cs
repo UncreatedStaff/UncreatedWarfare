@@ -173,6 +173,8 @@ public class FactionInfo : ICloneable, ITranslationArgument, IEquatable<FactionI
 
     public FactionInfo(Faction model)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         PrimaryKey = model.Key;
         FactionId = model.InternalName;
         Name = model.Name;
@@ -228,6 +230,8 @@ public class FactionInfo : ICloneable, ITranslationArgument, IEquatable<FactionI
 
     internal Faction CreateModel(ICachableLanguageDataStore languageDataStore)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Faction faction = new Faction
         {
             Key = PrimaryKey,

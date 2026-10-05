@@ -244,6 +244,8 @@ public class KitSignService :
         if (player is { IsOnline: false })
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // expects game thread
         if (player == null)
         {
@@ -259,6 +261,8 @@ public class KitSignService :
     {
         if (player is { IsOnline: false })
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         // expects game thread
         if (player == null)
@@ -276,6 +280,8 @@ public class KitSignService :
         if (!player.IsOnline)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // expects game thread
         _signs.UpdateSigns<KitSignInstanceProvider>(player, (_, provider) => provider.FavoriteIndex >= 0);
     }
@@ -284,6 +290,8 @@ public class KitSignService :
     {
         if (player is { IsOnline: false })
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         // expects game thread
         if (kit.Type == KitType.Loadout)
@@ -322,6 +330,8 @@ public class KitSignService :
         if (player is { IsOnline: false })
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // expects game thread
         int loadoutId = LoadoutIdHelper.Parse(kitId, out CSteamID s64);
         if (loadoutId != -1)
@@ -355,6 +365,8 @@ public class KitSignService :
     {
         if (player is { IsOnline: false })
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         // expects game thread
         if (player == null)

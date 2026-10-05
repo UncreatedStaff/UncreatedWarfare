@@ -57,6 +57,8 @@ public class VehicleSpawnerLayoutConfigurer : ILayoutHostedService, IDisposable
 
     public List<VehicleSpawnerLayoutConfiguration> GetEnabledSpawnerNames()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         IConfiguration config = _configuration;
         List<VehicleSpawnerLayoutConfiguration>? enabled = null;
         List<string>? disabled = null;
@@ -113,12 +115,16 @@ public class VehicleSpawnerLayoutConfigurer : ILayoutHostedService, IDisposable
 
     public bool IsEnabledInLayout(VehicleSpawnerInfo vehicleSpawnInfo)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         return EnabledSpawnerLayouts.Exists(s =>
             vehicleSpawnInfo.Id.Equals(s.SpawnerName, StringComparison.OrdinalIgnoreCase));
     }
 
     public bool TryGetSpawnerConfiguration(VehicleSpawnerInfo vehicleSpawnInfo, [NotNullWhen(true)] out VehicleSpawnerLayoutConfiguration? configuration)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         configuration = EnabledSpawnerLayouts.FirstOrDefault(s => vehicleSpawnInfo.Id.Equals(s.SpawnerName, StringComparison.OrdinalIgnoreCase));
         return configuration != null;
     }

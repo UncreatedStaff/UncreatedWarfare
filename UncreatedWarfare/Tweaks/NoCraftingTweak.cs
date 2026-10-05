@@ -1,5 +1,4 @@
-﻿using System;
-using Uncreated.Warfare.Events.Models;
+﻿using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Players;
@@ -25,6 +24,8 @@ internal sealed class NoCraftingTweak : IEventListener<CraftItemRequested>
 
     void IEventListener<CraftItemRequested>.HandleEvent(CraftItemRequested e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         TagAsset tag = e.Blueprint.GetCategoryTag();
         if (tag.GUID == AmmoTagGuid || tag.GUID == RepairTagGuid)
             return;

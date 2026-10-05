@@ -3,7 +3,6 @@ using DanielWillett.ReflectionTools.Emit;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
 using SDG.NetPak;
-using System;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -195,6 +194,8 @@ internal sealed class GetWorkshopFilesLastSentRecorder : IHarmonyPatch
     [UsedImplicitly]
     private static void OnSentDownloadWorkshopFilesMessage(ITransportConnection toPlayer)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         CSteamID steamId;
         if (!toPlayer.TryGetSteamId(out ulong steam64))
         {

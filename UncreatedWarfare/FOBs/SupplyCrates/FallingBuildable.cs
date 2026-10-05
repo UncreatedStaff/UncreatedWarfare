@@ -27,6 +27,8 @@ public class FallingBuildable : FallingItem
 
     protected virtual void GetHitTransform(out Vector3 position, out Quaternion rotation)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         float placementYaw = PlacementYaw;
 
         bool isBehindPlayer = Player.Transform.InverseTransformPoint(FinalRestPosition).z < 0;
@@ -54,6 +56,8 @@ public class FallingBuildable : FallingItem
 
     protected override void OnHitGround()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // try drop the barricade
 
         float offset = _buildableToPlace is ItemBarricadeAsset b ? b.offset : 0;

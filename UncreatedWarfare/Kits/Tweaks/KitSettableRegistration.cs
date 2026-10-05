@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using System;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Services;

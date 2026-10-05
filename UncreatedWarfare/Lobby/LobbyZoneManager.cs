@@ -96,6 +96,8 @@ public class LobbyZoneManager :
         if (_zoneCollider == null)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (isLoading)
         {
             foreach (WarfarePlayer player in _zoneCollider.ActiveObjects)
@@ -298,6 +300,8 @@ public class LobbyZoneManager :
         if (Disabled || TeamFlags == null)
             throw new InvalidOperationException("Lobby is disabled.");
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         PlayerLobbyComponent component = player.Component<PlayerLobbyComponent>();
         if (teamIndex < 0)
         {
@@ -347,6 +351,8 @@ public class LobbyZoneManager :
         if (TeamFlags == null)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         PlayerQuests quests = player.UnturnedPlayer.quests;
         PlayerLobbyComponent component = player.Component<PlayerLobbyComponent>();
         if (component.IsJoining)
@@ -376,6 +382,8 @@ public class LobbyZoneManager :
     {
         if (TeamFlags == null || _zoneCollider == null)
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         ref FlagInfo flag = ref TeamFlags[teamIndex];
         bool canJoinTeam = _behavior.CanJoinTeam(teamIndex, -1);
@@ -413,6 +421,8 @@ public class LobbyZoneManager :
     {
         if (_zoneCollider == null)
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         foreach (WarfarePlayer player in _zoneCollider.ActiveObjects)
         {
@@ -478,13 +488,17 @@ public class LobbyZoneManager :
 
     private void OnObjectEnteredLobby(IEventBasedProximity<WarfarePlayer> prox, WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         UpdatePlayerPositionalData(player);
         player.Component<PlayerLobbyComponent>().EnterLobby();
         UpdateAllFlags(player);
     }
 
-    private void OnObjectExitedLobby(IEventBasedProximity<WarfarePlayer> prox, WarfarePlayer player)
+    private static void OnObjectExitedLobby(IEventBasedProximity<WarfarePlayer> prox, WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         player.Component<PlayerLobbyComponent>().ExitLobby();
     }
 
@@ -534,6 +548,8 @@ public class LobbyZoneManager :
 
     private void UpdateTeamCounts()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _behavior.UpdateTeams();
 
         if (_zoneCollider == null)

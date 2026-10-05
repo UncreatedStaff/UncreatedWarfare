@@ -11,6 +11,8 @@ partial class EventDispatcher
     /// </summary>
     private void ProviderOnServerConnectedEarly(SteamPlayer steamPlayer)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         CSteamID steam64 = steamPlayer.playerID.steamID;
         if (_playerService is not PlayerService implPlayerService)
         {
@@ -79,6 +81,8 @@ partial class EventDispatcher
     /// </summary>
     private void ProviderOnServerConnected(CSteamID steam64)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         WarfarePlayer player = _playerService.GetOnlinePlayer(steam64);
 
         SubscribePlayerEvents(player);
@@ -108,6 +112,8 @@ partial class EventDispatcher
     /// </summary>
     private void ProviderOnServerDisconnected(CSteamID steam64)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         WarfarePlayer? player = _playerService.GetOnlinePlayerOrNull(steam64);
         if (player == null)
         {
@@ -179,6 +185,8 @@ partial class EventDispatcher
     /// </summary>
     private void ProviderOnBattlEyeKick(SteamPlayer client, string reason)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         WarfarePlayer? player = _playerService.GetOnlinePlayerOrNull(client);
         if (player == null)
         {

@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Configuration;
-using System;
 
 namespace Uncreated.Warfare.Layouts.Phases;
 public class ActionPhase : BasePhase<PhaseTeamSettings>

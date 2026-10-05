@@ -63,6 +63,9 @@ public class CommonTranslations : TranslationCollection
     [TranslationData("Sent when a player tries to use a command that requires them to be in main.")]
     public readonly Translation NotInMain = new Translation("<#b3a6a2>You must be in <#cedcde>MAIN</color> to use this command.");
 
+    [TranslationData("Sent when a player tries to use a command that requires them to be in the war room.")]
+    public readonly Translation NotInWarRoom = new Translation("<#b3a6a2>You must be in the <#cedcde>WAR ROOM</color> to use this command.");
+
     [TranslationData("Okay button in the popup UI.")]
     public readonly Translation PopupOkay = new Translation("OK", TranslationOptions.TMProUI);
 

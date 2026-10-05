@@ -203,6 +203,8 @@ public class ZoneStore : IHostedService, ILevelHostedService, IEarlyLevelHostedS
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public ITrackingProximity<WarfarePlayer> CreateColliderForZone(Zone zone)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         // avoid making GameObject if it'll error
@@ -237,6 +239,8 @@ public class ZoneStore : IHostedService, ILevelHostedService, IEarlyLevelHostedS
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public IProximity CreateProximityForZone(Zone zone)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         IProximity prox;
         Vector3 center = zone.Center;
         switch (zone.Shape)
@@ -286,6 +290,8 @@ public class ZoneStore : IHostedService, ILevelHostedService, IEarlyLevelHostedS
     /// </summary>
     public Zone? FindClosestZone(in Vector3 point, out float sqrDistance, ZoneType? type = null, float maxRange = float.NaN)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (ProximityZones.IsDefault)
         {
             sqrDistance = float.NaN;
@@ -325,6 +331,8 @@ public class ZoneStore : IHostedService, ILevelHostedService, IEarlyLevelHostedS
     /// </summary>
     public Zone? FindClosestZone(Vector2 point, out float sqrDistance, ZoneType? type = null, float maxRange = float.NaN)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (ProximityZones.IsDefault)
         {
             sqrDistance = float.NaN;
@@ -397,6 +405,8 @@ public class ZoneStore : IHostedService, ILevelHostedService, IEarlyLevelHostedS
     /// </summary>
     public string GetClosestLocationName(Vector3 position, bool shortName = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Zone? zone = GetClosestZone(position, null, null, isForLocation: true);
         if (zone != null)
         {
@@ -422,6 +432,8 @@ public class ZoneStore : IHostedService, ILevelHostedService, IEarlyLevelHostedS
 
     internal Zone? GetClosestZone(Vector3 position, ZoneType? type, FactionInfo? faction, bool isForLocation)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Zone? closest = null;
         float closestSqrDist = 0;
         if (!ProximityZones.IsDefault)
@@ -474,6 +486,8 @@ public class ZoneStore : IHostedService, ILevelHostedService, IEarlyLevelHostedS
     /// </summary>
     public Zone? SearchZone(ZoneType type, FactionInfo? faction = null)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         return faction == null
             ? Zones.FirstOrDefault(zone => zone.IsPrimary && zone.Type == type)
             : Zones.FirstOrDefault(zone => zone.IsPrimary && zone.Type == type && string.Equals(zone.Faction, faction.FactionId, StringComparison.Ordinal));
@@ -484,6 +498,8 @@ public class ZoneStore : IHostedService, ILevelHostedService, IEarlyLevelHostedS
     /// </summary>
     public bool IsInsideZone(Vector3 point, ZoneType type, FactionInfo? faction)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         return faction == null
             ? EnumerateInsideZones(point).Any(zone => zone.Type == type)
             : EnumerateInsideZones(point).Any(zone => zone.Type == type && string.Equals(zone.Faction, faction.FactionId, StringComparison.Ordinal));
@@ -494,6 +510,8 @@ public class ZoneStore : IHostedService, ILevelHostedService, IEarlyLevelHostedS
     /// </summary>
     public bool IsInsideZone(Vector2 point, ZoneType type, FactionInfo? faction)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         return faction == null
             ? EnumerateInsideZones(point).Any(zone => zone.Type == type)
             : EnumerateInsideZones(point).Any(zone => zone.Type == type && string.Equals(zone.Faction, faction.FactionId, StringComparison.Ordinal));
@@ -504,6 +522,8 @@ public class ZoneStore : IHostedService, ILevelHostedService, IEarlyLevelHostedS
     /// </summary>
     public Zone? SearchZone(string term, FactionInfo? relevantFaction = null)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int index = CollectionUtility.StringIndexOf(Zones, x => x.Name, term);
         if (index < 0)
         {
@@ -566,6 +586,8 @@ public class ZoneStore : IHostedService, ILevelHostedService, IEarlyLevelHostedS
     /// <param name="noOverlap">If <see langword="null"/> should be returned if more than one zone match.</param>
     public Zone? FindInsideZone(Vector3 pos, bool noOverlap)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (ProximityZones.IsDefault)
             return null;
 
@@ -604,6 +626,8 @@ public class ZoneStore : IHostedService, ILevelHostedService, IEarlyLevelHostedS
     /// <param name="noOverlap">If <see langword="null"/> should be returned if more than one zone match.</param>
     public Zone? FindInsideZone(Vector2 pos, bool noOverlap)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (ProximityZones.IsDefault)
             return null;
 

@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using System;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Players;
@@ -35,6 +34,8 @@ internal class SeedingVoteHud : VoteUIDisplay<VoteUIDisplayData>
     /// <inheritdoc />
     protected override void SendToPlayers(LanguageSet set)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         string title = _translations.SeedingVoteTitle.Translate(in set);
 
         string? voteNoUnselected = null, voteNoSelected = null;

@@ -42,6 +42,8 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
 
     public void ClearMapTacks()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         foreach (MapTackInfo tack in ActiveMapTacks)
@@ -54,6 +56,8 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
 
     public void AddMapTack(MapTack newMapTack, object owner)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         Vector3 pos = newMapTack.FeatureWorldPosition;
@@ -68,6 +72,8 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
 
     public bool RemoveMapTack(MapTack newMapTack)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         for (int i = 0; i < ActiveMapTacks.Count; ++i)
@@ -85,6 +91,8 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
 
     public int RemoveMapTacks(Func<MapTack, bool> filter)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         int ct = 0;
@@ -103,6 +111,8 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
     }
     public int RemoveMapTacks(Func<MapTack, object, bool> filter)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         int ct = 0;
@@ -122,6 +132,8 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
 
     public Vector3 TranslateWorldPointOntoMap(Vector3 featureWorldPosition)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Matrix4x4 matrix = ProjectWorldCoordsToMapTable(MapTable.Model, new Vector3(0, _tableInfo.VerticalSurfaceOffset, 0), new Vector2(_tableInfo.MapTableSquareWidth, _tableInfo.MapTableSquareWidth));
 
         return matrix.MultiplyPoint3x4(featureWorldPosition);
@@ -132,6 +144,8 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
     /// </summary>
     public static Matrix4x4 ProjectWorldCoordsToMapTable(Transform mapTableTransform, Vector3 platformOffset, Vector2 platformSize)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Vector3 scale = default;
         scale.x = platformSize.x / 2f;
         scale.y = platformSize.y / -2f;
@@ -158,6 +172,8 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
 
     void IEventListener<ClaimBedRequested>.HandleEvent(ClaimBedRequested e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         MapTackInfo mapTack = ActiveMapTacks.FirstOrDefault(t => t.Tack.Marker.Equals(e.Barricade));
         if (mapTack.Tack == null)
         {

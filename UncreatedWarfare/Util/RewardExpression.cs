@@ -27,6 +27,8 @@ public class RewardExpression
 
     public RewardExpression(string methodName, Type methodReturnType, Type dataReturnType, Type ownerType, IReadOnlyList<IEmittableVariable> variables, string expression, ILogger logger)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _methodName = methodName;
         _methodReturnType = methodReturnType;
         _dataReturnType = dataReturnType;
@@ -170,6 +172,8 @@ public class RewardExpression
 
     private bool Evaluate(ref int stPos, IOpCodeEmitter il, List<string> tokens, Dictionary<int, VariableInfo> vars, ref int stackSize)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         bool emitted = false;
         for (int i = stPos; i < tokens.Count;)
         {
@@ -526,6 +530,8 @@ public class RewardExpression
     }
     public object? TryEvaluate(object arg)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _method ??= CreateMethod();
 
         try
@@ -547,6 +553,8 @@ public class RewardExpression
 
     private EvaluateDelegate CreateMethod()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         List<string>? tokens = _tokens;
 
         Type[] parameters = [ typeof(object) ];

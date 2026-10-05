@@ -1,11 +1,9 @@
 using DanielWillett.ReflectionTools;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
 namespace Uncreated.Warfare.Util;
+
 internal static class ContextualTypeResolver
 {
     private static readonly Assembly ThisAssembly = typeof(ContextualTypeResolver).Assembly;
@@ -108,6 +106,8 @@ internal static class ContextualTypeResolver
 
     public static string TypeToString(Type type, Type? expectedBaseType = null)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         string? keyword = TryGetTypeKeyword(type);
         if (keyword != null)
             return keyword;
@@ -167,7 +167,8 @@ internal static class ContextualTypeResolver
     /// <param name="expectedBaseType">Any found types must be assignable to this type.</param>
     public static bool TryResolveType([NotNullWhen(true)] string? typeName, [NotNullWhen(true)] out Type? type, Type? expectedBaseType = null)
     {
-        
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         type = null;
         if (typeName == null)
             return false;
@@ -301,6 +302,8 @@ internal static class ContextualTypeResolver
 
     private static void LoadAllTypes()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Assembly warfareAssembly = Assembly.GetExecutingAssembly();
 
         List<Assembly> assemblies = [ warfareAssembly ];

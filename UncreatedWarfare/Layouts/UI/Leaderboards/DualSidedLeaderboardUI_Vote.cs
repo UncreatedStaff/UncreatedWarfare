@@ -36,6 +36,8 @@ partial class DualSidedLeaderboardUI
 
     private LayoutInfo[] ComputeCandidateLayouts()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         List<LayoutInfo> layouts = _layoutFactory.GetBaseLayoutFiles(_mapSwitchService?.SwitchingToMap?.DisplayName)
             .Select(x => _layoutFactory.ReadLayoutInfo(x.FullName, false)!)
             .ToList();
@@ -65,6 +67,8 @@ partial class DualSidedLeaderboardUI
 
     private void SendNoVotes(LanguageSet set)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // disables the vote button.
         while (set.MoveNext())
         {
@@ -74,6 +78,8 @@ partial class DualSidedLeaderboardUI
 
     private void SendVotes(LanguageSet set)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int i = 0;
         for (; i < _voteLayouts.Length; ++i)
         {
@@ -148,6 +154,8 @@ partial class DualSidedLeaderboardUI
         if (!IsVotingPeriodOpen)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         IsVotingPeriodOpen = false;
         int maxWinnerCount = -1;
         LayoutInfo? winner = null;
@@ -204,6 +212,8 @@ partial class DualSidedLeaderboardUI
             return;
         }
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int index = Array.FindIndex(VoteButtons, b => ReferenceEquals(b.Button.Button, button));
         if (index < 0 || index >= _voteLayouts.Length)
             return;
@@ -231,6 +241,8 @@ partial class DualSidedLeaderboardUI
 
     private void UpdateVoteCountLabels()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int max = _layoutVotes.Max();
         for (int vote = 0; vote < _layoutVotes.Length; ++vote)
         {

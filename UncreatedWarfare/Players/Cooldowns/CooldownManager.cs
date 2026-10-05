@@ -338,14 +338,11 @@ public sealed class CooldownManager : BaseAlternateConfigurationFile, ILayoutHos
         }
     }
 
-    /// <returns>
-    /// The deploy cooldown based on current player count.
-    /// </returns>
-    /// <remarks>Equation: <c>CooldownMin + (CooldownMax - CooldownMin) * (1 - Pow(1 - (PlayerCount - PlayersMin) * (1 / (PlayersMax - PlayersMin)), Alpha)</c>.</remarks>
+    /// <inheritdoc cref="GetFOBDeployCooldown(int)"/>
     public float GetFOBDeployCooldown() => GetFOBDeployCooldown(_playerService.OnlinePlayers.Count(x => x.Team.IsValid));
 
     /// <returns>
-    /// The deploy cooldown based on current player count.
+    /// The deploy cooldown based on the player count.
     /// </returns>
     /// <remarks>Equation: <c>CooldownMin + (CooldownMax - CooldownMin) * (1 - Pow(1 - (PlayerCount - PlayersMin) * (1 / (PlayersMax - PlayersMin)), Alpha)</c>.</remarks>
     public float GetFOBDeployCooldown(int players)

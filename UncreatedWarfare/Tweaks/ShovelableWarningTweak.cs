@@ -1,5 +1,4 @@
 using SDG.Framework.Utilities;
-using System;
 using System.Linq;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
@@ -33,6 +32,8 @@ internal class ShovelableWarningTweak : IEventListener<ProjectileSpawned>
             return;
         }
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // find emplacement from vehicle ID if it needs to warn enemies or friendlies
         ShovelableInfo? shovelableInfo = _fobManager.Configuration.Shovelables
             .FirstOrDefault(s => s.Emplacement != null
@@ -51,6 +52,8 @@ internal class ShovelableWarningTweak : IEventListener<ProjectileSpawned>
 
     private static void OnSolved(ShovelableInfo info, WarfareProjectile projectile, Vector3 projectedHitPosition, DateTime projectedImpactTime)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         float warnRadius = projectile.Asset.range;
         if (projectile.Ammo != null)
         {

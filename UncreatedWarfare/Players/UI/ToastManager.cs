@@ -225,12 +225,16 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
 
     public void BlockChannelFor(int channel, float time)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         CheckOutOfBoundsChannel(channel);
         Channels[channel].BlockFor(time);
     }
     
     public bool TryFindCurrentToastInfo(ToastMessageStyle style, out ToastMessage message)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         CheckOutOfBoundsToastMessageStyle(style);
 
         ToastMessageInfo info = ToastMessages[(int)style];
@@ -256,6 +260,9 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
     {
         if (!HasToasts || Hold || _hudManager.IsHidden(Player))
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         float time = Time.realtimeSinceStartup;
         bool updateAny = false;
         for (int i = 0; i < Channels.Length; ++i)
@@ -288,6 +295,8 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
 
     private void SkipExpirationIntl(int channel, ToastMessageStyle style)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ToastMessageChannel chnl = Channels[channel];
         if (!chnl.HasToasts || style != (ToastMessageStyle)(-1) && chnl.CurrentMessage.Style != style)
             return;
@@ -297,6 +306,8 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
     
     private void QueueIntl(in ToastMessage message)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ToastMessageInfo info = ToastMessages[(int)message.Style];
         ToastMessageChannel channel = Channels[info.Channel];
 
@@ -310,6 +321,8 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
 
     private void Send(in ToastMessage message, ToastMessageInfo info, ToastMessageChannel channel)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         HasToasts = true;
         channel.UpdateInfo(in message, info);
         if (info.UI != null)

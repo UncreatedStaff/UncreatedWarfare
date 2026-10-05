@@ -272,6 +272,8 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
         if (index < 0 || index >= PlayerStats.Length)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int teamIndex = -1;
         IReadOnlyList<Team> allTeams = Layout.TeamManager.AllTeams;
         for (int i = 0; i < allTeams.Count; ++i)
@@ -302,6 +304,8 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
 
     public virtual LeaderboardSet[] CreateLeaderboardSets()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         LeaderboardSet[] set = new LeaderboardSet[TeamManager.AllTeams.Count];
 
         for (int i = 0; i < TeamManager.AllTeams.Count; ++i)
@@ -314,6 +318,8 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
 
     private static void CreateLeaderboardRow(in LeaderboardSet.LeaderboardRow row, LeaderboardPhaseStatInfo[] visibleStats, Span<double> data)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ILeaderboardRow? rowBox = null;
         double[] stats = row.Player.Stats;
         for (int i = 0; i < visibleStats.Length; ++i)
@@ -383,6 +389,8 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
 
     private void CheckPlayer(WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         PlayerGameStatsComponent gameStats = player.Component<PlayerGameStatsComponent>();

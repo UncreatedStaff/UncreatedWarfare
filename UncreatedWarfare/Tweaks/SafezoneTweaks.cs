@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using System;
 using System.Linq;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
@@ -81,6 +80,8 @@ public class SafezoneTweaks :
         if (e.Parameters.cause == EDeathCause.KILL)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!CanDamage(e.Player.Position))
             e.Cancel();
     }
@@ -90,6 +91,8 @@ public class SafezoneTweaks :
     {
         if (!_zoneStore.IsInMainBase(e.Player.Position))
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         // if the player is dequipping a gun in main, it's convenient to turn
         // safety off for them in to save them from having to do it themselves later
@@ -128,6 +131,8 @@ public class SafezoneTweaks :
         if (e.Player.IsOnDuty)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!_zoneStore.IsInMainBase(e.Player.Position))
             return;
         
@@ -144,6 +149,8 @@ public class SafezoneTweaks :
     [EventListener(MustRunInstantly = true)]
     public void HandleEvent(PlayerEnteredZone e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (e.Zone.Type is ZoneType.MainBase or ZoneType.Lobby)
         {
             // heal player
@@ -198,6 +205,8 @@ public class SafezoneTweaks :
             return;
         }
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (e.Zone.Type != ZoneType.MainBase || _zoneStore.IsInMainBase(e.Player))
             return;
         
@@ -211,6 +220,8 @@ public class SafezoneTweaks :
 
     public void HandleEvent(ChangeFiremodeRequested e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (e.Player.IsOnDuty || !_zoneStore.IsInMainBase(e.Player))
             return;
 
@@ -220,6 +231,8 @@ public class SafezoneTweaks :
     // prevent damage to buildables and vehicles in sz
     public void HandleEvent(IDamageBuildableRequestedEvent e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (_zoneStore.IsInsideZone(e.Buildable.Position, ZoneType.MainBase, null))
         {
             e.Cancel();
@@ -228,6 +241,8 @@ public class SafezoneTweaks :
 
     public void HandleEvent(DamageVehicleRequested e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!CanDamage(e.Vehicle.Position))
             e.Cancel();
     }
@@ -236,6 +251,8 @@ public class SafezoneTweaks :
     {
         if (e.Player.IsOnDuty)
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         if (!_zoneStore.IsInWarRoom(e.Player))
             return;

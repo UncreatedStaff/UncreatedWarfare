@@ -50,6 +50,8 @@ partial class DualSidedLeaderboardUI :
 
     private void OpenChat()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         foreach (WarfarePlayer onlinePlayer in _playerService.OnlinePlayers)
         {
             ChatModeToggle.Update(onlinePlayer.UnturnedPlayer);
@@ -71,6 +73,8 @@ partial class DualSidedLeaderboardUI :
 
     private void OpenChatLate(WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ChatModeToggle.Update(player.UnturnedPlayer);
         ChatTextBox.TextBox.SetText(player.UnturnedPlayer, string.Empty);
         
@@ -79,6 +83,8 @@ partial class DualSidedLeaderboardUI :
 
     private void ChatSubmitted(UnturnedButton textbox, Player player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         string? text = ChatTextBox.TextBox.GetOrAddData(player).Text;
 
         if (text == null)
@@ -94,6 +100,8 @@ partial class DualSidedLeaderboardUI :
 
     private void UpdateChat()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         foreach (WarfarePlayer onlinePlayer in _playerService.OnlinePlayers)
         {
             UpdateChat(onlinePlayer);
@@ -102,6 +110,8 @@ partial class DualSidedLeaderboardUI :
 
     private void UpdateChat(WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         DualSidedLeaderboardPlayerData data = GetOrAddData(player.Steam64, _createData);
         int index = 0;
         ITransportConnection c = player.Connection;
@@ -131,6 +141,8 @@ partial class DualSidedLeaderboardUI :
         if (!IsActive && !_trackChat || text.Length == 0)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         DualSidedLeaderboardPlayerData data = GetOrAddData(recipient.Steam64, _createData);
         data.VisibleChats.Add(
             new ChatMessageInfo(
@@ -152,6 +164,8 @@ partial class DualSidedLeaderboardUI :
     {
         if (!IsActive)
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         foreach (WarfarePlayer onlinePlayer in e.TargetPlayers(e.Request))
         {

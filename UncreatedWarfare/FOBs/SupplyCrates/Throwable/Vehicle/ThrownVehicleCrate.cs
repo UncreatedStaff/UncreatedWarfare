@@ -29,6 +29,8 @@ public class ThrownVehicleCrate : ThrownSupplyCrate
 
     private void OnThrowableDestroyed()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // descending distance comparer
         IComparer<Component> comparer = new LookAtComparer<Component>(Throwable.transform.forward, x => x.transform.position - Throwable.transform.position, reverse: false);
 
@@ -84,6 +86,8 @@ public class ThrownVehicleCrate : ThrownSupplyCrate
 
     private void DropSupplies(WarfareVehicle warfareVehicle)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         foreach (IAssetLink<ItemAsset> itemAsset in warfareVehicle.Info.Rearm.Items)
         {
             ItemAsset? asset = itemAsset.GetAsset();

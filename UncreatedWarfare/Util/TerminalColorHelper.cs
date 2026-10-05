@@ -33,6 +33,8 @@ public static class TerminalColorHelper
     /// <remarks>See <see href="https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#text-formatting"/>.</remarks>
     public static unsafe string WrapMessageWithTerminalColorSequence(ConsoleColor color, ReadOnlySpan<char> message, bool background = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         WrapMessageWithColor8BitState state = default;
         state.Message = &message;
         state.Color = color;
@@ -64,6 +66,8 @@ public static class TerminalColorHelper
     /// <remarks>See <see href="https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#extended-colors"/>.</remarks>
     public static string WrapMessageWithTerminalColorSequence(int argb, ReadOnlySpan<char> message, bool background = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         unchecked
         {
             if ((byte)(argb >> 24) == 0) // console color
@@ -83,6 +87,8 @@ public static class TerminalColorHelper
     /// <remarks>See <see href="https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#extended-colors"/>.</remarks>
     public static unsafe string WrapMessageWithTerminalColorSequence(byte r, byte g, byte b, ReadOnlySpan<char> message, bool background = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         WrapMessageWithColorRGBState state = default;
         state.Message = &message;
         state.R = r;
@@ -117,6 +123,8 @@ public static class TerminalColorHelper
     /// <remarks>See <see href="https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#text-formatting"/>.</remarks>
     public static string GetTerminalColorSequence(ConsoleColor color, bool background = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GetTerminalColorSequence8BitState state = default;
         state.Color = color;
         state.Background = background;
@@ -140,6 +148,8 @@ public static class TerminalColorHelper
     /// <remarks>See <see href="https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#extended-colors"/>.</remarks>
     public static string GetTerminalColorSequence(int argb, bool background = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         unchecked
         {
             if ((byte)(argb >> 24) == 0) // console color
@@ -159,6 +169,8 @@ public static class TerminalColorHelper
     /// <remarks>See <see href="https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#extended-colors"/>.</remarks>
     public static string GetTerminalColorSequence(byte r, byte g, byte b, bool background = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GetTerminalColorSequenceRGBState state = default;
         state.Background = background;
         state.R = r;
@@ -196,6 +208,8 @@ public static class TerminalColorHelper
     /// <remarks>See <see href="https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#extended-colors"/>.</remarks>
     public static int GetTerminalColorSequenceLength(int argb, bool background = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         unchecked
         {
             if ((byte)(argb >> 24) == 0) // console color
@@ -238,6 +252,8 @@ public static class TerminalColorHelper
     /// <remarks>See <see href="https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#text-formatting"/>.</remarks>
     public static int WriteTerminalColorSequence(Span<char> data, ConsoleColor color, bool background = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int num = GetTerminalColorSequenceCode(color, background);
 
         data[0] = '\u001b';
@@ -266,6 +282,8 @@ public static class TerminalColorHelper
     /// <remarks>See <see href="https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#extended-colors"/>.</remarks>
     public static int WriteTerminalColorSequence(Span<char> data, int argb, bool background = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         unchecked
         {
             if ((byte)(argb >> 24) == 0) // console color
@@ -286,6 +304,8 @@ public static class TerminalColorHelper
     /// <remarks>See <see href="https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#extended-colors"/>.</remarks>
     public static int WriteTerminalColorSequence(Span<char> data, byte r, byte g, byte b, bool background = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#extended-colors
         data[0] = ConsoleEscapeCharacter;
         data[1] = '[';
@@ -389,6 +409,8 @@ public static class TerminalColorHelper
     /// </summary>
     public static unsafe string RemoveVirtualTerminalSequences(ReadOnlySpan<char> orig)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (orig.Length < 5)
             return orig.ToString();
 
@@ -453,6 +475,8 @@ public static class TerminalColorHelper
     [Pure]
     public static unsafe string ConvertRichTextToVirtualTerminalSequences(string str, StackColorFormatType format, int index = 0, int length = -1, RemoveRichTextOptions options = RemoveRichTextOptions.All, int argbForeground = DefaultForeground, int argbBackground = DefaultBackground)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         FormattingUtility.CheckTags();
         if (index >= str.Length || index < 0)
         {

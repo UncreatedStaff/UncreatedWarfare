@@ -42,6 +42,8 @@ public sealed class PropertiesTranslationStorageFactory : ITranslationStorageFac
 
     public ITranslationStorage Create(TranslationCollection collection)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         string fileName = collection.Name.Replace('\\', '/');
 
         if (!fileName.EndsWith(".properties", StringComparison.OrdinalIgnoreCase))
@@ -61,6 +63,8 @@ public sealed class PropertiesTranslationStorageFactory : ITranslationStorageFac
 
     public IEnumTranslationStorage<TEnum> CreateEnumStorage<TEnum>() where TEnum : unmanaged, Enum
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         TranslatableAttribute? info = ReflectionUtility.GetTypeDescriptorAttribute<TranslatableAttribute>(typeof(TEnum));
 
         string fileName;
@@ -149,6 +153,8 @@ file sealed class PropertiesTranslationStorage : ITranslationStorage, IDisposabl
 
     public IReadOnlyDictionary<TranslationLanguageKey, string> Load()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // ensure default directory is there
         string defaultDir = Path.Combine(_basePath, _languageService.DefaultLanguageCode);
         Directory.CreateDirectory(defaultDir);
@@ -190,6 +196,8 @@ file sealed class PropertiesTranslationStorage : ITranslationStorage, IDisposabl
         string? baseFolder = null,
         WriteTranslationsOptions options = WriteTranslationsOptions.Default)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         string langCode = language?.Code ?? _languageService.DefaultLanguageCode;
 
         string path = baseFolder == null ? GetFilePath(langCode) : Path.Combine(baseFolder, langCode, _fileName);
@@ -405,6 +413,8 @@ file sealed class PropertiesEnumTranslationStorage<TEnum> : IEnumTranslationStor
 
     public IReadOnlyDictionary<string, IReadOnlyDictionary<TEnum, string>> Load()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         LinearDictionary<string, IReadOnlyDictionary<TEnum, string>> tableTranslations
             = new LinearDictionary<string, IReadOnlyDictionary<TEnum, string>>(4);
 
@@ -437,6 +447,8 @@ file sealed class PropertiesEnumTranslationStorage<TEnum> : IEnumTranslationStor
         string? baseFolder = null,
         WriteTranslationsOptions options = WriteTranslationsOptions.Default)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _lastIntentionalWriteUtc = DateTime.UtcNow;
 
         string path = Path.Combine(baseFolder ?? _basePath, languageCode, _fileName);
@@ -527,6 +539,8 @@ file sealed class PropertiesEnumTranslationStorage<TEnum> : IEnumTranslationStor
 
     private bool ReadTranslations(string languageCode, string folder, IDictionary<TEnum, string> output)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         bool isDefault = string.Equals(_languageService.DefaultLanguageCode, languageCode, StringComparison.OrdinalIgnoreCase);
 
         string path = Path.Combine(folder, _fileName);

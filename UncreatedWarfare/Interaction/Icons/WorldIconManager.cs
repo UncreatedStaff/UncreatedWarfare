@@ -74,6 +74,8 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
         if (Provider.clients.Count == 0)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         float rt = Time.realtimeSinceStartup;
         float tickTime = rt - _lastTickTime;
         if ((rt - _lastRealtime) < _lowestTickSpeed && tickTime % _lowestTickSpeed >= (_lastRealtime - _lastTickTime) % _lowestTickSpeed)
@@ -131,6 +133,8 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
     /// </summary>
     public void UpdateAllIcons()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         float rt = Time.realtimeSinceStartup;
         _lastTickTime = rt;
 
@@ -154,6 +158,8 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
     /// </summary>
     public void RemoveAllIcons()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         foreach (KeyValuePair<Guid, List<WorldIconInfo>> iconSets in _iconsByGuid)
         {
             ClearEffectsByGuid(iconSets.Key, iconSets.Value);
@@ -178,6 +184,8 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
         if (icon == null)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         bool recheck = RemoveIconIntl(icon);
 
         if (recheck)
@@ -192,6 +200,8 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
     /// <returns>If tick speed needs to be rechecked.</returns>
     private bool RemoveIconIntl(WorldIconInfo icon)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (icon == null || !_allIcons.Remove(icon))
             return false;
 
@@ -247,6 +257,8 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
 
         if (!_iconsByGuid.TryGetValue(guid, out List<WorldIconInfo> list))
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         ClearEffectsByGuid(guid, list);
 
@@ -323,6 +335,8 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
     {
         GameThread.AssertCurrent();
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!icon.Effect.TryGetAsset(out EffectAsset? asset))
         {
             _logger.LogError("Unknown asset for icon {0}.", icon);
@@ -376,6 +390,8 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
 
     private void ClearEffectsByGuid(Guid guid, List<WorldIconInfo> list)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         float rt = Time.realtimeSinceStartup;
         bool anyNeedToBeCleared = false;
         ITransportConnection? singlePlayer = null;
@@ -421,6 +437,8 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
 
     private void RecheckTickSpeed()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         float min = float.NaN, max = float.NaN;
         foreach (WorldIconInfo info in _allIcons)
         {
@@ -454,6 +472,8 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
     {
         if (!player.IsOnline)
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         float rt = Time.realtimeSinceStartup;
         foreach (List<WorldIconInfo> iconSets in _iconsByGuid.Values)
@@ -507,6 +527,8 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
 
     private void RemovePlayerSpecificIcons(WarfarePlayer player, Team? team)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         bool recheck = false;
 
         List<Guid>? toRemove = null;

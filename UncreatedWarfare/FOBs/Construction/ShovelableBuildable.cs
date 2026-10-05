@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using System;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models.Fobs.Shovelables;
@@ -45,6 +44,8 @@ public class ShovelableBuildable : BuildableFobEntity<ShovelableInfo>
 
     public virtual void Complete(WarfarePlayer shoveler)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         IBuildable? completedBuildable = null;
         if (Info.CompletedStructure.TryGetAsset(out ItemPlaceableAsset? completedAsset))
         {
@@ -78,6 +79,8 @@ public class ShovelableBuildable : BuildableFobEntity<ShovelableInfo>
 
     private void DropEmplacement(EmplacementInfo emplacementInfo)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         emplacementInfo.Vehicle.AssertValid();
 
         // async void eats exceptions
@@ -112,6 +115,8 @@ public class ShovelableBuildable : BuildableFobEntity<ShovelableInfo>
     {
         if (IsCompleted)
             return false;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         if (amount <= 0)
         {

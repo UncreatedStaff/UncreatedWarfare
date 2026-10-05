@@ -155,6 +155,8 @@ public class ResourceFob : BaseFob, IBuildableFob, IResourceFob, IMapTackUIHandl
         _getProxyScore = GetProxyScore;
         _loopTicker.OnTick += (ticker, timeSinceStart, deltaTime) =>
         {
+            using IDisposable? profiler = ProfilerUtil.Profile();
+
             bool newProxyState = NearbyEnemies.Collection.Sum(_getProxyScore) >= 1;
             if (newProxyState != IsProxied)
             {
@@ -206,6 +208,8 @@ public class ResourceFob : BaseFob, IBuildableFob, IResourceFob, IMapTackUIHandl
 
     protected void UpdateIcon()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (Icon != null)
         {
             Icon.Dispose();
@@ -252,6 +256,8 @@ public class ResourceFob : BaseFob, IBuildableFob, IResourceFob, IMapTackUIHandl
 
     protected virtual void OnDeployTo(WarfarePlayer player, in DeploySettings settings)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // send a reminder to rearm if on low ammo
         KitPlayerComponent kitComp = player.Component<KitPlayerComponent>();
 
@@ -293,6 +299,8 @@ public class ResourceFob : BaseFob, IBuildableFob, IResourceFob, IMapTackUIHandl
     public void ChangeAmmo(float amount, SupplyChangeReason reason, WarfarePlayer? instigator = null) => ChangeSupplies(0, amount, reason, instigator);
     public void ChangeSupplies(float buildAmount, float ammoAmount, SupplyChangeReason reason, WarfarePlayer? instigator = null)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         buildAmount = Math.Max(-BuildCount, buildAmount);
         BuildCount += buildAmount;
         ammoAmount = Math.Max(-AmmoCount, ammoAmount);
@@ -320,6 +328,8 @@ public class ResourceFob : BaseFob, IBuildableFob, IResourceFob, IMapTackUIHandl
 
     protected virtual void NotifySuppliesChanged(SupplyType supplyType, float change)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         InvokeSuppliesUpdated(
             supplyType,
             (int)(supplyType == SupplyType.Build ? Math.Round(BuildCount) : Math.Round(AmmoCount))
@@ -435,17 +445,34 @@ public class ResourceFob : BaseFob, IBuildableFob, IResourceFob, IMapTackUIHandl
     private event Action<WarfarePlayer>? OnPlayerEntered;
     private event Action<WarfarePlayer>? OnPlayerExited;
 
-    protected internal void InvokeSuppliesUpdated(SupplyType type, int amount) => OnSuppliesUpdated?.Invoke(type, amount);
+    protected internal void InvokeSuppliesUpdated(SupplyType type, int amount)
+    {
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
-    protected internal void InvokeVehicleUpdated(MapTackVehicleType type, int amount) => OnVehicleUpdated?.Invoke(type, amount);
+        OnSuppliesUpdated?.Invoke(type, amount);
+    }
+
+    protected internal void InvokeVehicleUpdated(MapTackVehicleType type, int amount)
+    {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
+        OnVehicleUpdated?.Invoke(type, amount);
+    }
 
     protected internal void InvokeHealthUpdated()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         double? health = GetHealth();
         OnHealthUpdated?.Invoke(health);
     }
 
-    protected internal void InvokeAttributesUpdated() => OnAttributesUpdated?.Invoke(GetAttributes());
+    protected internal void InvokeAttributesUpdated()
+    {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
+        OnAttributesUpdated?.Invoke(GetAttributes());
+    }
 
     public virtual string GetTitle(in LanguageSet languageSet)
     {
@@ -495,6 +522,8 @@ public class ResourceFob : BaseFob, IBuildableFob, IResourceFob, IMapTackUIHandl
 
     protected virtual void UpdateVehicleCounts(IList<KeyValuePair<MapTackVehicleType, int>>? vehicleCounts)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Buffer.BlockCopy(_vehicleCounts, 0, VehicleCountsBuffer, 0, sizeof(int) * _vehicleCounts.Length);
         Array.Clear(_vehicleCounts, 0, _vehicleCounts.Length);
 

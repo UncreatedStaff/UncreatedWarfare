@@ -47,6 +47,8 @@ public class FlagElectricalGridHandler : IElectricalGridHandler, IEventListener<
     /// <inheritdoc />
     public void Start()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         foreach (Team team in _layout.TeamManager.AllTeams)
         {
             Zone? zone = _zoneStore.SearchZone(ZoneType.MainBase, team.Faction);
@@ -82,6 +84,8 @@ public class FlagElectricalGridHandler : IElectricalGridHandler, IEventListener<
 
     public bool IsPowered(LevelObject @object)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ElectricalGridBehaivor behaivor = _flagRotationService?.GridBehaivor ?? ElectricalGridBehaivor.EnabledWhenInRotation;
         if (behaivor == ElectricalGridBehaivor.AllEnabled)
             return true;
@@ -116,6 +120,8 @@ public class FlagElectricalGridHandler : IElectricalGridHandler, IEventListener<
 
     public bool IsPowered(InteractablePower otherInteractable)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ElectricalGridBehaivor behaivor = _flagRotationService?.GridBehaivor ?? ElectricalGridBehaivor.EnabledWhenInRotation;
         if (behaivor == ElectricalGridBehaivor.AllEnabled)
             return true;
@@ -160,6 +166,8 @@ public class FlagElectricalGridHandler : IElectricalGridHandler, IEventListener<
             return;
         }
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (e.OldObjective != null)
         {
             _electricalGridService.SetPowerForZoneObjects(e.OldObjective.Region.Primary.Zone, false, true);
@@ -176,6 +184,8 @@ public class FlagElectricalGridHandler : IElectricalGridHandler, IEventListener<
     {
         if (_flagRotationService == null)
             return false;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         IEnumerable<FlagObjective> rotation = _flagRotationService.GridBehaivor == ElectricalGridBehaivor.EnabledWhenObjective
             ? _flagRotationService.EnumerateObjectives()
@@ -196,6 +206,8 @@ public class FlagElectricalGridHandler : IElectricalGridHandler, IEventListener<
     {
         if (_flagRotationService == null)
             return false;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         IEnumerable<FlagObjective> rotation = _flagRotationService.GridBehaivor == ElectricalGridBehaivor.EnabledWhenObjective
             ? _flagRotationService.EnumerateObjectives()

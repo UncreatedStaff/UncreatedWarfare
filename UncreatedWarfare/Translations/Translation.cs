@@ -93,6 +93,8 @@ public class Translation : IDisposable
     /// </summary>
     public TranslationValue GetValueForLanguage(LanguageInfo? language)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         AssertInitialized();
 
         string langCode = language?.Code ?? LanguageService.DefaultCultureCode;
@@ -176,6 +178,8 @@ public class Translation : IDisposable
     /// <exception cref="ArgumentException">One of the values wasn't the right type.</exception>
     public string UnsafeTranslate(in TranslationArguments arguments, object?[] formatting)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Type[] genericArguments = GetType().GetGenericArguments();
         if (genericArguments.Length == 0)
         {

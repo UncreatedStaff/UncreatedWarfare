@@ -43,6 +43,8 @@ public struct ItemDescriptor
     {
         GameThread.AssertCurrent();
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ItemDescriptor[] list = new ItemDescriptor[items.Length];
         int listIndex = 0;
 

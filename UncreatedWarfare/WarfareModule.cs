@@ -395,6 +395,9 @@ public sealed class WarfareModule
         ConfigurationHelper.AddSourceWithMapOverride(configBuilder, FileProvider, systemConfigLocation);
         Configuration = configBuilder.Build();
 
+#if PROFILING
+        ProfilerUtil.Enabled = Configuration.GetValue<bool>("tests:profiling");
+#endif
         _systemConfigChangeToken = ChangeToken.OnChange(
             () => Configuration.GetReloadToken(),
             HandleSystemConfigUpdated
@@ -514,9 +517,6 @@ public sealed class WarfareModule
 
     internal void Shutdown()
     {
-        if (Singleton == this)
-            Singleton = null;
-
         _dispatcher = null;
 
         _systemConfigChangeToken?.Dispose();
@@ -576,6 +576,15 @@ public sealed class WarfareModule
 
         _logger.LogInformation("Cleaning up container...");
         ServiceProvider.Dispose();
+
+#if PROFILING
+        _logger.LogTrace("Flushing profiler data...");
+        ProfilerUtil.Flush();
+#endif
+
+        if (Singleton == this)
+            Singleton = null;
+
         CommandWindow.Log("Done - Shutting down");
     }
 
@@ -597,6 +606,12 @@ public sealed class WarfareModule
         bldr.RegisterType<ServerHeartbeatTimer>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
+
+#if PROFILING
+        bldr.RegisterType<ProfilerFlushService>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+#endif
 
         bldr.RegisterType<ActionLoggerService>()
             .AsSelf().AsImplementedInterfaces()

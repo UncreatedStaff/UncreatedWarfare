@@ -217,6 +217,8 @@ public class CommandWaitTask : CustomYieldInstruction, IDisposable
             if (_state != 0)
                 return;
 
+            using IDisposable? profiler = ProfilerUtil.Profile();
+
             dispatcher.RegisterCommandWaitTask(_task);
             _registered = true;
 

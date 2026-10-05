@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SDG.Framework.Utilities;
-using System;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
@@ -60,6 +59,8 @@ internal sealed class AfkKickComponent : IPlayerComponent, IDisposable
 
     private void OnUpdate()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Vector3 pos = Player.Position;
         float rt = Time.realtimeSinceStartup;
         if (_lastAfk < 0 || MathUtility.SquaredDistance(in pos, in _lastPos, true) > 0.0005 || Player.IsOnDuty)
@@ -89,6 +90,7 @@ internal sealed class AfkKickComponent : IPlayerComponent, IDisposable
                 return;
             }
 
+            await UniTask.SwitchToMainThread();
             if (Player.IsOnline)
             {
                 _logger.LogInformation("Player {0} kicked for being AFK for too long.", Player);
