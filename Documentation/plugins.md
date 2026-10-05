@@ -88,12 +88,12 @@ Set up your csproj file, updating your RootNamespace to include your gamemode's 
 
         <PackageReference Include="Uncreated.Warfare" Version="4.*" />
 
-        <PackageReference Include="PolySharp" Version="1.15.0">
+        <PackageReference Include="PolySharp" Version="1.*">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
         </PackageReference>
 
-        <PackageReference Include="Unturned.MSBuild" Version="1.0.0-test7">
+        <PackageReference Include="Unturned.MSBuild" Version="1.*">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
         </PackageReference>

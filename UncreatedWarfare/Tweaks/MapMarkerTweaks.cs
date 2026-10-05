@@ -14,7 +14,7 @@ using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Tweaks;
 
-public class MapMarkerTweaks : IEventListener<PlayerDropMarkerRequested>, IEventListener<SquadMemberLeft>, IEventListener<SquadLeaderUpdated>, ILayoutHostedService
+internal class MapMarkerTweaks : IEventListener<PlayerDropMarkerRequested>, IEventListener<SquadMemberLeft>, IEventListener<SquadLeaderUpdated>, ILayoutHostedService
 {
     private readonly IPlayerService _playerService;
 

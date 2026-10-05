@@ -7,7 +7,7 @@ using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.FOBs.StateStorage.Tweaks;
 
-public class BarricadeApplySavedStateTweaks : IEventListener<BarricadePlaced>
+internal class BarricadeApplySavedStateTweaks : IEventListener<BarricadePlaced>
 {
     private readonly ILogger _logger;
     private readonly BarricadeStateStore _barricadeStateStore;

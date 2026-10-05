@@ -4,7 +4,7 @@ using Uncreated.Warfare.Events.Models.Vehicles;
 
 namespace Uncreated.Warfare.Vehicles.Events.Tweaks;
 
-public class VehicleTrunkTweaks :
+internal class VehicleTrunkTweaks :
     IEventListener<VehicleExploded>,
     IEventListener<VehicleDespawned>
 {

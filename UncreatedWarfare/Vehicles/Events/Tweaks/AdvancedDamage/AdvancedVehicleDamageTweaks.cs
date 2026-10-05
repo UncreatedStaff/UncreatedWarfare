@@ -10,7 +10,7 @@ using Uncreated.Warfare.Vehicles.WarfareVehicles.Damage;
 
 namespace Uncreated.Warfare.Vehicles.Events.Tweaks.AdvancedDamage;
 
-public class AdvancedVehicleDamageTweaks : 
+internal class AdvancedVehicleDamageTweaks : 
     ILayoutHostedService,
     IEventListener<ProjectileExploding>,
     IEventListener<VehiclePreDamaged>,

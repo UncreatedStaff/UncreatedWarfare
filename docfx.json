@@ -10,7 +10,7 @@
           ]
         }
       ],
-      "dest": "api"
+      "output": "api"
     }
   ],
   "build": {
@@ -42,6 +42,15 @@
       "_appTitle": "Uncreated Framework",
       "_enableSearch": true,
       "pdf": false
+    },
+    "xref": [
+      "https://normanderwan.github.io/UnityXrefMaps/2022.3/xrefmap.yml",
+      "https://learn.microsoft.com/en-us/dotnet/.xrefmap.json"
+    ],
+    "sitemap": {
+      "baseUrl": "https://uncreated.network/doc",
+      "priority": 0.35,
+      "changefreq": "monthly"
     }
   }
 }

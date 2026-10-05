@@ -598,7 +598,7 @@ public partial class ModerationUI : UnturnedUI
         ModerationHistorySortModeButton.Update(player.UnturnedPlayer, false);
         ModerationPlayerSearchModeButton.Update(player.UnturnedPlayer, false);
 
-        SendModerationPlayerList(player);
+        await SendModerationPlayerList(player);
 
         int i = 0;
         int ct = Math.Min(PunishmentPresets.Presets.Count, Presets.Length);

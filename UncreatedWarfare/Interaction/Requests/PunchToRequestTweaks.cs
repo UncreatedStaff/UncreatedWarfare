@@ -6,7 +6,7 @@ using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Interaction.Requests;
 
-public class PunchToRequestTweaks : IAsyncEventListener<PlayerPunched>
+internal class PunchToRequestTweaks : IAsyncEventListener<PlayerPunched>
 {
     private readonly SignInstancer _signInstancer;
     private readonly ILogger _logger;

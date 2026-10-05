@@ -124,8 +124,8 @@ public class FactionDataStore : IFactionDataStore, IHostedService
 
     public async Task ReloadCache(CancellationToken token = default)
     {
-        IServiceScope scope = _serviceProvider.CreateScope();
-        await using IFactionDbContext dbContext = scope.ServiceProvider.GetRequiredService<IFactionDbContext>();
+        await using AsyncServiceScope scope = _serviceProvider.CreateAsyncScope();
+        IFactionDbContext dbContext = scope.ServiceProvider.GetRequiredService<IFactionDbContext>();
 
         List<Faction> dbModels = await dbContext.Factions
             .Include(faction => faction.Assets)
