@@ -139,6 +139,9 @@ public static class ProfilerUtil
 
     private static void FlushIntl(ConcurrentDictionary<UncreatedProfilerKey, ProfilerRecord> records, DateTime startTime)
     {
+        if (_records.Count == 0)
+            return;
+
         string baseDir = WarfareModule.IsActive ? WarfareModule.Singleton.HomeDirectory : Environment.CurrentDirectory;
 
         string directory = Path.Combine(baseDir, "Profiling");

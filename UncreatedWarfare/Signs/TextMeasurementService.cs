@@ -8,7 +8,8 @@ public class TextMeasurementService : IDisposable, ILayoutHostedService
 {
     private readonly TextMeshPro _textMeshPro;
     private readonly Dictionary<Guid, SignMetrics> _metrics = new Dictionary<Guid, SignMetrics>(8);
-    private readonly Dictionary<CacheKey, TMP_LineInfo[]> _cache = new Dictionary<CacheKey, TMP_LineInfo[]>(64);
+    // null means one line
+    private readonly Dictionary<CacheKey, TMP_LineInfo[]?> _cache = new Dictionary<CacheKey, TMP_LineInfo[]?>(64);
 
     public TextMeasurementService()
     {
@@ -97,7 +98,7 @@ public class TextMeasurementService : IDisposable, ILayoutHostedService
             return null;
 
         CacheKey key = new CacheKey(metrics.Sign, text);
-        if (_cache.TryGetValue(key, out TMP_LineInfo[] lines))
+        if (_cache.TryGetValue(key, out TMP_LineInfo[]? lines))
         {
             return lines;
         }
@@ -107,6 +108,12 @@ public class TextMeasurementService : IDisposable, ILayoutHostedService
         _textMeshPro.fontSize = preferredFontSize;
 
         TMP_TextInfo info = _textMeshPro.GetTextInfo(text);
+
+        if (info.lineCount == 1)
+        {
+            _cache.Add(key, null);
+            return null;
+        }
 
         lines = new TMP_LineInfo[info.lineCount];
         Array.Copy(info.lineInfo, lines, info.lineCount);
