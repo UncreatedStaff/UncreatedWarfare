@@ -13,7 +13,7 @@ namespace Uncreated.Warfare.Players.Unlocks;
 public class QuestUnlockRequirement : UnlockRequirement, IEquatable<QuestUnlockRequirement>
 {
     private RequestTranslations? _reqTranslations;
-    // private QuestService? _questService;
+    private QuestService? _questService;
     public Guid QuestId { get; set; }
     public Guid[] UnlockPresets { get; set; } = Array.Empty<Guid>();
 
@@ -22,6 +22,7 @@ public class QuestUnlockRequirement : UnlockRequirement, IEquatable<QuestUnlockR
     {
         base.Initialize(serviceProvider);
         _reqTranslations = serviceProvider.GetRequiredService<TranslationInjection<RequestTranslations>>().Value;
+        _questService = serviceProvider.GetRequiredService<QuestService>();
     }
 
     /// <inheritdoc />
@@ -100,7 +101,7 @@ public class QuestUnlockRequirement : UnlockRequirement, IEquatable<QuestUnlockR
 
         if (asset != null && ctx.Player != null)
         {
-            QuestService.ServerTrackQuest(ctx.Player, asset);
+            _questService?.StartTrackingQuest(ctx.Player, asset);
         }
 
         return ctx.Reply(_reqTranslations.RequestKitQuestIncomplete, asset!);

@@ -1,7 +1,6 @@
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
 using SDG.Framework.Utilities;
-using System;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Buildables;
@@ -25,6 +24,7 @@ namespace Uncreated.Warfare.StrategyMaps;
 
 [Priority(-4) /* after FlagService and VehicleSpawnerService */]
 public class StrategyMapManager :
+    IDisposable,
     ILayoutHostedService,
     IEventListenerProvider,
     IEventListener<BarricadePlaced>,
@@ -113,7 +113,14 @@ public class StrategyMapManager :
             if (info == null)
                 continue;
 
-            RegisterStrategyMap(new BuildableBarricade(barricade.Drop), info);
+            IBuildable buildable = new BuildableBarricade(barricade.Drop);
+            RegisterStrategyMap(buildable, info);
+
+            StrategyMap? map = _strategyMaps.FirstOrDefault(x => x.MapTable.Equals(buildable));
+            if (map == null)
+                continue;
+
+            map.DestroyOldMapTacks();
         }
     }
 
@@ -298,6 +305,14 @@ public class StrategyMapManager :
             return new FlagMapTack(this, map, _assetConfiguration.GetAssetLink<ItemPlaceableAsset>("Buildables:MapTacks:NeutralFlag"), flag);
         else
             return new FlagMapTack(this, map, flag.Owner.Faction.MapTackFlag, flag);
+    }
+
+    public void Dispose()
+    {
+        for (int i = _strategyMaps.Count - 1; i >= 0; --i)
+        {
+            _strategyMaps[i].Dispose();
+        }
     }
 
     #region UI Stuff

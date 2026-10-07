@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Primitives;
-using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -9,8 +8,10 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Interaction;
-using Uncreated.Warfare.Lobby;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Players.Saves;
+using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
@@ -30,6 +31,8 @@ public class QuestService : ILayoutHostedService, IEventListenerProvider, IDispo
     private readonly IServiceProvider _serviceProvider;
     private readonly ChatService _chatService;
     private readonly QuestTranslations _translations;
+    private readonly HudManager _hudManager;
+    private readonly IPlayerService _playerService;
     private readonly SemaphoreSlim _rewardsSemaphore = new SemaphoreSlim(1, 1);
 
     public IReadOnlyList<QuestTemplate> Templates { get; private set; }
@@ -61,11 +64,14 @@ public class QuestService : ILayoutHostedService, IEventListenerProvider, IDispo
         _translations = serviceProvider.GetRequiredService<TranslationInjection<QuestTranslations>>().Value;
         _chatService = serviceProvider.GetRequiredService<ChatService>();
         _module = serviceProvider.GetRequiredService<WarfareModule>();
+        _hudManager = serviceProvider.GetRequiredService<HudManager>();
+        _playerService = serviceProvider.GetRequiredService<IPlayerService>();
         _serviceProvider = serviceProvider;
         Templates = Array.Empty<QuestTemplate>();
 
         ActiveTrackers = new ReadOnlyCollection<QuestTracker>(_activeTrackers);
         _trackQuests = true;
+        CountQuests = true;
     }
 
     async UniTask ILayoutHostedService.StartAsync(CancellationToken token)
@@ -335,10 +341,14 @@ public class QuestService : ILayoutHostedService, IEventListenerProvider, IDispo
             player.UnturnedPlayer.quests.ServerAddQuest(questAsset);
             _logger.LogConditional("Added quest: {0} for player {1}.", questAsset, tracker.Player);
 
-            if (player.Save.TrackQuests)
-                ServerTrackQuest(player, questAsset);
-            else
-                ServerUntrackQuest(player, questAsset);
+            if (player.UnturnedPlayer.quests.GetTrackedQuest() == null)
+            {
+                StartTrackingQuest(player, questAsset);
+            }
+            else if (_hudManager.IsTrackedQuestHidden(player))
+            {
+                ServerUntrackQuest(player);
+            }
         }
 
         _logger.LogDebug("Tracker added: {0} for player {1}.", tracker.Quest.Name, tracker.Player);
@@ -378,6 +388,14 @@ public class QuestService : ILayoutHostedService, IEventListenerProvider, IDispo
         }
     }
 
+    internal void StartTrackingQuest(WarfarePlayer player, QuestAsset quest)
+    {
+        if (!player.Save.TrackQuests || _hudManager.IsTrackedQuestHidden(player))
+            return;
+
+        ServerTrackQuest(player, quest);
+    }
+
     public static void ServerTrackQuest(WarfarePlayer player, QuestAsset quest)
     {
         if (quest == null)
@@ -388,22 +406,11 @@ public class QuestService : ILayoutHostedService, IEventListenerProvider, IDispo
         if (player is not { IsOnline: true })
             return;
 
-        PlayerLobbyComponent? lobbyComp = player.ComponentOrNull<PlayerLobbyComponent>();
-        if (lobbyComp != null && !lobbyComp.TryTrackQuest(quest))
-        {
-            ServerUntrackQuest(player, quest);
-        }
-
         QuestAsset? current = player.UnturnedPlayer.quests.GetTrackedQuest();
-        if (current != null)
-        {
-            if (current.GUID != quest.GUID && player.Save.TrackQuests)
-            {
-                player.UnturnedPlayer.quests.ServerAddQuest(quest);
-            }
-        }
-        else if (player.Save.TrackQuests)
-            player.UnturnedPlayer.quests.ServerAddQuest(quest);
+        if (current != null && current.GUID == quest.GUID)
+            return;
+
+        player.UnturnedPlayer.quests.ServerAddQuest(quest);
     }
 
     public static void ServerUntrackQuest(WarfarePlayer player, QuestAsset quest)
@@ -421,6 +428,20 @@ public class QuestService : ILayoutHostedService, IEventListenerProvider, IDispo
             return;
 
         player.UnturnedPlayer.quests.ServerAddQuest(quest);
+    }
+
+    public static void ServerUntrackQuest(WarfarePlayer player)
+    {
+        GameThread.AssertCurrent();
+
+        if (player is not { IsOnline: true })
+            return;
+
+        QuestAsset? current = player.UnturnedPlayer.quests.GetTrackedQuest();
+        if (current == null)
+            return;
+
+        player.UnturnedPlayer.quests.ServerAddQuest(current);
     }
 
     void IEventListenerProvider.AppendListeners<TEventArgs>(TEventArgs args, List<object> listeners)
@@ -464,6 +485,44 @@ public class QuestService : ILayoutHostedService, IEventListenerProvider, IDispo
                 continue;
 
             quests.ServerRemoveQuest(q, wasCompleted: false);
+        }
+    }
+
+    /// <summary>
+    /// Invoked when <see cref="BinaryPlayerSave.TrackQuests"/> is changed.
+    /// </summary>
+    internal void ApplyTrackedQuestOption(WarfarePlayer player)
+    {
+        GameThread.AssertCurrent();
+
+        if (!player.Save.TrackQuests || _hudManager.IsTrackedQuestHidden(player))
+        {
+            ServerUntrackQuest(player);
+            return;
+        }
+
+        foreach (QuestTracker tracker in _activeTrackers)
+        {
+            if (!player.Equals(tracker.Player)
+                || tracker.Preset is not IAssetQuestPreset assetPreset
+                || Assets.find<QuestAsset>(assetPreset.Asset) is not { } questAsset)
+            {
+                continue;
+            }
+
+            ServerTrackQuest(player, questAsset);
+
+            // only track one quest.
+            // multiple trackers can map to one quest asset since they have multiple conditions.
+            return;
+        }
+    }
+
+    internal void ApplyTrackedQuestOptionToAll()
+    {
+        foreach (WarfarePlayer player in _playerService.OnlinePlayers)
+        {
+            ApplyTrackedQuestOption(player);
         }
     }
 }

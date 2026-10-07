@@ -1,13 +1,12 @@
 using Microsoft.Extensions.DependencyInjection;
 using SDG.Framework.Utilities;
 using StackCleaner;
-using System;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
-using Uncreated.Warfare.Quests;
+using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
@@ -20,7 +19,7 @@ namespace Uncreated.Warfare.Lobby;
 [PlayerComponent]
 public class PlayerLobbyComponent : IPlayerComponent, IDisposable
 {
-    private QuestAsset? _previouslyTrackedQuest;
+    private IDisposable? _disableQuestsHandle;
     private uint _simCount = uint.MaxValue;
 
 #nullable disable
@@ -34,6 +33,7 @@ public class PlayerLobbyComponent : IPlayerComponent, IDisposable
     private ZoneStore _zoneStore;
     private ILogger<PlayerLobbyComponent> _logger;
     private SquadManager _squadManager;
+    private HudManager _hudManager;
 
 #nullable restore
 
@@ -63,6 +63,7 @@ public class PlayerLobbyComponent : IPlayerComponent, IDisposable
         _zoneStore = serviceProvider.GetRequiredService<ZoneStore>();
         _logger = serviceProvider.GetRequiredService<ILogger<PlayerLobbyComponent>>();
         _squadManager = serviceProvider.GetRequiredService<SquadManager>();
+        _hudManager = serviceProvider.GetRequiredService<HudManager>();
     }
     
     public void UpdatePositionalData(int lookingTeam, int closestTeam)
@@ -157,11 +158,9 @@ public class PlayerLobbyComponent : IPlayerComponent, IDisposable
 
     public void EnterLobby()
     {
-        _previouslyTrackedQuest = Player.UnturnedPlayer.quests.GetTrackedQuest();
-        if (_previouslyTrackedQuest != null)
-        {
-            QuestService.ServerUntrackQuest(Player, _previouslyTrackedQuest);
-        }
+        _disableQuestsHandle?.Dispose();
+        _disableQuestsHandle = _hudManager.HideTrackedQuest(Player);
+        WarfareModule.Singleton.GlobalLogger.LogConditional("Hide tracked quest.");
 
         IsInLobby = true;
         UpdateUI(send: true);
@@ -225,10 +224,9 @@ public class PlayerLobbyComponent : IPlayerComponent, IDisposable
         _closestTeam = -1;
         IsInLobby = false;
 
-        if (_previouslyTrackedQuest != null)
-        {
-            QuestService.ServerTrackQuest(Player, _previouslyTrackedQuest);
-        }
+        _disableQuestsHandle?.Dispose();
+        _disableQuestsHandle = null;
+        WarfareModule.Singleton.GlobalLogger.LogConditional("Show tracked quest.");
 
         if (_simCount != uint.MaxValue)
         {
@@ -369,17 +367,6 @@ public class PlayerLobbyComponent : IPlayerComponent, IDisposable
         }
     }
 
-    public bool TryTrackQuest(QuestAsset quest)
-    {
-        if (IsInLobby)
-        {
-            _previouslyTrackedQuest = quest;
-            return false;
-        }
-
-        return true;
-    }
-
     public void Dispose()
     {
         if (_simCount != uint.MaxValue)
@@ -387,5 +374,9 @@ public class PlayerLobbyComponent : IPlayerComponent, IDisposable
             TimeUtility.physicsUpdated -= FixedUpdate;
             _simCount = uint.MaxValue;
         }
+
+        _disableQuestsHandle?.Dispose();
+        _disableQuestsHandle = null;
+        WarfareModule.Singleton.GlobalLogger.LogConditional("Show tracked quest.");
     }
 }

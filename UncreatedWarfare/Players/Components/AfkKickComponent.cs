@@ -12,8 +12,8 @@ namespace Uncreated.Warfare.Players.Components;
 [PlayerComponent]
 internal sealed class AfkKickComponent : IPlayerComponent, IDisposable
 {
-    public const float AfkTimeMaxSeconds = 6 * 60;
-    public const float AfkWarningSeconds = 5 * 60;
+    public const float AfkTimeMaxSeconds = 10 * 60;
+    public const float AfkWarningSeconds = 8 * 60;
 
     private bool _hasSentWarning;
 

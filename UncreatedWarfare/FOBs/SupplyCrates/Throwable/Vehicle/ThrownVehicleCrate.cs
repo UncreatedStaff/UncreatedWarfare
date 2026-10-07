@@ -1,4 +1,8 @@
+#if DEBUG
+// #define REFILL_TURRETS_DEBUG
+#endif
 using System;
+using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.UI;
@@ -84,17 +88,123 @@ public class ThrownVehicleCrate : ThrownSupplyCrate
             warfareVehicle.FlareEmitter.ReloadFlares();
     }
 
+    private struct TurretRefillState
+    {
+        public ItemMagazineAsset? Magazine;
+        public ItemGunAsset? Gun;
+
+        /// <summary>
+        /// Amount needed to add to fill up the magazine.
+        /// </summary>
+        public byte AmmoLeft;
+
+        public bool PendingSendToPlayer;
+    }
+
     private void DropSupplies(WarfareVehicle warfareVehicle)
     {
         using IDisposable? profiler = ProfilerUtil.Profile();
+
+        // collect some info about the current ammo in the turrets before refilling
+        Passenger[] turrets = warfareVehicle.Vehicle.turrets;
+        TurretRefillState[] turretInfo = new TurretRefillState[turrets.Length];
+        for (int i = 0; i < turrets.Length; ++i)
+        {
+            Passenger turret = turrets[i];
+            ref TurretRefillState state = ref turretInfo[i];
+
+            state.Gun = Assets.find(EAssetType.ITEM, turret.turret.itemID) as ItemGunAsset;
+            if (state.Gun == null || turret.state.Length < 18)
+                continue;
+
+            byte ammoCt = turret.state[GunStateIndices.AMMO];
+            ushort magId = BitConverter.ToUInt16(turret.state, (int)AttachmentType.Magazine);
+            state.Magazine = Assets.find(EAssetType.ITEM, magId) as ItemMagazineAsset;
+
+            if (state.Magazine == null)
+            {
+                // no magazine loaded, choose default one
+                state.Magazine = state.Gun.SelectDefaultMagazine();
+                state.AmmoLeft = state.Magazine?.MaxAmountAsByte ?? state.Gun.countMax;
+                continue;
+            }
+
+            byte maxAmount = state.Magazine.MaxAmountAsByte;
+            if (ammoCt >= maxAmount)
+            {
+                // mag is already full
+                continue;
+            }
+
+            state.AmmoLeft = (byte)(maxAmount - ammoCt);
+        }
+
+#if REFILL_TURRETS_DEBUG
+        // debugging dump
+        ILogger logger = WarfareModule.Singleton.ServiceProvider.Resolve<ILogger<ThrownVehicleCrate>>();
+        if (logger.IsEnabled(LogLevel.Trace))
+        {
+            logger.LogTrace($"Vehicle: {warfareVehicle.Asset.name}");
+            logger.LogTrace($"Turrets: {turrets.Length}");
+            for (int i = 0; i < turrets.Length; ++i)
+            {
+                Passenger turret = turrets[i];
+                ref TurretRefillState state = ref turretInfo[i];
+
+                logger.LogTrace($"-Turret {i}-: {turret.turret.itemID} (seat {turret.turret.seatIndex})");
+                logger.LogTrace($"Gun       : {state.Gun?.name ?? "null"}");
+                logger.LogTrace($"Magazine  : {state.Magazine?.name ?? "null"}");
+                logger.LogTrace($"Ammo Left : {state.AmmoLeft}");
+            }
+        }
+#endif
 
         foreach (IAssetLink<ItemAsset> itemAsset in warfareVehicle.Info.Rearm.Items)
         {
             ItemAsset? asset = itemAsset.GetAsset();
             if (asset == null)
                 continue;
+
+            byte amount = asset.MaxAmountAsByte;
+            for (int i = 0; i < turrets.Length; ++i)
+            {
+                ref TurretRefillState state = ref turretInfo[i];
+                if (state.AmmoLeft == 0)
+                {
+                    // already filled the turret
+                    continue;
+                }
+
+                if (state.Magazine == null || state.Magazine.GUID != asset.GUID)
+                    continue;
+
+                // rearm magazine instead of dropping the magazine
+                byte amountAvailable = Math.Min(state.AmmoLeft, amount);
+                amount -= amountAvailable;
+                state.AmmoLeft -= amountAvailable;
+                state.PendingSendToPlayer |= UpdateTurretMagazineState(warfareVehicle, i, state.Magazine, state.AmmoLeft);
+#if REFILL_TURRETS_DEBUG
+                logger.LogTrace($"Used {amountAvailable} ammo to refill turret {i} from missing {state.AmmoLeft + amountAvailable} ammo to missing {state.AmmoLeft} ammo. Left to drop: {amount}.");
+#endif
+            }
+
+            if (amount <= 0)
+                continue;
             
-            ItemManager.dropItem(new Item(asset, EItemOrigin.CRAFT), Throwable.transform.position, false, true, true);
+#if REFILL_TURRETS_DEBUG
+            logger.LogTrace($"Dropping item {asset.name} with amount: {amount}.");
+#endif
+            // if we didn't use the entire mag drop the item
+            ItemManager.dropItem(new Item(asset, EItemOrigin.CRAFT) { amount = amount }, Throwable.transform.position, false, true, true);
+        }
+
+        // state could be updated multiple times for one turret, so just send them all at the end
+        for (int i = 0; i < turrets.Length; ++i)
+        {
+            if (turretInfo[i].PendingSendToPlayer)
+            {
+                turrets[i].player.player.equipment.sendUpdateState();
+            }
         }
         
         // spawn a nice effect
@@ -104,5 +214,24 @@ public class ThrownVehicleCrate : ThrownSupplyCrate
             relevantDistance = 70,
             reliable = true
         });
+    }
+
+    /// <returns>Needs sent to player?</returns>
+    private static bool UpdateTurretMagazineState(WarfareVehicle warfareVehicle, int turretIndex, ItemMagazineAsset magazine, byte amountFromFull)
+    {
+        byte full = magazine.MaxAmountAsByte;
+        byte amount = (byte)(full - Math.Min(full, amountFromFull));
+
+        InteractableVehicle vehicle = warfareVehicle.Vehicle;
+        Passenger turret = vehicle.turrets[turretIndex];
+
+        BitConverter.TryWriteBytes(
+            turret.state.AsSpan((int)AttachmentType.Magazine),
+            magazine.id
+        );
+        turret.state[GunStateIndices.MAGAZINE_QUALITY] = 100;
+        turret.state[GunStateIndices.AMMO] = amount;
+
+        return turret.player != null;
     }
 }

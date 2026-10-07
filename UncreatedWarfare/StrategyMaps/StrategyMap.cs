@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using System;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Events.Models;
@@ -8,7 +7,7 @@ using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.FOBs.Rallypoints;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Proximity;
 using Uncreated.Warfare.StrategyMaps.MapTacks;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
@@ -18,6 +17,8 @@ namespace Uncreated.Warfare.StrategyMaps;
 
 public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
 {
+    private static readonly List<RegionCoordinate> MapTackSearchBuffer = new List<RegionCoordinate>(4);
+
     private readonly MapTableInfo _tableInfo;
     private readonly BuildableAttributesDataStore _attributeStore;
     internal readonly List<MapTackInfo> ActiveMapTacks;
@@ -40,9 +41,91 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
         Position = buildable.Position;
     }
 
+    internal void DestroyOldMapTacks()
+    {
+        foreach (IBuildable buildable in EnumerateBuildablesOnSurface())
+        {
+            if (ActiveMapTacks.Exists(t => t.Tack.Marker.Equals(buildable)))
+                continue;
+
+            WarfareModule.Singleton.GlobalLogger.LogTrace($"Destroying unregistered map tack: {buildable.Asset.name}.");
+            buildable.Destroy();
+        }
+    }
+
+    /// <summary>
+    /// Enumerates all buildables placed on this map's plane based on their position, irrespective to whether or not they're registered as map tacks.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
+    public IEnumerable<IBuildable> EnumerateBuildablesOnSurface()
+    {
+        GameThread.AssertCurrent();
+
+        Vector3 offset = new Vector3(0f, _tableInfo.VerticalSurfaceOffset, 0f);
+        Vector3 scale;
+        scale.x = _tableInfo.MapTableSquareWidth / 2f;
+        scale.y = _tableInfo.MapTableSquareWidth / -2f;
+        scale.z = 0f;
+
+        Transform model = MapTable.Model;
+        Vector3 planePosition = model.position + offset;
+        Matrix4x4 normalizedToBarricade = Matrix4x4.TRS(planePosition, model.rotation, scale);
+
+        Vector3 bl = normalizedToBarricade.MultiplyPoint3x4(new Vector3(-1f, -1f, -0f));
+        Vector3 tl = normalizedToBarricade.MultiplyPoint3x4(new Vector3(-1f, 1f, 0f));
+        Vector3 br = normalizedToBarricade.MultiplyPoint3x4(new Vector3(1f, -1f, 0f));
+        Vector3 tr = normalizedToBarricade.MultiplyPoint3x4(new Vector3(1f, 1f, 0f));
+
+        const float sqrt2 = 1.4142135623731f;
+
+        // distance from corner of square containing circle with radius r
+        //  = sqrt(2) * r (or sqrt(2r) via pythagorean theorem)
+        float radius = sqrt2 * (_tableInfo.MapTableSquareWidth / 2f);
+
+        IProximity polygon = new PolygonProximity([
+            new Vector2(bl.x, bl.z),
+            new Vector2(tl.x, tl.z),
+            new Vector2(tr.x, tr.z),
+            new Vector2(br.x, br.z)
+        ], planePosition.y - 0.25f, planePosition.y + 0.25f);
+
+        MapTackSearchBuffer.Clear();
+
+        Regions.getRegionsInRadius(planePosition, radius, MapTackSearchBuffer);
+
+        foreach (RegionCoordinate coordinate in MapTackSearchBuffer)
+        {
+            List<BarricadeDrop> barricades = BarricadeManager.regions[coordinate.x, coordinate.y].drops;
+            List<StructureDrop> structures = StructureManager.regions[coordinate.x, coordinate.y].drops;
+
+            // loop backwards in case they're being destroyed
+            for (int i = barricades.Count - 1; i >= 0; --i)
+            {
+                BarricadeDrop drop = barricades[i];
+                if (MapTable.Equals(drop) || !polygon.TestPoint(in drop.GetServersideData().point))
+                    continue;
+                
+                yield return new BuildableBarricade(drop);
+            }
+
+            for (int i = structures.Count - 1; i >= 0; --i)
+            {
+                StructureDrop drop = structures[i];
+                if (MapTable.Equals(drop) || !polygon.TestPoint(in drop.GetServersideData().point))
+                    continue;
+
+                yield return new BuildableStructure(drop);
+            }
+        }
+
+        MapTackSearchBuffer.Clear();
+    }
+
     public void ClearMapTacks()
     {
         using IDisposable? profiler = ProfilerUtil.Profile();
+
+        WarfareModule.Singleton.GlobalLogger.LogConditional($"Clearing strategy map: {Position}.");
 
         GameThread.AssertCurrent();
 

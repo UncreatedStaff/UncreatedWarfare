@@ -10,6 +10,7 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Kits.Cosmetics;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Steam;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
@@ -150,10 +151,12 @@ public class OptionsUI : UnturnedUI
                     saveUpdated = true;
                 }
 
+                bool trackQuestsUpdated = false;
                 if (_trackQuestsOption.TryGetValue(player.UnturnedPlayer, out value) && player.Save.TrackQuests != value)
                 {
                     player.Save.TrackQuests = value;
                     saveUpdated = true;
+                    trackQuestsUpdated = true;
                 }
 
                 bool cosmeticsUpdated = false;
@@ -169,6 +172,12 @@ public class OptionsUI : UnturnedUI
                     player.Save.ViewFriendlyCosmetics = value;
                     saveUpdated = true;
                     cosmeticsUpdated = true;
+                }
+
+                if (trackQuestsUpdated && _module.IsLayoutActive())
+                {
+                    QuestService? questService = _module.ScopedProvider.ResolveOptional<QuestService>();
+                    questService?.ApplyTrackedQuestOption(player);
                 }
 
                 if (saveUpdated)

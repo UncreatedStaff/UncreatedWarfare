@@ -330,7 +330,10 @@ public static class EffectUtility
 
         if (clear)
         {
-            EffectManager.ClearEffectByGuid(debugEffect.GUID, connection);
+            if (connection == null)
+                EffectManager.ClearEffectByGuid_AllPlayers(debugEffect.GUID);
+            else
+                EffectManager.ClearEffectByGuid(debugEffect.GUID, connection);
         }
 
         TriggerEffectParameters p = new TriggerEffectParameters(debugEffect)
@@ -374,7 +377,10 @@ public static class EffectUtility
 
         if (clear)
         {
-            EffectManager.ClearEffectByGuid(debugEffect.GUID, connection);
+            if (connection == null)
+                EffectManager.ClearEffectByGuid_AllPlayers(debugEffect.GUID);
+            else
+                EffectManager.ClearEffectByGuid(debugEffect.GUID, connection);
         }
 
         TriggerDebugEffect(center + extents, rotation * Quaternion.Euler(0f, 270f, 180f), clear: false, scale: effectScale);
