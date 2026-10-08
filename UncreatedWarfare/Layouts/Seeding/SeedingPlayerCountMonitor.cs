@@ -12,6 +12,7 @@ using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Stats.EventHandlers;
 using Uncreated.Warfare.Util.Timing;
+using UnityEngine.SceneManagement;
 
 namespace Uncreated.Warfare.Layouts.Seeding;
 
@@ -278,7 +279,21 @@ internal class SeedingPlayerCountMonitor :
             }
             return UniTask.CompletedTask;
         }
-        
+
+        if (LevelNavigation.flagData == null /* first thing to load on level load */)
+        {
+            SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+        else
+        {
+            TryStartSeeding();
+        }
+
+        return UniTask.CompletedTask;
+    }
+
+    private void TryStartSeeding()
+    {
         try
         {
             StartSeeding(delayStart: true);
@@ -287,8 +302,12 @@ internal class SeedingPlayerCountMonitor :
         {
             _logger.LogWarning(ex, "No seeding layouts configured, booting into a normal layout.");
         }
+    }
 
-        return UniTask.CompletedTask;
+    private void OnSceneLoaded(Scene arg0, LoadSceneMode arg1)
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+        TryStartSeeding();
     }
 
     UniTask IHostedService.StopAsync(CancellationToken token)
@@ -545,6 +564,7 @@ internal class SeedingPlayerCountMonitor :
         _changeToken.Dispose();
         Interlocked.Exchange(ref _pendingLayout, null)?.Dispose();
         Interlocked.Exchange(ref _awaitStartTicker, null)?.Dispose();
+        SceneManager.sceneLoaded -= OnSceneLoaded;
 
         if (VoteManager is IDisposable disp)
             disp.Dispose();

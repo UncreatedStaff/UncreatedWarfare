@@ -150,6 +150,8 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
         newMapTack.DropMarker(worldCoordsOnMapTable, MapTable.Rotation);
         _attributeStore.UpdateAttributes(newMapTack.Marker).Add(MainBaseBuildables.TransientAttribute, null);
 
+        WarfareModule.Singleton.GlobalLogger.LogConditional($"Adding map tack: {newMapTack.MarkerAsset.ToDisplayString()} for {owner}.");
+
         ActiveMapTacks.Add(new MapTackInfo(newMapTack, owner));
     }
 
