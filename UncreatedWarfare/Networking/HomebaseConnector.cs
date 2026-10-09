@@ -87,7 +87,11 @@ public partial class HomebaseConnector : IHostedService
         ValueTask disconnect = default;
         int ct = _lifetime.ForEachRemoteConnection(c =>
         {
-            disconnect = c.CloseAsync(token).Preserve();
+            try
+            {
+                disconnect = c.CloseAsync(token).Preserve();
+            }
+            catch (ObjectDisposedException) { }
             return false;
         }, workOnCopy: true);
 

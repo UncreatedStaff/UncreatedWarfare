@@ -28,8 +28,11 @@ public class SquadManager :
     /// </summary>
     public ReadOnlyTrackingList<Squad> Squads { get; }
 
-    public SquadManager(ILogger<SquadManager> logger, IPlayerService playerService)
+    public SquadConfiguration Configuration { get; }
+
+    public SquadManager(ILogger<SquadManager> logger, IPlayerService playerService, SquadConfiguration squadConfig)
     {
+        Configuration = squadConfig;
         _logger = logger;
         _playerService = playerService;
         _squads = new TrackingList<Squad>(16);

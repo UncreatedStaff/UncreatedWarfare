@@ -1,5 +1,6 @@
 ﻿using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Extensions;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Squads;
 
 namespace Uncreated.Warfare.Kits.Requests.Requirements;
@@ -7,7 +8,7 @@ namespace Uncreated.Warfare.Kits.Requests.Requirements;
 /// <summary>
 /// Checks if there are too many squad members using a kit or not enough squad members to use a kit.
 /// </summary>
-public sealed class MinRequiredSquadMembersRequirement(SquadManager? squadManager = null) : IKitRequirement
+public sealed class MinRequiredSquadMembersRequirement(IPlayerService playerService, SquadManager? squadManager = null) : IKitRequirement
 {
     public KitRequirementResult AcceptCached<TState>(IKitRequirementVisitor<TState> visitor, in KitRequirementResolutionContext<TState> ctx)
     {
@@ -20,6 +21,13 @@ public sealed class MinRequiredSquadMembersRequirement(SquadManager? squadManage
 
         int min = ctx.Kit.MinRequiredSquadMembers.Value;
 
+        int scaleMaximum = squadManager.Configuration.SquadLimitScaleMaximum;
+        if (playerService.OnlinePlayers.Count < scaleMaximum)
+        {
+            double scale = (double)playerService.OnlinePlayers.Count / scaleMaximum;
+            min = (int)Math.Round(scale * min);
+        }
+
         foreach (WarfarePlayer player in squad.Members)
         {
             if (player.Component<KitPlayerComponent>().IsKit(ctx.Kit.Key))
@@ -29,7 +37,7 @@ public sealed class MinRequiredSquadMembersRequirement(SquadManager? squadManage
             }
         }
 
-        if (squad.Members.Length >= ctx.Kit.MinRequiredSquadMembers.Value)
+        if (squad.Members.Length >= min)
             return KitRequirementResult.Yes;
 
         visitor.AcceptMinRequiredSquadMembersNotMet(in ctx, null, squad.Members.Length, min);

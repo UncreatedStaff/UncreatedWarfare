@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -32,9 +31,9 @@ public static class ProfilerUtil
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
     public static IDisposable? Profile(
-#if PROFILING // avoid extra string allocations when not compiling with profiling enabled.
+// #if PROFILING // avoid extra string allocations when not compiling with profiling enabled.
         [CallerFilePath] string? filePath = null, [CallerMemberName] string? methodName = null, [CallerLineNumber] int lineNumber = 0
-#endif
+// #endif
     )
     {
 #if !PROFILING
@@ -52,9 +51,9 @@ public static class ProfilerUtil
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
     public static IDisposable? Profile(string description
-#if PROFILING
+// #if PROFILING
         , [CallerFilePath] string? filePath = null, [CallerMemberName] string? methodName = null, [CallerLineNumber] int lineNumber = 0
-#endif
+// #endif
     )
     {
 #if !PROFILING
