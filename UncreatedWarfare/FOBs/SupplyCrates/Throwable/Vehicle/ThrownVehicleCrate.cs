@@ -2,6 +2,7 @@
 // #define REFILL_TURRETS_DEBUG
 #endif
 using System;
+using System.Linq;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Players;
@@ -35,10 +36,12 @@ public class ThrownVehicleCrate : ThrownSupplyCrate
     {
         using IDisposable? profiler = ProfilerUtil.Profile();
 
-        // descending distance comparer
-        IComparer<Component> comparer = new LookAtComparer<Component>(Throwable.transform.forward, x => x.transform.position - Throwable.transform.position, reverse: false);
+        Vector3 position = Throwable.transform.position;
 
-        int results = Physics.OverlapSphereNonAlloc(Throwable.transform.position, 5f, TempHitColliders, 1 << LayerMasks.VEHICLE);
+        // descending distance comparer
+        IComparer<Component> comparer = new LookAtComparer<Component>(Throwable.transform.forward, x => x.transform.position - position, reverse: false);
+
+        int results = Physics.OverlapSphereNonAlloc(position, 5f, TempHitColliders, 1 << LayerMasks.VEHICLE);
         Array.Sort<Collider>(TempHitColliders, 0, results, comparer);
         WarfareVehicle? warfareVehicle = null;
         for (int i = 0; i < results; i++)
@@ -58,29 +61,45 @@ public class ThrownVehicleCrate : ThrownSupplyCrate
             Thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastAmmoNotNearVehicle.Translate(Thrower)));
             return;
         }
-        
-        if (_fobManager != null && !(_zoneStore != null && _zoneStore.IsInMainBase(Throwable.transform.position)))
+
+        position = warfareVehicle.Position;
+
+        if (_fobManager != null && !(_zoneStore != null && _zoneStore.IsInMainBase(position)))
         {
-            ResourceFob? nearestFob = _fobManager.FindNearestResourceFob(Thrower.Team, Throwable.transform.position);
-            if (nearestFob == null)
+            float requiredAmmoCount = warfareVehicle.Info.Rearm.AmmoConsumed;
+
+            bool anyFobs = false;
+            float maxAmmoAvailable = 0;
+
+            // check all FOBs in the area instead of just the nearest one, since caches and FOBs can overlap.
+            // use the one with the most ammo
+            foreach (ResourceFob fob in _fobManager.Fobs
+                         .OfType<ResourceFob>()
+                         .Where(f => f.Team.IsFriendly(Thrower.Team) && MathUtility.WithinRange(position, f.Position, f.EffectiveRadius))
+                         .OrderByDescending(x => x.AmmoCount)
+                    )
+            {
+                if (fob.AmmoCount >= requiredAmmoCount)
+                {
+                    fob.ChangeAmmo(-requiredAmmoCount, SupplyChangeReason.ConsumeRearmVehicle);
+                    Thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastLoseAmmo.Translate(requiredAmmoCount, Thrower)));
+                    break;
+                }
+
+                maxAmmoAvailable = Math.Max(fob.AmmoCount, maxAmmoAvailable);
+                anyFobs = fob is BunkerFob || fob.AmmoCount > 0;
+            }
+
+            if (!anyFobs)
             {
                 RespawnThrowableItem();
                 Thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastAmmoNotNearFob.Translate(Thrower)));
                 return;
             }
-            
-            int requiredAmmoCount = warfareVehicle.Info.Rearm.AmmoConsumed;
-            if (nearestFob.AmmoCount < warfareVehicle.Info.Rearm.AmmoConsumed)
-            {
-                RespawnThrowableItem();
-                Thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastInsufficientAmmo.Translate(nearestFob.AmmoCount, requiredAmmoCount, Thrower)));
-                return;
-            }
 
-            // note: this used to directly subtract from the FOB but led to mismatches between FOB ammo and crate ammo.
-            // todo: is this comment^ still relevant?
-            nearestFob.ChangeAmmo(-requiredAmmoCount, SupplyChangeReason.ConsumeRearmVehicle);
-            Thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastLoseAmmo.Translate(requiredAmmoCount, Thrower)));
+            RespawnThrowableItem();
+            Thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastInsufficientAmmo.Translate(maxAmmoAvailable, requiredAmmoCount, Thrower)));
+            return;
         }
         
         DropSupplies(warfareVehicle);

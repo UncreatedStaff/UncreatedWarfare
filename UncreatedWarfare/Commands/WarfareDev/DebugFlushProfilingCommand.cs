@@ -12,7 +12,7 @@ internal sealed class DebugFlushProfilingCommand : IExecutableCommand
 #if !PROFILING
         throw Context.SendNotImplemented();
 #else
-        Context.AssertRanByPlayer();
+        Context.AssertRanByTerminal();
 
         if (Context.MatchParameter(0, "enable", "start"))
         {
