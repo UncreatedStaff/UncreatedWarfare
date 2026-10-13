@@ -60,12 +60,12 @@ public class PlayerInjureComponent : MonoBehaviour,
     /// <summary>
     /// The amount of seconds it takes to bleed out with no intervention.
     /// </summary>
-    private const float InjureStandardBleedoutDuration = 30;
+    private const float InjureStandardBleedoutDuration = 60;
 
     /// <summary>
     /// A damage multiplier of incoming damage while injured.
     /// </summary>
-    private const float InjuredDamageMultiplier = 0.4f;
+    private const float InjuredDamageMultiplier = 0.2f;
 
     /// <summary>
     /// Defines which players can revive other players.
