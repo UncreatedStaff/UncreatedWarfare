@@ -17,9 +17,9 @@ internal class ProfilerRecord
     /// <summary>
     /// Average time in <c>ticks / <see cref="ProfilerUtil.FrequencyResolution"/></c>.
     /// </summary>
-    public float Average
+    public unsafe float Average
     {
-        unsafe get
+        get
         {
             uint avgBits = unchecked( (uint)(Volatile.Read(ref _packedAverageAndSampleCount) >>> 32) );
             return *(float*)&avgBits;
