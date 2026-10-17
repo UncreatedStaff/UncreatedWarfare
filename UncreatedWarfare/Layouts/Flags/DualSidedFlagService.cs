@@ -250,12 +250,23 @@ public abstract class DualSidedFlagService :
             .ToArray();
 
         ActiveFlags = new ReadOnlyCollection<FlagObjective>(_flags);
-        
-        StartingTeamRegion = new ZoneRegion(t1Zones, TeamManager);
-        StartingTeam = TeamManager.AllTeams.First(x => x.Faction.FactionId.Equals(StartingTeamRegion.Primary.Zone.Faction, StringComparison.Ordinal));
-        
-        EndingTeamRegion = new ZoneRegion(t2Zones, TeamManager);
-        EndingTeam = TeamManager.AllTeams.First(x => x.Faction.FactionId.Equals(EndingTeamRegion.Primary.Zone.Faction, StringComparison.Ordinal));
+
+        try
+        {
+            StartingTeamRegion = new ZoneRegion(t1Zones, TeamManager);
+            StartingTeam = TeamManager.AllTeams.First(x => x.Faction.FactionId.Equals(StartingTeamRegion.Primary.Zone.Faction, StringComparison.Ordinal));
+
+            EndingTeamRegion = new ZoneRegion(t2Zones, TeamManager);
+            EndingTeam = TeamManager.AllTeams.First(x => x.Faction.FactionId.Equals(EndingTeamRegion.Primary.Zone.Faction, StringComparison.Ordinal));
+        }
+        catch (InvalidOperationException) // thrown by First()
+        {
+            Logger.LogError(
+                $"One or both teams are missing a main base with the correct faction IDs configured. " +
+                $"Starting: \"{StartingTeamRegion.Primary.Zone.Faction}\". Ending: \"{EndingTeamRegion.Primary.Zone.Faction}\"."
+            );
+            throw new LayoutConfigurationException("Unable to identify starting and ending teams.");
+        }
         
         IsActive = true;
 

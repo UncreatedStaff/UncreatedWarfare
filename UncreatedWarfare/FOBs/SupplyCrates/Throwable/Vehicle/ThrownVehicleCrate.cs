@@ -70,6 +70,7 @@ public class ThrownVehicleCrate : ThrownSupplyCrate
 
             bool anyFobs = false;
             float maxAmmoAvailable = 0;
+            bool consumedAmmo = false;
 
             // check all FOBs in the area instead of just the nearest one, since caches and FOBs can overlap.
             // use the one with the most ammo
@@ -83,6 +84,7 @@ public class ThrownVehicleCrate : ThrownSupplyCrate
                 {
                     fob.ChangeAmmo(-requiredAmmoCount, SupplyChangeReason.ConsumeRearmVehicle);
                     Thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastLoseAmmo.Translate(requiredAmmoCount, Thrower)));
+                    consumedAmmo = true;
                     break;
                 }
 
@@ -97,9 +99,12 @@ public class ThrownVehicleCrate : ThrownSupplyCrate
                 return;
             }
 
-            RespawnThrowableItem();
-            Thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastInsufficientAmmo.Translate(maxAmmoAvailable, requiredAmmoCount, Thrower)));
-            return;
+            if (!consumedAmmo)
+            {
+                RespawnThrowableItem();
+                Thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastInsufficientAmmo.Translate(maxAmmoAvailable, requiredAmmoCount, Thrower)));
+                return;
+            }
         }
         
         DropSupplies(warfareVehicle);
