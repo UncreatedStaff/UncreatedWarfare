@@ -103,7 +103,7 @@ public static class EventContinuations
             {
                 if (needsToContinue(eventArgs))
                 {
-                    UniTask.Create(() => continuation(eventArgs, token));
+                    _ = continuation(eventArgs, token);
                     shouldAllow = false;
                     return;
                 }
@@ -272,7 +272,7 @@ public static class EventContinuations
         {
             if (needsToContinue(eventArgs))
             {
-                UniTask.Create(() => continuation(eventArgs, token));
+                _ = continuation(eventArgs, token);
                 shouldAllow = false;
                 return;
             }

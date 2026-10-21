@@ -88,9 +88,8 @@ public class WarfarePlayer :
         }
         else
         {
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
                 if (!IsOnline)
                     return;
 

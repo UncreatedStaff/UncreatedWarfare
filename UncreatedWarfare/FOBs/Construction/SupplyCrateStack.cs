@@ -513,9 +513,8 @@ public class SupplyCrateStack : IDisposable
         }
         else
         {
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
                 if (ColliderObject != null)
                     Object.Destroy(ColliderObject);
                 ColliderObject = null!;

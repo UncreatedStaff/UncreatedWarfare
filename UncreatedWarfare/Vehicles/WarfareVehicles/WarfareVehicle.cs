@@ -1,10 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Diagnostics.CodeAnalysis;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Vehicles.Spawners;
 using Uncreated.Warfare.Vehicles.UI;
 using Uncreated.Warfare.Vehicles.WarfareVehicles.Damage;
 using Uncreated.Warfare.Vehicles.WarfareVehicles.Flares;
@@ -93,9 +89,8 @@ public class WarfareVehicle : IDisposable, ITransformObject, IEquatable<WarfareV
         else
         {
             _isSettingUpComponent = true;
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
                 if (Vehicle == null)
                     return;
 

@@ -22,6 +22,8 @@ public class CaptureUI : UnturnedUI, IHudUIListener
     private readonly ITranslationService _translationService;
     private readonly HudManager _hudManager;
 
+    internal const TranslationOptions GroupOptions = TranslationOptions.PerTeamTranslation | TranslationOptions.PerLanguageTranslation;
+
     public UnturnedLabel Title { get; } = new UnturnedLabel("TitleLabel");
     public ImageProgressBar CaptureProgress { get; } = new ImageProgressBar("CaptureProgress");
     public CaptureUI(
@@ -190,7 +192,7 @@ public class CaptureUI : UnturnedUI, IHudUIListener
 
         foreach (FlagObjective flag in rot.ActiveFlags)
         {
-            foreach (LanguageSet set in _translationService.SetOf.PlayersIn(flag.Players))
+            foreach (LanguageSet set in _translationService.SetOf.PlayersIn(flag.Players, GroupOptions))
             {
                 CaptureUIState state = uiEvents.EvaluateCaptureUI(flag, set);
                 UpdateCaptureUI(set, in state);

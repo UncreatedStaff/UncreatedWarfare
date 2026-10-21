@@ -1,5 +1,4 @@
 using SDG.Framework.Utilities;
-using System;
 using System.Collections.ObjectModel;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -248,11 +247,7 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<WarfarePlayer
             if (_disposed)
                 return;
 
-            UniTask.Create(async () =>
-            {
-                await UniTask.SwitchToMainThread();
-                DisposeIntl();
-            });
+            GameThread.Queue(DisposeIntl);
         }
     }
 

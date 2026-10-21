@@ -119,9 +119,8 @@ public class PlayerVoteManager : IPlayerVoteManager, IDisposable, IEventListener
                 {
                     _currentVoteCancellationRegistration = ct.Register(static state =>
                     {
-                        UniTask.Create(async () =>
+                        GameThread.Queue(() =>
                         {
-                            await UniTask.SwitchToMainThread();
                             PlayerVoteManager me = (PlayerVoteManager)state;
                             if (!me._disposed)
                                 me.CancelVote();
@@ -366,9 +365,8 @@ public class PlayerVoteManager : IPlayerVoteManager, IDisposable, IEventListener
                 PlayerVoteState vote2 = vote, old2 = old;
                 CSteamID pid = player;
                 IVoteDisplay disp = voteDisplay;
-                UniTask.Create(async () =>
+                GameThread.Queue(() =>
                 {
-                    await UniTask.SwitchToMainThread();
                     if (ReferenceEquals(_voteInfo.Container?.SettingsIntl.Display, disp))
                     {
                         InvokePlayerVoteUpdated(disp, pid, vote2, old2);

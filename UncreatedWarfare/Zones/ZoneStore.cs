@@ -500,9 +500,22 @@ public class ZoneStore : IHostedService, ILevelHostedService, IEarlyLevelHostedS
     {
         using IDisposable? profiler = ProfilerUtil.Profile();
 
-        return faction == null
-            ? EnumerateInsideZones(point).Any(zone => zone.Type == type)
-            : EnumerateInsideZones(point).Any(zone => zone.Type == type && string.Equals(zone.Faction, faction.FactionId, StringComparison.Ordinal));
+        if (ProximityZones.IsDefault)
+            return false;
+
+        foreach (ZoneProximity proximity in ProximityZones)
+        {
+            if (proximity.Zone.Type != type)
+                continue;
+            if (!proximity.Proximity.TestPoint(in point))
+                continue;
+            if (faction != null && !string.Equals(proximity.Zone.Faction, faction.FactionId, StringComparison.Ordinal))
+                continue;
+
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -512,9 +525,22 @@ public class ZoneStore : IHostedService, ILevelHostedService, IEarlyLevelHostedS
     {
         using IDisposable? profiler = ProfilerUtil.Profile();
 
-        return faction == null
-            ? EnumerateInsideZones(point).Any(zone => zone.Type == type)
-            : EnumerateInsideZones(point).Any(zone => zone.Type == type && string.Equals(zone.Faction, faction.FactionId, StringComparison.Ordinal));
+        if (ProximityZones.IsDefault)
+            return false;
+
+        foreach (ZoneProximity proximity in ProximityZones)
+        {
+            if (proximity.Zone.Type != type)
+                continue;
+            if (!proximity.Proximity.TestPoint(in point))
+                continue;
+            if (faction != null && !string.Equals(proximity.Zone.Faction, faction.FactionId, StringComparison.Ordinal))
+                continue;
+
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>

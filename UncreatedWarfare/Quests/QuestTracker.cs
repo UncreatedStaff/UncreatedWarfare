@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using System;
 using System.Text.Json;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Players;
@@ -82,9 +81,8 @@ public abstract class QuestTracker
         }
         else
         {
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
                 HandleUpdated();
 
                 if (IsComplete)

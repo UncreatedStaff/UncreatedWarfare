@@ -1,7 +1,6 @@
 #if DEBUG
-//#define DEBUG_LOGGING
+//#define ITEM_DISTRO_DEBUG
 #endif
-using System;
 using System.Diagnostics;
 using System.Linq;
 using Uncreated.Warfare.Kits;
@@ -20,14 +19,14 @@ public class FallbackItemDistributionService : IItemDistributionService
     private readonly IKitItemResolver _itemResolver;
     private readonly DroppedItemTracker _droppedItemTracker;
     private readonly CosmeticInstancer _cosmeticInstancer;
-#if DEBUG_LOGGING
+#if ITEM_DISTRO_DEBUG
     private readonly ILogger<FallbackItemDistributionService> _logger;
 #endif
 
     private bool _isAutoClearing;
 
     public FallbackItemDistributionService(IKitItemResolver itemResolver, DroppedItemTracker droppedItemTracker, CosmeticInstancer cosmeticInstancer
-#if DEBUG_LOGGING
+#if ITEM_DISTRO_DEBUG
         , ILogger<FallbackItemDistributionService> logger
 #endif
     )
@@ -35,20 +34,20 @@ public class FallbackItemDistributionService : IItemDistributionService
         _itemResolver = itemResolver;
         _droppedItemTracker = droppedItemTracker;
         _cosmeticInstancer = cosmeticInstancer;
-#if DEBUG_LOGGING
+#if ITEM_DISTRO_DEBUG
         _logger = logger;
 #endif
     }
 
-    [Conditional("DEBUG_LOGGING"), StringFormatMethod("fmt"), UsedImplicitly]
-    private void DebugLog(string fmt, params object?[]? args)
+    [Conditional("ITEM_DISTRO_DEBUG"), StringFormatMethod("fmt"), UsedImplicitly]
+    protected void DebugLog(string fmt, params object?[]? args)
     {
-#if DEBUG_LOGGING
+#if ITEM_DISTRO_DEBUG
         _logger.LogDebug(fmt, args);
 #endif
     }
 
-    public int ClearInventory<TState>(WarfarePlayer player, TState state) where TState : IItemClearState
+    public virtual int ClearInventory<TState>(WarfarePlayer player, TState state) where TState : IItemClearState
     {
         using IDisposable? profiler = ProfilerUtil.Profile();
 
@@ -174,7 +173,7 @@ public class FallbackItemDistributionService : IItemDistributionService
             ++ct;
     }
 
-    public int GiveItems<TState>(IEnumerable<IItem> items, WarfarePlayer player, TState state) where TState : IItemDistributionState
+    public virtual int GiveItems<TState>(IEnumerable<IItem> items, WarfarePlayer player, TState state) where TState : IItemDistributionState
     {
         using IDisposable? profiler = ProfilerUtil.Profile();
 
@@ -333,7 +332,7 @@ public class FallbackItemDistributionService : IItemDistributionService
     }
 
     /// <inheritdoc />
-    public int RestockItems<TState>(IEnumerable<IItem> items, WarfarePlayer player, TState state) where TState : IItemDistributionState
+    public virtual int RestockItems<TState>(IEnumerable<IItem> items, WarfarePlayer player, TState state) where TState : IItemDistributionState
     {
         using IDisposable? profiler = ProfilerUtil.Profile();
 
@@ -346,7 +345,7 @@ public class FallbackItemDistributionService : IItemDistributionService
 
         Player nativePlayer = player.UnturnedPlayer;
 
-#if DEBUG_LOGGING
+#if ITEM_DISTRO_DEBUG
         using IDisposable? scope = _logger.BeginScope(player);
         DebugLog("Restocking...");
 #endif

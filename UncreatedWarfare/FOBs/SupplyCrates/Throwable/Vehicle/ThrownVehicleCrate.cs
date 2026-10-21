@@ -92,15 +92,15 @@ public class ThrownVehicleCrate : ThrownSupplyCrate
                 anyFobs = fob is BunkerFob || fob.AmmoCount > 0;
             }
 
-            if (!anyFobs)
-            {
-                RespawnThrowableItem();
-                Thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastAmmoNotNearFob.Translate(Thrower)));
-                return;
-            }
-
             if (!consumedAmmo)
             {
+                if (!anyFobs)
+                {
+                    RespawnThrowableItem();
+                    Thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastAmmoNotNearFob.Translate(Thrower)));
+                    return;
+                }
+
                 RespawnThrowableItem();
                 Thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastInsufficientAmmo.Translate(maxAmmoAvailable, requiredAmmoCount, Thrower)));
                 return;

@@ -1,8 +1,6 @@
 using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
 using Microsoft.Extensions.Configuration;
-using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -676,9 +674,8 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
 
     private void TimerTicked(object state)
     {
-        UniTask.Create(async () =>
+        GameThread.Queue(() =>
         {
-            await UniTask.SwitchToMainThread();
             if (_warningStep > 0)
             {                                        // round time left to the nearest 5 seconds
                 TimeSpan regenIn = TimeSpan.FromSeconds((int)Math.Round((NextDailyQuestDay - DateTime.UtcNow).TotalSeconds * 5) / 5);

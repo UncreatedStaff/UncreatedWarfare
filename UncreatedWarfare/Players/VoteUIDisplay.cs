@@ -39,6 +39,8 @@ public abstract class VoteUIDisplay<TData> : UnturnedUI, IVoteDisplay where TDat
 
     protected abstract TData CreateData(CSteamID arg);
 
+    protected abstract TranslationOptions GroupOptions { get; }
+
     protected abstract void SendToPlayers(LanguageSet set);
 
     protected virtual void OnCleared(WarfarePlayer player, TData? data) { }
@@ -66,7 +68,11 @@ public abstract class VoteUIDisplay<TData> : UnturnedUI, IVoteDisplay where TDat
             PlayerKeys.PressedPluginKey3 += OnVotedNo;
         }
 
-        foreach (LanguageSet set in TranslationService.SetOf.PlayersWhere(playerSelector))
+        LanguageSetEnumerator enumerator = playerSelector != null
+            ? TranslationService.SetOf.PlayersWhere(playerSelector, GroupOptions)
+            : TranslationService.SetOf.AllPlayers(GroupOptions);
+
+        foreach (LanguageSet set in enumerator)
         {
             SendToPlayers(set);
         }
@@ -98,7 +104,7 @@ public abstract class VoteUIDisplay<TData> : UnturnedUI, IVoteDisplay where TDat
             PlayerKeys.PressedPluginKey0 -= OnVotedYes;
             PlayerKeys.PressedPluginKey3 -= OnVotedNo;
         }
-        foreach (LanguageSet set in TranslationService.SetOf.PlayersWhere(PlayerIsVoting()))
+        foreach (LanguageSet set in TranslationService.SetOf.PlayersWhere(PlayerIsVoting(), TranslationOptions.None))
         {
             while (set.MoveNext())
             {
@@ -146,7 +152,7 @@ public abstract class VoteUIDisplay<TData> : UnturnedUI, IVoteDisplay where TDat
     {
         using IDisposable? profiler = ProfilerUtil.Profile();
 
-        foreach (LanguageSet set in TranslationService.SetOf.PlayersWhere(PlayerIsVoting()))
+        foreach (LanguageSet set in TranslationService.SetOf.PlayersWhere(PlayerIsVoting(), GroupOptions))
         {
             SendToPlayers(set);
         }

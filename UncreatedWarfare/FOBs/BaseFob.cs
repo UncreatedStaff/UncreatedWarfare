@@ -27,11 +27,7 @@ public abstract class BaseFob : IDisposable
         }
         else
         {
-            UniTask.Create(async () =>
-            {
-                await UniTask.SwitchToMainThread();
-                InvokeDeregistered();
-            });
+            GameThread.Queue(InvokeDeregistered);
         }
     }
 

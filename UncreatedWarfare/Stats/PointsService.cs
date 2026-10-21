@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Primitives;
-using System;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
@@ -148,10 +147,9 @@ public class PointsService : IEventListener<PlayerTeamChanged>, IEarlyLevelHoste
 
         if (!Level.isLoaded || _ui == null)
             return;
-        
-        UniTask.Create(async () =>
+
+        GameThread.Queue(() =>
         {
-            await UniTask.SwitchToMainThread();
             foreach (WarfarePlayer player in _playerService.OnlinePlayers)
             {
                 _ui.UpdatePointsUI(player);

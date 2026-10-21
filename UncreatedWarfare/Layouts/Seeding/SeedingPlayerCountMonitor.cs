@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Primitives;
-using System;
 using System.IO;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
@@ -11,6 +10,7 @@ using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Stats.EventHandlers;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
 using UnityEngine.SceneManagement;
 
@@ -164,9 +164,8 @@ internal class SeedingPlayerCountMonitor :
 
         if (Rules.Enabled)
         {
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
                 CheckShouldStartVote();
                 if (!VoteManager.IsVoting && !IsSeeding)
                     CheckShouldAwaitStart();

@@ -1,5 +1,4 @@
 using DanielWillett.ReflectionTools;
-using System;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -53,6 +52,8 @@ public class PlayerService : IPlayerService
 
     /// <inheritdoc />
     public bool IsEmpty => Provider.clients.Count == 0;
+
+    public int Count => Provider.clients.Count;
 
     /// <inheritdoc />
     public ReadOnlyTrackingList<WarfarePlayer> OnlinePlayers
@@ -440,10 +441,8 @@ public class PlayerService : IPlayerService
         {
             Action<WarfarePlayer, TDelegate> a1 = subscribe;
             TDelegate v1 = value;
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
-
                 SubscribeToPlayerEvent(a1, v1);
             });
         }
@@ -476,10 +475,8 @@ public class PlayerService : IPlayerService
         {
             Action<WarfarePlayer, TDelegate> a1 = unsubscribe;
             TDelegate v1 = value;
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
-
                 UnsubscribeFromPlayerEvent(a1, v1);
             });
         }

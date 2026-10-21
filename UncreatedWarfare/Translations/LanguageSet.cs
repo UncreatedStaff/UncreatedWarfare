@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Globalization;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Localization;
@@ -6,153 +7,105 @@ using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Translations;
 
+/// <summary>
+/// A group of one or more players with a common language, culture, time-zone, team, and IMGUI setting.
+/// </summary>
 public struct LanguageSet : IEnumerable<WarfarePlayer>, IEnumerator<WarfarePlayer>
 {
-    private ArraySegment<WarfarePlayer> _players;
+    internal LanguageGroup? Group;
+    public WarfarePlayer? Next;
     private int _index;
 
-    private bool _isSinglePlayer;
-    internal int StartIndex;
-    internal int Count;
+    public readonly WarfarePlayer? SingleOrNull
+    {
+        get
+        {
+            if (Group == null)
+                return Next!;
 
-    public WarfarePlayer? Next;
+            if (Group.Players.Count == 1)
+                return Group.Players[0];
 
-    public readonly ArraySegment<WarfarePlayer> Players => _players;
+            return null;
+        }
+    }
+
+    public readonly ArraySegment<WarfarePlayer> Players => Group?.Players ?? new ArraySegment<WarfarePlayer>(new WarfarePlayer[] { Next! });
+
+    public readonly int Count => Group?.Count ?? 1;
+
 #nullable disable
     public readonly WarfarePlayer Current => Next;
     readonly object IEnumerator.Current => Next;
 #nullable restore
-    public LanguageInfo Language { get; }
-    public CultureInfo Culture { get; }
-    public TimeZoneInfo TimeZone { get; }
-    public bool IMGUI { get; }
-    public Team Team { get; }
-    public LanguageSet(LanguageInfo language, CultureInfo culture, TimeZoneInfo timeZone, bool imgui, Team team)
+    public readonly LanguageInfo Language => Group?.Language ?? Next!.Locale.LanguageInfo;
+    public readonly CultureInfo Culture => Group?.Culture ?? Next!.Locale.CultureInfo;
+    public readonly TimeZoneInfo TimeZone => Group?.TimeZone ?? Next!.Locale.TimeZone;
+    public readonly bool IMGUI => Group?.IMGUI ?? Next!.Save.IMGUI;
+    public readonly Team Team => Group?.Team ?? Next!.Team;
+    internal LanguageSet(LanguageGroup group)
     {
-        Language = language;
-        Culture = culture;
-        TimeZone = timeZone;
-        Team = team;
-        IMGUI = imgui;
+        Group = group;
         _index = -1;
     }
 
-    public LanguageSet(in LanguageSet set)
+    public LanguageSet(LanguageInfo language, CultureInfo culture, TimeZoneInfo timeZone, bool imgui, Team team)
     {
-        _players = set._players;
-        Language = set.Language;
-        Culture = set.Culture;
-        TimeZone = set.TimeZone;
-        Team = set.Team;
-        IMGUI = set.IMGUI;
-        _index = -1;
+        Group = new LanguageGroup(null);
+        Group.Reset(language, culture, timeZone, imgui, team);
+        Group.Players = new ArraySegment<WarfarePlayer>(Array.Empty<WarfarePlayer>());
     }
 
     public LanguageSet(WarfarePlayer player)
     {
         Next = player;
-        _isSinglePlayer = true;
+        Group = null;
         _index = -1;
-        IMGUI = player.Save.IMGUI;
-        Language = player.Locale.LanguageInfo;
-        Culture = player.Locale.CultureInfo;
-        TimeZone = player.Locale.TimeZone;
-        Team = player.Team;
     }
 
+    [MustDisposeResource]
     public readonly LanguageSet Preserve()
     {
-        LanguageSet set = new LanguageSet(Language, Culture, TimeZone, IMGUI, Team);
-        set.SetPlayers(_isSinglePlayer
-            ? _players
-            : new ArraySegment<WarfarePlayer>(_players.ToArray())
-        );
-        set.StartIndex = 0;
-        set.Count = _players.Count;
-        return set;
-    }
-
-    internal void SetPlayers(ArraySegment<WarfarePlayer> players)
-    {
-        if (players.Count == 1)
+        if (Group == null)
         {
-            _isSinglePlayer = true;
-            Next = players[0];
+            return this;
         }
-        else
-        {
-            _isSinglePlayer = false;
-            _players = players;
-        }
-    }
 
-    /// <summary>
-    /// Check if a player's language settings is on par with this set.
-    /// </summary>
-    public readonly bool Includes(WarfarePlayer player)
-    {
-        if (_isSinglePlayer)
-            return Next!.Equals(player);
+        WarfarePlayer[] players = Group.Players.ToArray();
+        LanguageGroup group = Group.Service?.RentLanguageGroup() ?? new LanguageGroup(null);
 
-        return player.Save.IMGUI == IMGUI
-               && player.Locale.LanguageInfo.Equals(Language)
-               && player.Locale.CultureInfo.Name.Equals(Culture.Name, StringComparison.Ordinal)
-               && player.Locale.TimeZone.Id.Equals(TimeZone.Id, StringComparison.Ordinal)
-               && player.Team == Team;
+        group.Players = new ArraySegment<WarfarePlayer>(players);
+        group.Reset(Group.Language, Group.Culture, Group.TimeZone, Group.IMGUI, Group.Team);
+
+        return new LanguageSet(group);
     }
 
     public readonly PooledTransportConnectionList GatherTransportConnections()
     {
-        if (_isSinglePlayer)
+        if (Group != null)
         {
-            PooledTransportConnectionList list = TransportConnectionPoolHelper.Claim(1);
-            if (Next!.IsOnline)
-                list.Add(Next.Connection);
-            return list;
+            return Group.GatherTransportConnections();
         }
-        else
-        {
-            PooledTransportConnectionList list = TransportConnectionPoolHelper.Claim(_players.Count);
-            WarfarePlayer[] arr = _players.Array!;
-            int i = _players.Offset;
-            int ct = i + _players.Count;
-            for (; i < ct; i++)
-            {
-                WarfarePlayer pl = arr[i];
-                if (pl.IsOnline)
-                    list.Add(pl.Connection);
-            }
 
-            return list;
-        }
+        PooledTransportConnectionList list = TransportConnectionPoolHelper.Claim(1);
+        if (Next!.IsOnline)
+            list.Add(Next.Connection);
+        return list;
+
     }
 
     public readonly PooledTransportConnectionList GatherTransportConnections(byte x, byte y, byte area)
     {
-        if (_isSinglePlayer)
+        if (Group != null)
         {
-            PooledTransportConnectionList list = TransportConnectionPoolHelper.Claim(1);
-            PlayerMovement movement = Next!.UnturnedPlayer.movement;
-            if (Next.IsOnline && Regions.checkArea(movement.region_x, movement.region_y, x, y, area))
-                list.Add(Next.Connection);
-            return list;
+            return Group.GatherTransportConnections(x, y, area);
         }
-        else
-        {
-            PooledTransportConnectionList list = TransportConnectionPoolHelper.Claim(_players.Count);
-            WarfarePlayer[] arr = _players.Array!;
-            int i = _players.Offset;
-            int ct = i + _players.Count;
-            for (; i < ct; i++)
-            {
-                WarfarePlayer pl = arr[i];
-                PlayerMovement movement = pl.UnturnedPlayer.movement;
-                if (pl.IsOnline && Regions.checkArea(movement.region_x, movement.region_y, x, y, area))
-                    list.Add(pl.Connection);
-            }
 
-            return list;
-        }
+        PooledTransportConnectionList list = TransportConnectionPoolHelper.Claim(1);
+        PlayerMovement movement = Next!.UnturnedPlayer.movement;
+        if (Next.IsOnline && Regions.checkArea(movement.region_x, movement.region_y, x, y, area))
+            list.Add(Next.Connection);
+        return list;
     }
 
     public void Reset()
@@ -163,7 +116,7 @@ public struct LanguageSet : IEnumerable<WarfarePlayer>, IEnumerator<WarfarePlaye
     [MemberNotNullWhen(true, nameof(Next))]
     public bool MoveNext()
     {
-        if (_isSinglePlayer)
+        if (Group == null)
         {
             if (_index != -1)
                 return false;
@@ -176,10 +129,10 @@ public struct LanguageSet : IEnumerable<WarfarePlayer>, IEnumerator<WarfarePlaye
         }
 
         ++_index;
-        if (_index >= _players.Count)
+        if (_index >= Group.Players.Count)
             return false;
 
-        Next = _players[_index];
+        Next = Group.Players[_index];
         return true;
     }
 
@@ -191,5 +144,109 @@ public struct LanguageSet : IEnumerable<WarfarePlayer>, IEnumerator<WarfarePlaye
     readonly IEnumerator<WarfarePlayer> IEnumerable<WarfarePlayer>.GetEnumerator() => GetEnumerator();
     readonly IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-    public readonly void Dispose() { }
+    public readonly void Dispose()
+    {
+        Group?.Return();
+    }
+}
+
+internal sealed class LanguageGroup
+{
+    internal readonly LanguageSets? Service;
+    internal ArraySegment<WarfarePlayer> Players;
+
+    internal int StartIndex;
+    internal int Count;
+
+#nullable disable
+
+    public LanguageInfo Language { get; private set; }
+    public CultureInfo Culture { get; private set; }
+    public TimeZoneInfo TimeZone { get; private set; }
+    public bool IMGUI { get; private set; }
+    public Team Team { get; private set; }
+
+#nullable restore
+    public LanguageGroup(LanguageSets? service)
+    {
+        Service = service;
+    }
+
+    internal void Reset(LanguageInfo language, CultureInfo culture, TimeZoneInfo timeZone, bool imgui, Team team)
+    {
+        Language = language;
+        Culture = culture;
+        TimeZone = timeZone;
+        IMGUI = imgui;
+        Team = team;
+    }
+
+    internal bool Includes(WarfarePlayer player, TranslationOptions options)
+    {
+        if ((options & TranslationOptions.PerTeamTranslation) != 0 && player.Team != Team)
+        {
+            return false;
+        }
+
+        if ((options & TranslationOptions.PerTimeZoneTranslation) != 0 && !player.Locale.TimeZone.Id.Equals(TimeZone.Id, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if ((options & TranslationOptions.PerCultureTranslation) != 0 && !player.Locale.CultureInfo.Name.Equals(Culture.Name, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if ((options & TranslationOptions.PerLanguageTranslation) != 0 && !player.Locale.LanguageInfo.Equals(Language))
+        {
+            return false;
+        }
+
+        if ((options & TranslationOptions.ConsiderIMGUI) != 0 && player.Save.IMGUI != IMGUI)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    internal PooledTransportConnectionList GatherTransportConnections()
+    {
+        PooledTransportConnectionList list = TransportConnectionPoolHelper.Claim(Players.Count);
+        WarfarePlayer[] arr = Players.Array!;
+        int i = Players.Offset;
+        int ct = i + Players.Count;
+        for (; i < ct; i++)
+        {
+            WarfarePlayer pl = arr[i];
+            if (pl.IsOnline)
+                list.Add(pl.Connection);
+        }
+
+        return list;
+    }
+
+    internal PooledTransportConnectionList GatherTransportConnections(byte x, byte y, byte area)
+    {
+        PooledTransportConnectionList list = TransportConnectionPoolHelper.Claim(Players.Count);
+        WarfarePlayer[] arr = Players.Array!;
+        int i = Players.Offset;
+        int ct = i + Players.Count;
+        for (; i < ct; i++)
+        {
+            WarfarePlayer pl = arr[i];
+            PlayerMovement movement = pl.UnturnedPlayer.movement;
+            if (pl.IsOnline && Regions.checkArea(movement.region_x, movement.region_y, x, y, area))
+                list.Add(pl.Connection);
+        }
+
+        return list;
+    }
+
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    internal void Return()
+    {
+        Service?.ReturnLanguageGroup(this);
+    }
 }

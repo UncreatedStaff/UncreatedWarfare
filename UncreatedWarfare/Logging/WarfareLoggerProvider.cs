@@ -1,9 +1,7 @@
 using DanielWillett.ReflectionTools;
 using SDG.Framework.Utilities;
 using StackCleaner;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
@@ -186,13 +184,7 @@ public class WarfareLoggerProvider : ILoggerProvider
         if (GameThread.IsCurrent)
             Update();
         else
-        {
-            UniTask.Create(async () =>
-            {
-                await UniTask.SwitchToMainThread();
-                Update();
-            });
-        }
+            GameThread.Queue(Update);
     }
 
     private struct LogMessage

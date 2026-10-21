@@ -13,6 +13,9 @@ public class NullPlayerService : IPlayerService
     public bool IsEmpty => true;
 
     /// <inheritdoc />
+    public int Count => 0;
+
+    /// <inheritdoc />
     public ReadOnlyTrackingList<WarfarePlayer> OnlinePlayers { get; } = new ReadOnlyTrackingList<WarfarePlayer>(new TrackingList<WarfarePlayer>(0));
 
     public NullPlayerService(IServiceProvider serviceProvider)

@@ -238,7 +238,7 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
                     Logger.LogError(ex, "Error closing leaderboard.");
                 }
                 Dispose();
-                UniTask.Create(() => _session.MoveToNextPhase(CancellationToken.None));
+                _ = _session.MoveToNextPhase(CancellationToken.None);
             }
             else
             {

@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using System;
 using System.IO;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Layouts.UI;
@@ -54,6 +53,8 @@ public class PreparationPhase : BasePhase<PhaseTeamSettings>, IDisposable
     {
         using IDisposable? profiler = ProfilerUtil.Profile();
 
+        const TranslationOptions options = TranslationOptions.PerLanguageTranslation;
+
         TranslationList? globalTranslationList = null;
         if (Name is { Count: > 0 })
         {
@@ -69,17 +70,17 @@ public class PreparationPhase : BasePhase<PhaseTeamSettings>, IDisposable
                 continue;
 
             if (Duration.Ticks > 0)
-                _stagingUi.SendToAll(_translationService.SetOf.PlayersOnTeam(settings.TeamInfo), settings.Name, Duration);
+                _stagingUi.SendToAll(_translationService.SetOf.PlayersOnTeam(settings.TeamInfo, options), settings.Name, Duration);
             else
-                _stagingUi.SendToAll(_translationService.SetOf.PlayersOnTeam(settings.TeamInfo), settings.Name);
+                _stagingUi.SendToAll(_translationService.SetOf.PlayersOnTeam(settings.TeamInfo, options), settings.Name);
         }
 
         if (globalTranslationList != null)
         {
             if (Duration.Ticks > 0)
-                _stagingUi.SendToAll(_translationService.SetOf.AllPlayers(), globalTranslationList, Duration);
+                _stagingUi.SendToAll(_translationService.SetOf.AllPlayers(options), globalTranslationList, Duration);
             else
-                _stagingUi.SendToAll(_translationService.SetOf.AllPlayers(), globalTranslationList);
+                _stagingUi.SendToAll(_translationService.SetOf.AllPlayers(options), globalTranslationList);
         }
 
         if (Duration.Ticks <= 0)
@@ -98,14 +99,14 @@ public class PreparationPhase : BasePhase<PhaseTeamSettings>, IDisposable
 
             if (globalTranslationList != null)
             {
-                phase._stagingUi.UpdateForAll(phase._translationService.SetOf.PlayersOnTeam(), globalTranslationList, timeLeft);
+                phase._stagingUi.UpdateForAll(phase._translationService.SetOf.PlayersOnTeam(options), globalTranslationList, timeLeft);
             }
             else foreach (PhaseTeamSettings settings in phase.Teams!)
             {
                 if (settings.Name is not { Count: > 0 } || settings.TeamInfo == null)
                     continue;
 
-                phase._stagingUi.UpdateForAll(phase._translationService.SetOf.PlayersOnTeam(settings.TeamInfo), settings.Name, timeLeft);
+                phase._stagingUi.UpdateForAll(phase._translationService.SetOf.PlayersOnTeam(settings.TeamInfo, options), settings.Name, timeLeft);
             }
 
             if (!isCompleted)
@@ -113,8 +114,7 @@ public class PreparationPhase : BasePhase<PhaseTeamSettings>, IDisposable
             
             phase._ticker?.Dispose();
             phase._ticker = null;
-            PreparationPhase phase2 = phase;
-            UniTask.Create(() => phase2._session.MoveToNextPhase(CancellationToken.None));
+            UniTask __ = phase._session.MoveToNextPhase(CancellationToken.None);
         });
     }
 

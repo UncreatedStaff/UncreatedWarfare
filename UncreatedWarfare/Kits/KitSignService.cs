@@ -1,12 +1,13 @@
-using System;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Kits;
 using Uncreated.Warfare.Events.Models.Squads;
 using Uncreated.Warfare.Kits.Loadouts;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Signs;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Kits;
@@ -20,13 +21,17 @@ public class KitSignService :
 {
     private readonly SignInstancer _signs;
     private readonly IPlayerService _playerService;
+    private readonly ITranslationService _translationService;
     private readonly LoadoutService _loadoutService;
+    private readonly IKitDataStore _kitDataStore;
 
-    public KitSignService(SignInstancer signs, IPlayerService playerService, LoadoutService loadoutService)
+    public KitSignService(SignInstancer signs, IPlayerService playerService, ITranslationService translationService, LoadoutService loadoutService, IKitDataStore kitDataStore)
     {
         _signs = signs;
         _playerService = playerService;
+        _translationService = translationService;
         _loadoutService = loadoutService;
+        _kitDataStore = kitDataStore;
     }
 
     /// <summary>
@@ -36,13 +41,12 @@ public class KitSignService :
     public void UpdateSigns()
     {
         if (GameThread.IsCurrent)
-            UpdateSignsIntl(null);
+            UpdateSignsIntl((WarfarePlayer?)null);
         else
         {
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
-                UpdateSignsIntl(null);
+                UpdateSignsIntl((WarfarePlayer?)null);
             });
         }
     }
@@ -58,10 +62,89 @@ public class KitSignService :
         else
         {
             WarfarePlayer p2 = player;
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
                 UpdateSignsIntl(p2);
+            });
+        }
+    }
+
+    /// <summary>
+    /// Update all kit signs for a <paramref name="team"/>.
+    /// </summary>
+    /// <remarks>Thread Safe</remarks>
+    public void UpdateSigns(Team team)
+    {
+        if (GameThread.IsCurrent)
+            UpdateSignsIntl(team);
+        else
+        {
+            Team t2 = team;
+            GameThread.Queue(() =>
+            {
+                UpdateSignsIntl(t2);
+            });
+        }
+    }
+
+    /// <summary>
+    /// Update all kit signs for all players matching a predicate
+    /// </summary>
+    /// <remarks>Thread Safe</remarks>
+    public void UpdateSignsWhere(Func<Kit, bool>? kitSignPredicate, Func<int, bool>? loadoutSignPredicate, Func<int, bool>? favoriteSignPredicate)
+    {
+        if (GameThread.IsCurrent)
+            UpdateSignsIntl(null, null, kitSignPredicate, loadoutSignPredicate, favoriteSignPredicate);
+        else
+        {
+            Func<Kit, bool>? kitSignPredicate2 = kitSignPredicate;
+            Func<int, bool>? loadoutSignPredicate2 = loadoutSignPredicate;
+            Func<int, bool>? favoriteSignPredicate2 = favoriteSignPredicate;
+            GameThread.Queue(() =>
+            {
+                UpdateSignsIntl(null, null, kitSignPredicate2, loadoutSignPredicate2, favoriteSignPredicate2);
+            });
+        }
+    }
+
+    /// <summary>
+    /// Update all kit signs for a player matching a predicate
+    /// </summary>
+    /// <remarks>Thread Safe</remarks>
+    public void UpdateSignsWhere(WarfarePlayer player, Func<Kit, bool>? kitSignPredicate, Func<int, bool>? loadoutSignPredicate, Func<int, bool>? favoriteSignPredicate)
+    {
+        if (GameThread.IsCurrent)
+            UpdateSignsIntl(player, null, kitSignPredicate, loadoutSignPredicate, favoriteSignPredicate);
+        else
+        {
+            WarfarePlayer p2 = player;
+            Func<Kit, bool>? kitSignPredicate2 = kitSignPredicate;
+            Func<int, bool>? loadoutSignPredicate2 = loadoutSignPredicate;
+            Func<int, bool>? favoriteSignPredicate2 = favoriteSignPredicate;
+            GameThread.Queue(() =>
+            {
+                UpdateSignsIntl(p2, null, kitSignPredicate2, loadoutSignPredicate2, favoriteSignPredicate2);
+            });
+        }
+    }
+
+    /// <summary>
+    /// Update all kit signs for a team matching a predicate
+    /// </summary>
+    /// <remarks>Thread Safe</remarks>
+    public void UpdateSignsWhere(Team team, Func<Kit, bool>? kitSignPredicate, Func<int, bool>? loadoutSignPredicate, Func<int, bool>? favoriteSignPredicate)
+    {
+        if (GameThread.IsCurrent)
+            UpdateSignsIntl(null, team, kitSignPredicate, loadoutSignPredicate, favoriteSignPredicate);
+        else
+        {
+            Team t2 = team;
+            Func<Kit, bool>? kitSignPredicate2 = kitSignPredicate;
+            Func<int, bool>? loadoutSignPredicate2 = loadoutSignPredicate;
+            Func<int, bool>? favoriteSignPredicate2 = favoriteSignPredicate;
+            GameThread.Queue(() =>
+            {
+                UpdateSignsIntl(null, t2, kitSignPredicate2, loadoutSignPredicate2, favoriteSignPredicate2);
             });
         }
     }
@@ -77,9 +160,8 @@ public class KitSignService :
         else
         {
             WarfarePlayer p2 = player;
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
                 UpdateLoadoutSignsIntl(p2);
             });
         }
@@ -95,9 +177,8 @@ public class KitSignService :
             UpdateLoadoutSignsIntl(null);
         else
         {
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
                 UpdateLoadoutSignsIntl(null);
             });
         }
@@ -114,9 +195,8 @@ public class KitSignService :
         else
         {
             WarfarePlayer p2 = player;
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
                 UpdateFavoriteSignsIntl(p2);
             });
         }
@@ -133,9 +213,8 @@ public class KitSignService :
         else
         {
             Kit k2 = kit;
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
                 UpdateSignsIntl(k2, null);
             });
         }
@@ -153,9 +232,8 @@ public class KitSignService :
         {
             Kit k2 = kit;
             WarfarePlayer p2 = player;
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
                 UpdateSignsIntl(k2, p2);
             });
         }
@@ -172,9 +250,8 @@ public class KitSignService :
         else
         {
             string k2 = kitId;
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
                 UpdateSignsIntl(k2, null);
             });
         }
@@ -192,9 +269,8 @@ public class KitSignService :
         {
             string k2 = kitId;
             WarfarePlayer p2 = player;
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
                 UpdateSignsIntl(k2, p2);
             });
         }
@@ -211,9 +287,8 @@ public class KitSignService :
         else
         {
             PublicKitLevel k2 = levelInfo;
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
                 UpdateSignsIntl(k2, null);
             });
         }
@@ -231,9 +306,8 @@ public class KitSignService :
         {
             PublicKitLevel k2 = levelInfo;
             WarfarePlayer p2 = player;
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
                 UpdateSignsIntl(k2, p2);
             });
         }
@@ -255,6 +329,74 @@ public class KitSignService :
         {
             _signs.UpdateSigns<KitSignInstanceProvider>(player);
         }
+    }
+
+    private void UpdateSignsIntl(Team team)
+    {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
+        // expects game thread
+        _signs.UpdateSigns<KitSignInstanceProvider>(_translationService.SetOf.PlayersOnTeam(team, KitSignInstanceProvider.TranslationOptions));
+    }
+
+    private void UpdateSignsIntl(WarfarePlayer? player, Team? team, Func<Kit, bool>? kitSignPredicate, Func<int, bool>? loadoutSignPredicate, Func<int, bool>? favoriteSignPredicate)
+    {
+        if (player is { IsOnline: false })
+            return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
+        // expects game thread
+        UpdateKitSignsWithPredicatesState state;
+        state.KitSignPredicate = kitSignPredicate;
+        state.LoadoutSignPredicate = loadoutSignPredicate;
+        state.FavoriteSignPredicate = favoriteSignPredicate;
+        state.KitDataStore = _kitDataStore;
+
+        SignInstancer.WhereStateRef<KitSignInstanceProvider, UpdateKitSignsWithPredicatesState> predicate
+            = static (_, provider, ref state) =>
+            {
+                int index = provider.LoadoutNumber;
+                if (index >= 0)
+                {
+                    if (index == 0 || state.LoadoutSignPredicate == null)
+                        return false;
+
+                    return state.LoadoutSignPredicate(index);
+                }
+
+                index = provider.FavoriteIndex;
+                if (index >= 0)
+                {
+                    return state.FavoriteSignPredicate != null && state.FavoriteSignPredicate(index);
+                }
+
+                return state.KitSignPredicate != null
+                       && provider.KitId != null
+                       && state.KitDataStore.CachedKitsById.TryGetValue(provider.KitId, out Kit? cachedKit)
+                       && state.KitSignPredicate(cachedKit);
+            };
+
+        if (team is not null)
+        {
+            _signs.UpdateSigns(_translationService.SetOf.PlayersOnTeam(team), ref state, predicate);
+        }
+        else if (player == null)
+        {
+            _signs.UpdateSigns(ref state, predicate);
+        }
+        else
+        {
+            _signs.UpdateSigns(player, ref state, predicate);
+        }
+    }
+
+    private struct UpdateKitSignsWithPredicatesState
+    {
+        internal Func<Kit, bool>? KitSignPredicate;
+        internal Func<int, bool>? LoadoutSignPredicate;
+        internal Func<int, bool>? FavoriteSignPredicate;
+        internal IKitDataStore KitDataStore;
     }
 
     private void UpdateLoadoutSignsIntl(WarfarePlayer? player)
@@ -382,19 +524,19 @@ public class KitSignService :
     [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     public void HandleEvent(PlayerKitChanged e, IServiceProvider serviceProvider)
     {
-        UpdateSigns();
+        UpdateSignsWhere(e.Player.Team, k => k.Id == e.State?.Id || k.MinRequiredSquadMembers.HasValue, _ => true, _ => true);
     }
 
     [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     public void HandleEvent(SquadMemberJoined e, IServiceProvider serviceProvider)
     {
-        UpdateSigns();
+        UpdateSignsWhere(e.Player.Team, k => k.RequiresSquad, _ => true, _ => true);
     }
 
     [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     public void HandleEvent(SquadMemberLeft e, IServiceProvider serviceProvider)
     {
-        UpdateSigns();
+        UpdateSignsWhere(e.Player.Team, k => k.RequiresSquad, _ => true, _ => true);
     }
 
     [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]

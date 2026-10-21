@@ -32,9 +32,9 @@ public class TicketsChanged : IFlagsNeedUIUpdateEvent
     public required ITicketTracker TicketTracker { get; init; }
 
     /// <inheritdoc />
-    LanguageSetEnumerator IFlagsNeedUIUpdateEvent.EnumerateApplicableSets(ITranslationService translationService, ref bool ticketsOnly)
+    LanguageSetEnumerator IFlagsNeedUIUpdateEvent.EnumerateApplicableSets(ITranslationService translationService, TranslationOptions options, ref bool ticketsOnly)
     {
         ticketsOnly = true;
-        return translationService.SetOf.PlayersOnTeam(Team);
+        return translationService.SetOf.PlayersOnTeam(Team, options);
     }
 }

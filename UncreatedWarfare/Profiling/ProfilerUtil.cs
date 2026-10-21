@@ -138,7 +138,7 @@ public static class ProfilerUtil
 
     private static void FlushIntl(ConcurrentDictionary<UncreatedProfilerKey, ProfilerRecord> records, DateTime startTime)
     {
-        if (_records.Count == 0)
+        if (records.Count == 0)
             return;
 
         string baseDir = WarfareModule.IsActive ? WarfareModule.Singleton.HomeDirectory : Environment.CurrentDirectory;
@@ -147,13 +147,13 @@ public static class ProfilerUtil
 
         Directory.CreateDirectory(directory);
 
-        FileInfo?[] allFiles = new DirectoryInfo(directory).GetFiles("*.csv", SearchOption.TopDirectoryOnly);
         // delete old files
         while (true)
         {
             long totalLength = 0;
             FileInfo? oldest = null;
             DateTime oldestDate = DateTime.MaxValue;
+            FileInfo?[] allFiles = new DirectoryInfo(directory).GetFiles("*.csv", SearchOption.TopDirectoryOnly);
             for (int i = 0; i < allFiles.Length; i++)
             {
                 FileInfo? file = allFiles[i];

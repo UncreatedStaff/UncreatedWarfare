@@ -86,5 +86,27 @@ public enum TranslationOptions
     /// <summary>
     /// A hint sent with <see cref="Player.ServerShowHint"/> or <see cref="ChatService.SendHint"/>.
     /// </summary>
-    Hint = UI
+    Hint = UI,
+
+    /// <summary>
+    /// Players with different time zones should translate this separately.
+    /// </summary>
+    PerTimeZoneTranslation = 1 << 9,
+
+    /// <summary>
+    /// Players with different cultures should translate this separately.
+    /// </summary>
+    /// <remarks>This doesn't need to be added to translations, it'll be added automatically during translation.</remarks>
+    PerCultureTranslation = 1 << 10,
+
+    /// <summary>
+    /// Players with different languages can all translate this together.
+    /// </summary>
+    /// <remarks>This doesn't need to be added to translations, it'll be added automatically during translation.</remarks>
+    PerLanguageTranslation = 1 << 11,
+
+    /// <summary>
+    /// Players with different IMGUI settings should translate this separately.
+    /// </summary>
+    ConsiderIMGUI = 1 << 12
 }

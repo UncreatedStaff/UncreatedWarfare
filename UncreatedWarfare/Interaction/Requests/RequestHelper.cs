@@ -1,7 +1,5 @@
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Uncreated.Warfare.Layouts.Teams;
@@ -126,7 +124,7 @@ public static class RequestHelper
             return null;
         }
 
-        ISignInstanceProvider? provider = signInstancer.GetSignProvider(barricade);
+        BaseSignInstanceProvider? provider = signInstancer.GetSignProvider(barricade);
         return provider as IRequestable<object>;
     }
 }

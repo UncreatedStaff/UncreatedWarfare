@@ -24,8 +24,10 @@ namespace Uncreated.Warfare.Signs;
 [SignPrefix("kit_")]
 [SignPrefix("loadout_")]
 [SignPrefix("kitfav_")]
-public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>, IKitRequirementVisitor<StringBuilder>
+public class KitSignInstanceProvider : BaseSignInstanceProvider, IRequestable<Kit>, IKitRequirementVisitor<StringBuilder>
 {
+    public const TranslationOptions TranslationOptions = LanguageSets.DefaultTranslationOptions | TranslationOptions.PerPlayerTranslation;
+
     private static readonly StringBuilder KitSignBuffer = new StringBuilder(230);
 
     private readonly IKitDataStore _kitDataStore;
@@ -42,14 +44,15 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
     private static readonly Color32 ColorKitUnfavoritedName = new Color32(255, 255, 255, 255);
 
     /// <inheritdoc />
-    bool ISignInstanceProvider.CanBatchTranslate => false;
+    public override TranslationOptions GroupOptions => TranslationOptions;
 
     /// <inheritdoc />
-    string ISignInstanceProvider.FallbackText => KitId ?? ("Loadout " + LoadoutNumber.ToString(CultureInfo.InvariantCulture));
+    public override string FallbackText => KitId ?? ("Loadout " + LoadoutNumber.ToString(CultureInfo.InvariantCulture));
     public string KitId { get; private set; }
     public int LoadoutNumber { get; private set; }
     public int FavoriteIndex { get; private set; }
     public KitSignInstanceProvider(
+        BarricadeDrop barricade,
         IKitDataStore kitDataStore,
         TranslationInjection<KitSignTranslations> translations,
         PlayerNitroBoostService nitroBoostService,
@@ -58,6 +61,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
         TextMeasurementService measurementService,
         KitRequirementManager kitRequirements,
         PublicKitLevelConfiguration kitCostConfig)
+    : base(barricade)
     {
         _kitDataStore = kitDataStore;
         _nitroBoostService = nitroBoostService;
@@ -71,7 +75,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
         KitId = null!;
     }
 
-    public void Initialize(BarricadeDrop barricade, string extraInfo, IServiceProvider serviceProvider)
+    public override void Initialize(BarricadeDrop barricade, string extraInfo, IServiceProvider serviceProvider)
     {
         _signMetrics = _measurementService.GetSignMetrics(barricade.asset.GUID);
 
@@ -98,7 +102,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
         }
     }
 
-    public string Translate(ITranslationValueFormatter formatter, IServiceProvider serviceProvider, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
+    public override string Translate(ITranslationValueFormatter formatter, IServiceProvider serviceProvider, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
     {
         using IDisposable? profiler = ProfilerUtil.Profile();
 
@@ -156,7 +160,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
 
     /*
      *  - KIT NAME WITH A
-     *     MAYBE NEWLINE  or OPEN LINE IF NOT NEEDED
+     *     MAYBE NEWLINE  or  OPEN LINE IF NOT NEEDED
      *  * EMPTY LINE IF NO WEAPON TEXT
      *  - COST
      *  - WEAPON TEXT [optional]

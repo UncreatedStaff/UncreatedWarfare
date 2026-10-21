@@ -1,4 +1,3 @@
-using System;
 using System.Globalization;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Models.Localization;
@@ -84,9 +83,10 @@ public static class TranslationExtensions
     /// <param name="format">Format information for the translation. This can just be a <see cref="string"/>.</param>
     public static string Translate(this ITranslationArgument argument, ITranslationService translationService, in LanguageSet set, ArgumentFormat format = default, bool canUseIMGUI = false, TranslationOptions options = TranslationOptions.None)
     {
-        if (set.Players.Count == 1)
+        WarfarePlayer? single = set.SingleOrNull;
+        if (single != null)
         {
-            return argument.Translate(translationService, set.Players[0], format, canUseIMGUI, options);
+            return argument.Translate(translationService, single, format, canUseIMGUI, options);
         }
 
         if (canUseIMGUI && (options & TranslationOptions.NoRichText) == 0 && set.IMGUI)
@@ -146,9 +146,10 @@ public static class TranslationExtensions
     /// <exception cref="ArgumentException">Arguments in <paramref name="formatting"/> aren't convertible to the type the translation is expecting.</exception>
     public static string UnsafeTranslate(this Translation translation, object[] formatting, in LanguageSet set, bool canUseIMGUI = false)
     {
-        if (set.Players.Count == 1)
+        WarfarePlayer? single = set.SingleOrNull;
+        if (single != null)
         {
-            return translation.Translate(set.Players[0]);
+            return translation.UnsafeTranslate(formatting, single, canUseIMGUI);
         }
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
@@ -219,9 +220,10 @@ public static class TranslationExtensions
     /// <exception cref="ArgumentException">Arguments in <paramref name="formatting"/> aren't convertible to the type the translation is expecting.</exception>
     public static string UnsafeTranslate(this Translation translation, object[] formatting, in LanguageSet set, out Color color, bool canUseIMGUI = false)
     {
-        if (set.Players.Count == 1)
+        WarfarePlayer? single = set.SingleOrNull;
+        if (single != null)
         {
-            return translation.Translate(set.Players[0], out color);
+            return translation.UnsafeTranslate(formatting, single, out color, canUseIMGUI);
         }
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
@@ -295,9 +297,10 @@ public static class TranslationExtensions
     /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate(this Translation translation, in LanguageSet set, bool canUseIMGUI = false)
     {
-        if (set.Players.Count == 1)
+        WarfarePlayer? single = set.SingleOrNull;
+        if (single != null)
         {
-            return translation.Translate(set.Players[0]);
+            return translation.Translate(single, canUseIMGUI);
         }
 
         AssertNoArgs(translation);
@@ -361,9 +364,10 @@ public static class TranslationExtensions
     /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public static string Translate(this Translation translation, in LanguageSet set, out Color color, bool canUseIMGUI = false)
     {
-        if (set.Players.Count == 1)
+        WarfarePlayer? single = set.SingleOrNull;
+        if (single != null)
         {
-            return translation.Translate(set.Players[0], out color);
+            return translation.Translate(single, out color, canUseIMGUI);
         }
 
         AssertNoArgs(translation);
@@ -430,9 +434,10 @@ public static class TranslationExtensions
     /// </summary>
     public static string Translate<T0>(this Translation<T0> translation, T0 arg0, in LanguageSet set, bool canUseIMGUI = false)
     {
-        if (set.Players.Count == 1)
+        WarfarePlayer? single = set.SingleOrNull;
+        if (single != null)
         {
-            return translation.Translate(set.Players[0]);
+            return translation.Translate(arg0, single, canUseIMGUI);
         }
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
@@ -498,9 +503,10 @@ public static class TranslationExtensions
     /// </summary>
     public static string Translate<T0>(this Translation<T0> translation, T0 arg0, in LanguageSet set, out Color color, bool canUseIMGUI = false)
     {
-        if (set.Players.Count == 1)
+        WarfarePlayer? single = set.SingleOrNull;
+        if (single != null)
         {
-            return translation.Translate(set.Players[0], out color);
+            return translation.Translate(arg0, single, out color, canUseIMGUI);
         }
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
@@ -568,9 +574,10 @@ public static class TranslationExtensions
     /// </summary>
     public static string Translate<T0, T1>(this Translation<T0, T1> translation, T0 arg0, T1 arg1, in LanguageSet set, bool canUseIMGUI = false)
     {
-        if (set.Players.Count == 1)
+        WarfarePlayer? single = set.SingleOrNull;
+        if (single != null)
         {
-            return translation.Translate(set.Players[0]);
+            return translation.Translate(arg0, arg1, single, canUseIMGUI);
         }
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
@@ -636,9 +643,10 @@ public static class TranslationExtensions
     /// </summary>
     public static string Translate<T0, T1>(this Translation<T0, T1> translation, T0 arg0, T1 arg1, in LanguageSet set, out Color color, bool canUseIMGUI = false)
     {
-        if (set.Players.Count == 1)
+        WarfarePlayer? single = set.SingleOrNull;
+        if (single != null)
         {
-            return translation.Translate(set.Players[0], out color);
+            return translation.Translate(arg0, arg1, single, out color, canUseIMGUI);
         }
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
@@ -706,9 +714,10 @@ public static class TranslationExtensions
     /// </summary>
     public static string Translate<T0, T1, T2>(this Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2, in LanguageSet set, bool canUseIMGUI = false)
     {
-        if (set.Players.Count == 1)
+        WarfarePlayer? single = set.SingleOrNull;
+        if (single != null)
         {
-            return translation.Translate(set.Players[0]);
+            return translation.Translate(arg0, arg1, arg2, single, canUseIMGUI);
         }
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
@@ -774,9 +783,10 @@ public static class TranslationExtensions
     /// </summary>
     public static string Translate<T0, T1, T2>(this Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2, in LanguageSet set, out Color color, bool canUseIMGUI = false)
     {
-        if (set.Players.Count == 1)
+        WarfarePlayer? single = set.SingleOrNull;
+        if (single != null)
         {
-            return translation.Translate(set.Players[0], out color);
+            return translation.Translate(arg0, arg1, arg2, single, out color, canUseIMGUI);
         }
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
@@ -844,9 +854,10 @@ public static class TranslationExtensions
     /// </summary>
     public static string Translate<T0, T1, T2, T3>(this Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, in LanguageSet set, bool canUseIMGUI = false)
     {
-        if (set.Players.Count == 1)
+        WarfarePlayer? single = set.SingleOrNull;
+        if (single != null)
         {
-            return translation.Translate(set.Players[0]);
+            return translation.Translate(arg0, arg1, arg2, arg3, single, canUseIMGUI);
         }
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
@@ -912,9 +923,10 @@ public static class TranslationExtensions
     /// </summary>
     public static string Translate<T0, T1, T2, T3>(this Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, in LanguageSet set, out Color color, bool canUseIMGUI = false)
     {
-        if (set.Players.Count == 1)
+        WarfarePlayer? single = set.SingleOrNull;
+        if (single != null)
         {
-            return translation.Translate(set.Players[0], out color);
+            return translation.Translate(arg0, arg1, arg2, arg3, single, out color, canUseIMGUI);
         }
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
@@ -982,9 +994,10 @@ public static class TranslationExtensions
     /// </summary>
     public static string Translate<T0, T1, T2, T3, T4>(this Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, in LanguageSet set, bool canUseIMGUI = false)
     {
-        if (set.Players.Count == 1)
+        WarfarePlayer? single = set.SingleOrNull;
+        if (single != null)
         {
-            return translation.Translate(set.Players[0]);
+            return translation.Translate(arg0, arg1, arg2, arg3, arg4, single, canUseIMGUI);
         }
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
@@ -1050,9 +1063,10 @@ public static class TranslationExtensions
     /// </summary>
     public static string Translate<T0, T1, T2, T3, T4>(this Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, in LanguageSet set, out Color color, bool canUseIMGUI = false)
     {
-        if (set.Players.Count == 1)
+        WarfarePlayer? single = set.SingleOrNull;
+        if (single != null)
         {
-            return translation.Translate(set.Players[0], out color);
+            return translation.Translate(arg0, arg1, arg2, arg3, arg4, single, out color, canUseIMGUI);
         }
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
@@ -1120,9 +1134,10 @@ public static class TranslationExtensions
     /// </summary>
     public static string Translate<T0, T1, T2, T3, T4, T5>(this Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, in LanguageSet set, bool canUseIMGUI = false)
     {
-        if (set.Players.Count == 1)
+        WarfarePlayer? single = set.SingleOrNull;
+        if (single != null)
         {
-            return translation.Translate(set.Players[0]);
+            return translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, single, canUseIMGUI);
         }
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
@@ -1188,9 +1203,10 @@ public static class TranslationExtensions
     /// </summary>
     public static string Translate<T0, T1, T2, T3, T4, T5>(this Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, in LanguageSet set, out Color color, bool canUseIMGUI = false)
     {
-        if (set.Players.Count == 1)
+        WarfarePlayer? single = set.SingleOrNull;
+        if (single != null)
         {
-            return translation.Translate(set.Players[0], out color);
+            return translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, single, out color, canUseIMGUI);
         }
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
@@ -1258,9 +1274,10 @@ public static class TranslationExtensions
     /// </summary>
     public static string Translate<T0, T1, T2, T3, T4, T5, T6>(this Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, in LanguageSet set, bool canUseIMGUI = false)
     {
-        if (set.Players.Count == 1)
+        WarfarePlayer? single = set.SingleOrNull;
+        if (single != null)
         {
-            return translation.Translate(set.Players[0]);
+            return translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, single, canUseIMGUI);
         }
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
@@ -1326,9 +1343,10 @@ public static class TranslationExtensions
     /// </summary>
     public static string Translate<T0, T1, T2, T3, T4, T5, T6>(this Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, in LanguageSet set, out Color color, bool canUseIMGUI = false)
     {
-        if (set.Players.Count == 1)
+        WarfarePlayer? single = set.SingleOrNull;
+        if (single != null)
         {
-            return translation.Translate(set.Players[0], out color);
+            return translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, single, out color, canUseIMGUI);
         }
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
@@ -1396,9 +1414,10 @@ public static class TranslationExtensions
     /// </summary>
     public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, in LanguageSet set, bool canUseIMGUI = false)
     {
-        if (set.Players.Count == 1)
+        WarfarePlayer? single = set.SingleOrNull;
+        if (single != null)
         {
-            return translation.Translate(set.Players[0]);
+            return translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, single, canUseIMGUI);
         }
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
@@ -1464,9 +1483,10 @@ public static class TranslationExtensions
     /// </summary>
     public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, in LanguageSet set, out Color color, bool canUseIMGUI = false)
     {
-        if (set.Players.Count == 1)
+        WarfarePlayer? single = set.SingleOrNull;
+        if (single != null)
         {
-            return translation.Translate(set.Players[0], out color);
+            return translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, single, out color, canUseIMGUI);
         }
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
@@ -1534,9 +1554,10 @@ public static class TranslationExtensions
     /// </summary>
     public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, in LanguageSet set, bool canUseIMGUI = false)
     {
-        if (set.Players.Count == 1)
+        WarfarePlayer? single = set.SingleOrNull;
+        if (single != null)
         {
-            return translation.Translate(set.Players[0]);
+            return translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, single, canUseIMGUI);
         }
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
@@ -1602,9 +1623,10 @@ public static class TranslationExtensions
     /// </summary>
     public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, in LanguageSet set, out Color color, bool canUseIMGUI = false)
     {
-        if (set.Players.Count == 1)
+        WarfarePlayer? single = set.SingleOrNull;
+        if (single != null)
         {
-            return translation.Translate(set.Players[0], out color);
+            return translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, single, out color, canUseIMGUI);
         }
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
@@ -1672,9 +1694,10 @@ public static class TranslationExtensions
     /// </summary>
     public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, in LanguageSet set, bool canUseIMGUI = false)
     {
-        if (set.Players.Count == 1)
+        WarfarePlayer? single = set.SingleOrNull;
+        if (single != null)
         {
-            return translation.Translate(set.Players[0]);
+            return translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, single, canUseIMGUI);
         }
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
@@ -1740,9 +1763,10 @@ public static class TranslationExtensions
     /// </summary>
     public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, in LanguageSet set, out Color color, bool canUseIMGUI = false)
     {
-        if (set.Players.Count == 1)
+        WarfarePlayer? single = set.SingleOrNull;
+        if (single != null)
         {
-            return translation.Translate(set.Players[0], out color);
+            return translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, single, out color, canUseIMGUI);
         }
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);

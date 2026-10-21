@@ -1,4 +1,3 @@
-using System;
 using System.Linq;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;

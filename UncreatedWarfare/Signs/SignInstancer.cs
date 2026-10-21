@@ -1,6 +1,6 @@
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
-using System;
+using SDG.Framework.Utilities;
 using System.Globalization;
 using System.Linq;
 using Uncreated.Warfare.Events.Models;
@@ -8,6 +8,7 @@ using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
@@ -23,25 +24,44 @@ public class SignInstancer : ILayoutHostedService,
     IEventListener<SignTextChanged>,
     IEventListener<PlayerLocaleUpdated>
 {
+    /// <summary>
+    /// Signature for <see cref="UpdateSigns{TProvider,TState}(ref TState,WhereStateRef{TProvider,TState})"/> and <see cref="UpdateSigns{TProvider,TState}(WarfarePlayer,ref TState,WhereStateRef{TProvider,TState})"/>.
+    /// </summary>
+    public delegate bool WhereStateRef<in TProvider, TState>(InteractableSign sign, TProvider provider, ref TState state)
+        where TProvider : BaseSignInstanceProvider;
+
+    /// <summary>
+    /// Signature for <see cref="UpdateSigns{TProvider,TState}(TState,WhereState{TProvider,TState})"/> and <see cref="UpdateSigns{TProvider,TState}(WarfarePlayer,TState,WhereState{TProvider,TState})"/>.
+    /// </summary>
+    public delegate bool WhereState<in TProvider, in TState>(InteractableSign sign, TProvider provider, TState state)
+        where TProvider : BaseSignInstanceProvider;
+
     private static readonly ClientInstanceMethod<string> SendChangeText = ReflectionUtility.FindRequiredRpc<InteractableSign, ClientInstanceMethod<string>>("SendChangeText");
+
+    private const int MaxSignUpdatesPerFrame = 3;
 
     private readonly WarfareModule _warfare;
     private IServiceProvider? _serviceProvider;
     private readonly SignInstanceData[] _types;
-    private readonly Dictionary<uint, ISignInstanceProvider> _signProviders = new Dictionary<uint, ISignInstanceProvider>(256);
-    private readonly Dictionary<uint, int> _signProviderTypeIndexes = new Dictionary<uint, int>(256);
+    private readonly Dictionary<uint, BaseSignInstanceProvider> _signProviders = new Dictionary<uint, BaseSignInstanceProvider>(256);
+    // private readonly Dictionary<uint, int> _signProviderTypeIndexes = new Dictionary<uint, int>(256);
     private readonly ILogger<SignInstancer> _logger;
     private readonly ITranslationService _translationService;
+    private readonly IPlayerService _playerService;
 
-    public SignInstancer(WarfareModule module, ILogger<SignInstancer> logger, ITranslationService translationService)
+    private readonly List<HashSet<ulong>> _playerListPool = new List<HashSet<ulong>>(64);
+    private readonly Queue<BaseSignInstanceProvider> _updateQueue = new Queue<BaseSignInstanceProvider>();
+
+    public SignInstancer(WarfareModule module, ILogger<SignInstancer> logger, ITranslationService translationService, IPlayerService playerService)
     {
         _warfare = module;
         _logger = logger;
         _translationService = translationService;
+        _playerService = playerService;
 
-        // find all ISignInstanceProvider's
+        // find all BaseSignInstanceProvider's
         List<SignInstanceData> instances = new List<SignInstanceData>(8);
-        foreach (Type signProviderType in Accessor.GetTypesSafe().Where(typeof(ISignInstanceProvider).IsAssignableFrom))
+        foreach (Type signProviderType in Accessor.GetTypesSafe().Where(typeof(BaseSignInstanceProvider).IsAssignableFrom))
         {
             if (signProviderType.IsAbstract || !signProviderType.IsClass)
                 continue;
@@ -67,6 +87,7 @@ public class SignInstancer : ILayoutHostedService,
             CheckBarricadeForInit(barricade.Drop);
         }
 
+        TimeUtility.updated += OnUpdate;
         return UniTask.CompletedTask;
     }
 
@@ -74,7 +95,50 @@ public class SignInstancer : ILayoutHostedService,
     {
         ResetAllSigns(changeText: false);
         _serviceProvider = null;
+        TimeUtility.updated -= OnUpdate;
         return UniTask.CompletedTask;
+    }
+
+    private HashSet<ulong> EnqueueUpdate(BaseSignInstanceProvider provider)
+    {
+        if (provider.IsQueued)
+            return provider.Players!;
+
+        if (provider.Players == null)
+        {
+            if (_playerListPool.Count > 0)
+            {
+                provider.Players = _playerListPool[^1];
+                _playerListPool.RemoveAt(_playerListPool.Count - 1);
+            }
+            else
+            {
+                provider.Players = new HashSet<ulong>(32);
+            }
+        }
+
+        provider.IsQueued = true;
+        _updateQueue.Enqueue(provider);
+        return provider.Players;
+    }
+
+    private void ApplyDequeue(BaseSignInstanceProvider provider)
+    {
+        provider.IsQueued = false;
+        provider.IsQueuedAllPlayers = false;
+        HashSet<ulong>? oldPlayers = provider.Players;
+        provider.Players = null;
+        if (oldPlayers != null)
+        {
+            oldPlayers.Clear();
+            _playerListPool.Add(oldPlayers);
+        }
+    }
+
+    private void MarkAllPlayers(BaseSignInstanceProvider provider)
+    {
+        provider.IsQueuedAllPlayers = true;
+        provider.Players?.Clear();
     }
     
     /// <summary>
@@ -95,14 +159,14 @@ public class SignInstancer : ILayoutHostedService,
     /// Get the sign provider for a specific sign.
     /// </summary>
     /// <exception cref="GameThreadException"/>
-    public ISignInstanceProvider? GetSignProvider(BarricadeDrop drop)
+    public BaseSignInstanceProvider? GetSignProvider(BarricadeDrop drop)
     {
         GameThread.AssertCurrent();
 
         if (drop.interactable is not InteractableSign)
             throw new ArgumentException("Barricade must be sign.", nameof(drop));
 
-        _signProviders.TryGetValue(drop.instanceID, out ISignInstanceProvider? provider);
+        _signProviders.TryGetValue(drop.instanceID, out BaseSignInstanceProvider? provider);
         return provider;
     }
 
@@ -121,7 +185,7 @@ public class SignInstancer : ILayoutHostedService,
 
         uint instanceId = drop.instanceID;
 
-        if (!_signProviders.TryGetValue(instanceId, out ISignInstanceProvider? provider))
+        if (!_signProviders.TryGetValue(instanceId, out BaseSignInstanceProvider? provider))
         {
             return sign.text;
         }
@@ -146,7 +210,7 @@ public class SignInstancer : ILayoutHostedService,
 
         uint instanceId = drop.instanceID;
 
-        if (!_signProviders.TryGetValue(instanceId, out ISignInstanceProvider provider))
+        if (!_signProviders.TryGetValue(instanceId, out BaseSignInstanceProvider provider))
         {
             return sign.text;
         }
@@ -167,9 +231,11 @@ public class SignInstancer : ILayoutHostedService,
         GameThread.AssertCurrent();
 
         int ct = 0;
-        foreach (LanguageSet set in _translationService.SetOf.AllPlayers())
+        foreach (KeyValuePair<uint, BaseSignInstanceProvider> p in _signProviders)
         {
-            ct += UpdateSigns(set);
+            EnqueueUpdate(p.Value);
+            MarkAllPlayers(p.Value);
+            ++ct;
         }
 
         return ct;
@@ -179,16 +245,21 @@ public class SignInstancer : ILayoutHostedService,
     /// Update all signs with a certain provider type.
     /// </summary>
     /// <exception cref="GameThreadException"/>
-    public int UpdateSigns<TProvider>() where TProvider : class, ISignInstanceProvider
+    public int UpdateSigns<TProvider>() where TProvider : BaseSignInstanceProvider
     {
         using IDisposable? profiler = ProfilerUtil.Profile();
 
         GameThread.AssertCurrent();
 
         int ct = 0;
-        foreach (LanguageSet set in _translationService.SetOf.AllPlayers())
+        foreach (KeyValuePair<uint, BaseSignInstanceProvider> p in _signProviders)
         {
-            ct += UpdateSigns<TProvider>(set);
+            if (p.Value is not TProvider provider)
+                continue;
+
+            EnqueueUpdate(provider);
+            MarkAllPlayers(provider);
+            ++ct;
         }
 
         return ct;
@@ -198,16 +269,81 @@ public class SignInstancer : ILayoutHostedService,
     /// Update all signs that match a predicate with a certain provider type.
     /// </summary>
     /// <exception cref="GameThreadException"/>
-    public int UpdateSigns<TProvider>(Func<InteractableSign, TProvider, bool> selector) where TProvider : class, ISignInstanceProvider
+    public int UpdateSigns<TProvider>(Func<InteractableSign, TProvider, bool> selector) where TProvider : BaseSignInstanceProvider
     {
         using IDisposable? profiler = ProfilerUtil.Profile();
 
         GameThread.AssertCurrent();
 
         int ct = 0;
-        foreach (LanguageSet set in _translationService.SetOf.AllPlayers())
+        foreach (KeyValuePair<uint, BaseSignInstanceProvider> p in _signProviders)
         {
-            ct += UpdateSigns(set, selector);
+            if (p.Value is not TProvider provider)
+                continue;
+
+            InteractableSign sign = (InteractableSign)provider.Barricade.interactable;
+            if (!selector(sign, provider))
+                continue;
+
+            EnqueueUpdate(provider);
+            MarkAllPlayers(provider);
+            ++ct;
+        }
+
+        return ct;
+    }
+
+    /// <summary>
+    /// Update all signs that match a predicate with a certain provider type.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
+    public int UpdateSigns<TProvider, TState>(TState state, WhereState<TProvider, TState> selector) where TProvider : BaseSignInstanceProvider
+    {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
+        GameThread.AssertCurrent();
+
+        int ct = 0;
+        foreach (KeyValuePair<uint, BaseSignInstanceProvider> p in _signProviders)
+        {
+            if (p.Value is not TProvider provider)
+                continue;
+
+            InteractableSign sign = (InteractableSign)provider.Barricade.interactable;
+            if (!selector(sign, provider, state))
+                continue;
+
+            EnqueueUpdate(provider);
+            MarkAllPlayers(provider);
+            ++ct;
+        }
+
+        return ct;
+    }
+
+    /// <summary>
+    /// Update all signs that match a predicate with a certain provider type.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
+    public int UpdateSigns<TProvider, TState>(ref TState state, WhereStateRef<TProvider, TState> selector) where TProvider : BaseSignInstanceProvider
+    {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
+        GameThread.AssertCurrent();
+
+        int ct = 0;
+        foreach (KeyValuePair<uint, BaseSignInstanceProvider> p in _signProviders)
+        {
+            if (p.Value is not TProvider provider)
+                continue;
+
+            InteractableSign sign = (InteractableSign)provider.Barricade.interactable;
+            if (!selector(sign, provider, ref state))
+                continue;
+
+            EnqueueUpdate(provider);
+            MarkAllPlayers(provider);
+            ++ct;
         }
 
         return ct;
@@ -218,46 +354,77 @@ public class SignInstancer : ILayoutHostedService,
     /// </summary>
     /// <exception cref="GameThreadException"/>
     public int UpdateSigns(WarfarePlayer player)
-        => UpdateSigns(new LanguageSet(player));
+    {
+        if (!player.IsOnline)
+            return 0;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
+        GameThread.AssertCurrent();
+
+        int ct = 0;
+        foreach (KeyValuePair<uint, BaseSignInstanceProvider> p in _signProviders)
+        {
+            HashSet<ulong> set = EnqueueUpdate(p.Value);
+            set.Add(player.Steam64.m_SteamID);
+            ++ct;
+        }
+
+        return ct;
+    }
 
     /// <summary>
     /// Update all signs with a certain provider type for a player.
     /// </summary>
     /// <exception cref="GameThreadException"/>
-    public int UpdateSigns<TProvider>(WarfarePlayer player) where TProvider : class, ISignInstanceProvider
-        => UpdateSigns<TProvider>(new LanguageSet(player));
+    public int UpdateSigns<TProvider>(WarfarePlayer player) where TProvider : BaseSignInstanceProvider
+    {
+        if (!player.IsOnline)
+            return 0;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
+        GameThread.AssertCurrent();
+
+        int ct = 0;
+        foreach (KeyValuePair<uint, BaseSignInstanceProvider> p in _signProviders)
+        {
+            if (p.Value is not TProvider provider)
+                continue;
+
+            HashSet<ulong> set = EnqueueUpdate(provider);
+            set.Add(player.Steam64.m_SteamID);
+            ++ct;
+        }
+
+        return ct;
+    }
 
     /// <summary>
     /// Update all signs that match a predicate with a certain provider type for a player.
     /// </summary>
     /// <exception cref="GameThreadException"/>
-    public int UpdateSigns<TProvider>(WarfarePlayer player, Func<InteractableSign, TProvider, bool> selector) where TProvider : class, ISignInstanceProvider
-        => UpdateSigns(new LanguageSet(player), selector);
-
-    /// <summary>
-    /// Update all signs for a set of players.
-    /// </summary>
-    /// <exception cref="GameThreadException"/>
-    public int UpdateSigns(LanguageSet set)
+    public int UpdateSigns<TProvider>(WarfarePlayer player, Func<InteractableSign, TProvider, bool> selector) where TProvider : BaseSignInstanceProvider
     {
+        if (!player.IsOnline)
+            return 0;
+
         using IDisposable? profiler = ProfilerUtil.Profile();
 
         GameThread.AssertCurrent();
 
         int ct = 0;
-        foreach (BarricadeInfo barricade in BarricadeUtility.EnumerateBarricades())
+        foreach (KeyValuePair<uint, BaseSignInstanceProvider> p in _signProviders)
         {
-            if (barricade.Drop.interactable is not InteractableSign sign)
+            if (p.Value is not TProvider provider)
                 continue;
 
-            if (!_signProviders.TryGetValue(barricade.Drop.instanceID, out ISignInstanceProvider provider))
+            InteractableSign sign = (InteractableSign)provider.Barricade.interactable;
+            if (!selector(sign, provider))
                 continue;
 
-            int dataIndex = _signProviderTypeIndexes[barricade.Drop.instanceID];
-            ref SignInstanceData data = ref _types[dataIndex];
-
-            string? batch = null;
-            BroadcastUpdate(set, provider, in barricade, sign, ref data.CanBatch, ref data.HasCanBatch, ref batch);
+            HashSet<ulong> set = EnqueueUpdate(provider);
+            set.Add(player.Steam64.m_SteamID);
             ++ct;
         }
 
@@ -265,28 +432,30 @@ public class SignInstancer : ILayoutHostedService,
     }
 
     /// <summary>
-    /// Update all signs with a certain provider type for a set of players.
+    /// Update all signs that match a predicate with a certain provider type for a player.
     /// </summary>
     /// <exception cref="GameThreadException"/>
-    public int UpdateSigns<TProvider>(LanguageSet set) where TProvider : class, ISignInstanceProvider
+    public int UpdateSigns<TProvider, TState>(WarfarePlayer player, TState state, WhereState<TProvider, TState> selector) where TProvider : BaseSignInstanceProvider
     {
+        if (!player.IsOnline)
+            return 0;
+
         using IDisposable? profiler = ProfilerUtil.Profile();
 
         GameThread.AssertCurrent();
 
-        bool hasCanBatch = false, canBatch = false;
-
         int ct = 0;
-        foreach (BarricadeInfo barricade in BarricadeUtility.EnumerateBarricades())
+        foreach (KeyValuePair<uint, BaseSignInstanceProvider> p in _signProviders)
         {
-            if (barricade.Drop.interactable is not InteractableSign sign)
+            if (p.Value is not TProvider provider)
                 continue;
 
-            if (!_signProviders.TryGetValue(barricade.Drop.instanceID, out ISignInstanceProvider provider) || provider is not TProvider)
+            InteractableSign sign = (InteractableSign)provider.Barricade.interactable;
+            if (!selector(sign, provider, state))
                 continue;
 
-            string? batchTranslate = null;
-            BroadcastUpdate(set, provider, in barricade, sign, ref canBatch, ref hasCanBatch, ref batchTranslate);
+            HashSet<ulong> set = EnqueueUpdate(provider);
+            set.Add(player.Steam64.m_SteamID);
             ++ct;
         }
 
@@ -294,28 +463,30 @@ public class SignInstancer : ILayoutHostedService,
     }
 
     /// <summary>
-    /// Update all signs that match a predicate with a certain provider type for a set of players.
+    /// Update all signs that match a predicate with a certain provider type for a player.
     /// </summary>
     /// <exception cref="GameThreadException"/>
-    public int UpdateSigns<TProvider>(LanguageSet set, Func<InteractableSign, TProvider, bool> selector) where TProvider : class, ISignInstanceProvider
+    public int UpdateSigns<TProvider, TState>(WarfarePlayer player, ref TState state, WhereStateRef<TProvider, TState> selector) where TProvider : BaseSignInstanceProvider
     {
+        if (!player.IsOnline)
+            return 0;
+
         using IDisposable? profiler = ProfilerUtil.Profile();
 
         GameThread.AssertCurrent();
 
-        bool hasCanBatch = false, canBatch = false;
-
         int ct = 0;
-        foreach (BarricadeInfo barricade in BarricadeUtility.EnumerateBarricades())
+        foreach (KeyValuePair<uint, BaseSignInstanceProvider> p in _signProviders)
         {
-            if (barricade.Drop.interactable is not InteractableSign sign)
+            if (p.Value is not TProvider provider)
                 continue;
 
-            if (!_signProviders.TryGetValue(barricade.Drop.instanceID, out ISignInstanceProvider p) || p is not TProvider provider || !selector(sign, provider))
+            InteractableSign sign = (InteractableSign)provider.Barricade.interactable;
+            if (!selector(sign, provider, ref state))
                 continue;
 
-            string? batchTranslate = null;
-            BroadcastUpdate(set, p, in barricade, sign, ref canBatch, ref hasCanBatch, ref batchTranslate);
+            HashSet<ulong> set = EnqueueUpdate(provider);
+            set.Add(player.Steam64.m_SteamID);
             ++ct;
         }
 
@@ -323,28 +494,231 @@ public class SignInstancer : ILayoutHostedService,
     }
 
     /// <summary>
-    /// Update a specific sign.
+    /// Update all signs for a player.
     /// </summary>
     /// <exception cref="GameThreadException"/>
-    public void UpdateSign(BarricadeDrop barricade)
+    public int UpdateSigns([HandlesResourceDisposal] LanguageSetEnumerator players)
     {
+        if (players.IsEmpty)
+            return 0;
+
         using IDisposable? profiler = ProfilerUtil.Profile();
 
         GameThread.AssertCurrent();
 
-        if (barricade.interactable is not InteractableSign sign || !BarricadeManager.tryGetRegion(barricade.model, out byte x, out byte y, out ushort plant, out _))
+        int ct = 0;
+        foreach (KeyValuePair<uint, BaseSignInstanceProvider> p in _signProviders)
+        {
+            HashSet<ulong> set = EnqueueUpdate(p.Value);
+            AddLangSetToHashSet(set, ref players);
+            ++ct;
+        }
+
+        players.Dispose();
+        return ct;
+    }
+
+    /// <summary>
+    /// Update all signs with a certain provider type for a player.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
+    public int UpdateSigns<TProvider>([HandlesResourceDisposal] LanguageSetEnumerator players) where TProvider : BaseSignInstanceProvider
+    {
+        if (players.IsEmpty)
+            return 0;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
+        GameThread.AssertCurrent();
+
+        int ct = 0;
+        foreach (KeyValuePair<uint, BaseSignInstanceProvider> p in _signProviders)
+        {
+            if (p.Value is not TProvider provider)
+                continue;
+
+            HashSet<ulong> set = EnqueueUpdate(provider);
+            AddLangSetToHashSet(set, ref players);
+            ++ct;
+        }
+        
+        players.Dispose();
+        return ct;
+    }
+
+    /// <summary>
+    /// Update all signs that match a predicate with a certain provider type for a player.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
+    public int UpdateSigns<TProvider>([HandlesResourceDisposal] LanguageSetEnumerator players, Func<InteractableSign, TProvider, bool> selector) where TProvider : BaseSignInstanceProvider
+    {
+        if (players.IsEmpty)
+            return 0;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
+        GameThread.AssertCurrent();
+
+        int ct = 0;
+        foreach (KeyValuePair<uint, BaseSignInstanceProvider> p in _signProviders)
+        {
+            if (p.Value is not TProvider provider)
+                continue;
+
+            InteractableSign sign = (InteractableSign)provider.Barricade.interactable;
+            if (!selector(sign, provider))
+                continue;
+
+            HashSet<ulong> set = EnqueueUpdate(provider);
+            AddLangSetToHashSet(set, ref players);
+            ++ct;
+        }
+
+        players.Dispose();
+        return ct;
+    }
+
+    /// <summary>
+    /// Update all signs that match a predicate with a certain provider type for a player.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
+    public int UpdateSigns<TProvider, TState>([HandlesResourceDisposal] LanguageSetEnumerator players, TState state, WhereState<TProvider, TState> selector) where TProvider : BaseSignInstanceProvider
+    {
+        if (players.IsEmpty)
+            return 0;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
+        GameThread.AssertCurrent();
+
+        int ct = 0;
+        foreach (KeyValuePair<uint, BaseSignInstanceProvider> p in _signProviders)
+        {
+            if (p.Value is not TProvider provider)
+                continue;
+
+            InteractableSign sign = (InteractableSign)provider.Barricade.interactable;
+            if (!selector(sign, provider, state))
+                continue;
+
+            HashSet<ulong> set = EnqueueUpdate(provider);
+            AddLangSetToHashSet(set, ref players);
+            ++ct;
+        }
+
+        players.Dispose();
+        return ct;
+    }
+
+    /// <summary>
+    /// Update all signs that match a predicate with a certain provider type for a player.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
+    public int UpdateSigns<TProvider, TState>([HandlesResourceDisposal] LanguageSetEnumerator players, ref TState state, WhereStateRef<TProvider, TState> selector) where TProvider : BaseSignInstanceProvider
+    {
+        if (players.IsEmpty)
+            return 0;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
+        GameThread.AssertCurrent();
+
+        int ct = 0;
+        foreach (KeyValuePair<uint, BaseSignInstanceProvider> p in _signProviders)
+        {
+            if (p.Value is not TProvider provider)
+                continue;
+
+            InteractableSign sign = (InteractableSign)provider.Barricade.interactable;
+            if (!selector(sign, provider, ref state))
+                continue;
+
+            HashSet<ulong> set = EnqueueUpdate(provider);
+            AddLangSetToHashSet(set, ref players);
+            ++ct;
+        }
+
+        players.Dispose();
+        return ct;
+    }
+
+    private void OnUpdate()
+    {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
+        for (int i = 0; i < MaxSignUpdatesPerFrame && _updateQueue.TryDequeue(out BaseSignInstanceProvider next); ++i)
+        {
+            BarricadeDrop barricade = next.Barricade;
+
+            if (next.IsQueuedAllPlayers)
+            {
+                UpdateSignImmediate(barricade, next);
+            }
+            else if (next.Players is { Count: > 0 } players)
+            {
+                UpdateSignImmediateForPlayers(barricade, next, players);
+            }
+
+            ApplyDequeue(next);
+        }
+    }
+
+    private void UpdateSignImmediateForPlayers(BarricadeDrop barricade, BaseSignInstanceProvider provider, HashSet<ulong> players)
+    {
+        if (!BarricadeManager.tryGetRegion(barricade.model, out byte x, out byte y, out ushort plant, out _))
             return;
 
-        // index isn't needed
-        BarricadeInfo info = plant == ushort.MaxValue
-            ? new BarricadeInfo(barricade, -1, new RegionCoord(x, y))
-            : new BarricadeInfo(barricade, -1, plant);
+        NetId netId = barricade.interactable.GetNetId();
 
-        LanguageSetEnumerator enumerator = plant == ushort.MaxValue
-            ? _translationService.SetOf.PlayersInArea(x, y, BarricadeManager.BARRICADE_REGIONS)
-            : _translationService.SetOf.AllPlayers();
+        TranslationOptions groupOptions = provider.GroupOptions;
+        if ((groupOptions & TranslationOptions.PerPlayerTranslation) == 0)
+        {
+            foreach (LanguageSet set in _translationService.SetOf.PlayersIn(players, groupOptions))
+            {
+                string text = _serviceProvider == null
+                    ? provider.FallbackText
+                    : provider.Translate(_translationService.ValueFormatter, _serviceProvider, set.Language, set.Culture, null);
 
-        ISignInstanceProvider? provider = GetSignProvider(barricade);
+                SendChangeText.Invoke(
+                    netId,
+                    ENetReliability.Unreliable,
+                    plant != ushort.MaxValue
+                        ? set.GatherTransportConnections()
+                        : set.GatherTransportConnections(x, y, BarricadeManager.BARRICADE_REGIONS),
+                    text
+                );
+            }
+        }
+        else
+        {
+            foreach (ulong pl in players)
+            {
+                WarfarePlayer? player = _playerService.GetOnlinePlayerOrNull(pl);
+                if (player == null)
+                    continue;
+
+                if (plant != ushort.MaxValue
+                    && !Regions.checkArea(player.UnturnedPlayer.movement.region_x, player.UnturnedPlayer.movement.region_y, x, y, BarricadeManager.BARRICADE_REGIONS))
+                {
+                    continue;
+                }
+
+                string text = _serviceProvider == null
+                    ? provider.FallbackText
+                    : provider.Translate(_translationService.ValueFormatter, _serviceProvider, player.Locale.LanguageInfo, player.Locale.CultureInfo, player);
+
+                SendChangeText.Invoke(netId, ENetReliability.Unreliable, player.Connection, text);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Update a specific sign instantly.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
+    public void UpdateSignImmediate(BarricadeDrop barricade)
+    {
+        BaseSignInstanceProvider? provider = GetSignProvider(barricade);
         if (provider == null)
         {
             CheckBarricadeForInit(barricade);
@@ -354,13 +728,60 @@ public class SignInstancer : ILayoutHostedService,
                 return;
         }
 
-        foreach (LanguageSet set in enumerator)
-        {
-            bool canBatch = true;
-            bool hasCanBatch = false;
-            string? batch = null;
+        UpdateSignImmediate(barricade, provider);
+    }
 
-            BroadcastUpdate(set, provider, in info, sign, ref canBatch, ref hasCanBatch, ref batch);
+    private void UpdateSignImmediate(BarricadeDrop barricade, BaseSignInstanceProvider provider)
+    {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
+        GameThread.AssertCurrent();
+
+        if (barricade.interactable is not InteractableSign sign || !BarricadeManager.tryGetRegion(barricade.model, out byte x, out byte y, out ushort plant, out _))
+            return;
+
+        NetId netId = sign.GetNetId();
+        TranslationOptions groupOptions = provider.GroupOptions;
+        if ((groupOptions & TranslationOptions.PerPlayerTranslation) == 0)
+        {
+            LanguageSetEnumerator enumerator = plant == ushort.MaxValue
+                ? _translationService.SetOf.PlayersInArea(x, y, BarricadeManager.BARRICADE_REGIONS, groupOptions)
+                : _translationService.SetOf.AllPlayers(groupOptions);
+
+            foreach (LanguageSet set in enumerator)
+            {
+                string text = _serviceProvider == null
+                    ? provider.FallbackText
+                    : provider.Translate(_translationService.ValueFormatter, _serviceProvider, set.Language, set.Culture, null);
+
+                SendChangeText.Invoke(
+                    netId,
+                    ENetReliability.Unreliable,
+                    plant != ushort.MaxValue
+                        ? set.GatherTransportConnections()
+                        : set.GatherTransportConnections(x, y, BarricadeManager.BARRICADE_REGIONS),
+                    text
+                );
+            }
+        }
+        else
+        {
+            foreach (WarfarePlayer player in _playerService.OnlinePlayers)
+            {
+                if (plant != ushort.MaxValue)
+                {
+                    PlayerMovement move = player.UnturnedPlayer.movement;
+                    if (!Regions.checkArea(move.region_x, move.region_y, x, y, BarricadeManager.BARRICADE_REGIONS))
+                        continue;
+                }
+
+                WarfarePlayerLocale locale = player.Locale;
+                string text = _serviceProvider == null
+                    ? provider.FallbackText
+                    : provider.Translate(_translationService.ValueFormatter, _serviceProvider, locale.LanguageInfo, locale.CultureInfo, player);
+
+                SendChangeText.Invoke(netId, ENetReliability.Unreliable, player.Connection, text);
+            }
         }
     }
 
@@ -383,50 +804,7 @@ public class SignInstancer : ILayoutHostedService,
         }
 
         _signProviders.Clear();
-        _signProviderTypeIndexes.Clear();
-    }
-
-    private void BroadcastUpdate(LanguageSet set, ISignInstanceProvider provider, in BarricadeInfo barricade, InteractableSign sign, ref bool canBatch, ref bool hasCanBatch, ref string? batchTranslate)
-    {
-        using IDisposable? profiler = ProfilerUtil.Profile();
-
-        NetId netId = sign.GetNetId();
-
-        if (!hasCanBatch)
-        {
-            canBatch = provider.CanBatchTranslate;
-            hasCanBatch = true;
-        }
-
-        RegionCoord region = barricade.Coord;
-        string? text;
-        if (canBatch)
-        {
-            text = batchTranslate ??= _serviceProvider == null
-                ? provider.FallbackText
-                : provider.Translate(_translationService.ValueFormatter, _serviceProvider, set.Language, set.Culture, null);
-
-            SendChangeText.Invoke(
-                netId,
-                ENetReliability.Unreliable,
-                barricade.Plant != ushort.MaxValue
-                ? set.GatherTransportConnections()
-                : set.GatherTransportConnections(region.x, region.y, BarricadeManager.BARRICADE_REGIONS),
-                text
-            );
-        }
-        else while (set.MoveNext())
-        {
-            PlayerMovement movement = set.Next.UnturnedPlayer.movement;
-            if (barricade.Plant == ushort.MaxValue && !Regions.checkArea(movement.region_x, movement.region_y, region.x, region.y, BarricadeManager.BARRICADE_REGIONS))
-                continue;
-
-            text = _serviceProvider == null
-                ? provider.FallbackText
-                : provider.Translate(_translationService.ValueFormatter, _serviceProvider, set.Language, set.Culture, set.Next);
-
-            SendChangeText.Invoke(netId, ENetReliability.Unreliable, set.Next.Connection, text);
-        }
+        // _signProviderTypeIndexes.Clear();
     }
 
     private bool TryGetProviderType(string text, out int index)
@@ -469,7 +847,7 @@ public class SignInstancer : ILayoutHostedService,
     }
     private void RemoveBarricade(BarricadeDrop barricade)
     {
-        _signProviderTypeIndexes.Remove(barricade.instanceID);
+        // _signProviderTypeIndexes.Remove(barricade.instanceID);
         _signProviders.Remove(barricade.instanceID);
     }
 
@@ -497,9 +875,9 @@ public class SignInstancer : ILayoutHostedService,
             return;
         }
 
-        ISignInstanceProvider provider = (ISignInstanceProvider)ActivatorUtilities.CreateInstance(_serviceProvider, data.Type);
+        BaseSignInstanceProvider provider = (BaseSignInstanceProvider)ReflectionUtility.CreateInstanceFixed(_serviceProvider, data.Type, [ barricade ]);
         _signProviders.Add(barricade.instanceID, provider);
-        _signProviderTypeIndexes.Add(barricade.instanceID, dataIndex);
+        // _signProviderTypeIndexes.Add(barricade.instanceID, dataIndex);
 
         string extraInfo = text.Length <= data.Prefix.Length + 1 || text[data.Prefix.Length] != '_' ? text.Substring(data.Prefix.Length) : text.Substring(data.Prefix.Length + 1);
         try
@@ -511,19 +889,30 @@ public class SignInstancer : ILayoutHostedService,
             _logger.LogError(ex, "Error initializing sign provider {0} for barricade {1} #{2}.", data.Type, barricade.asset.itemName, barricade.instanceID);
         }
 
-        UpdateSign(barricade);
+        UpdateSignImmediate(barricade);
     }
 
     private struct SignInstanceData
     {
         public readonly Type Type;
         public readonly string Prefix;
-        public bool CanBatch;
-        public bool HasCanBatch;
         public SignInstanceData(Type type, string prefix)
         {
             Type = type;
             Prefix = prefix;
         }
+    }
+
+    private static void AddLangSetToHashSet(HashSet<ulong> set, ref LanguageSetEnumerator players)
+    {
+        while (players.MoveNext())
+        {
+            while (players.Set.MoveNext())
+            {
+                set.Add(players.Set.Next.Steam64.m_SteamID);
+            }
+        }
+
+        players.Reset();
     }
 }

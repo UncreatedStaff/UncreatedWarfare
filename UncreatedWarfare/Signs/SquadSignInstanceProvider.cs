@@ -1,4 +1,3 @@
-using System;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -14,9 +13,9 @@ using Uncreated.Warfare.Translations.Util;
 namespace Uncreated.Warfare.Signs;
 
 [SignPrefix("squad_")]
-public class SquadSignInstanceProvider : ISignInstanceProvider, IRequestable<Squad>
+public class SquadSignInstanceProvider : BaseSignInstanceProvider, IRequestable<Squad>
 {
-    private static StringBuilder StringBuilder = new();
+    private static readonly StringBuilder StringBuilder = new StringBuilder();
     private readonly ITeamManager<Team> _teamManager;
     private readonly SquadManager _squadManager;
     private readonly TextMeasurementService _measurementService;
@@ -24,10 +23,12 @@ public class SquadSignInstanceProvider : ISignInstanceProvider, IRequestable<Squ
     private SignMetrics _signMetrics;
 
     public SquadSignInstanceProvider(
+        BarricadeDrop barricade,
         ITeamManager<Team> teamManager,
         SquadManager squadManager,
         TextMeasurementService measurementService,
         TranslationInjection<SquadTranslations> translations)
+    : base(barricade)
     {
         Team = Team.NoTeam;
         SquadNumber = 0;
@@ -38,11 +39,11 @@ public class SquadSignInstanceProvider : ISignInstanceProvider, IRequestable<Squ
         _translations = translations.Value;
     }
     
-    public bool CanBatchTranslate => true;
-    public string FallbackText => $"Squad #{SquadNumber}";
+    public override string FallbackText => $"Squad #{SquadNumber}";
+
     public Team Team { get; private set; }
     public byte SquadNumber { get; private set; }
-    public void Initialize(BarricadeDrop barricade, string extraInfo, IServiceProvider serviceProvider)
+    public override void Initialize(BarricadeDrop barricade, string extraInfo, IServiceProvider serviceProvider)
     {
         Match regexMatch = Regex.Match(extraInfo, @"team(\d+)_(\d+)");
 
@@ -61,8 +62,7 @@ public class SquadSignInstanceProvider : ISignInstanceProvider, IRequestable<Squ
         SquadNumber = byte.Parse(squadNumber, CultureInfo.InvariantCulture);
     }
 
-    public string Translate(ITranslationValueFormatter formatter, IServiceProvider serviceProvider, LanguageInfo language,
-        CultureInfo culture, WarfarePlayer? player)
+    public override string Translate(ITranslationValueFormatter formatter, IServiceProvider serviceProvider, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
     {
         using IDisposable? profiler = ProfilerUtil.Profile();
 

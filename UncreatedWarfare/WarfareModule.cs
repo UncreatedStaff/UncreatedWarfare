@@ -16,9 +16,9 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using MySqlConnector;
 using SDG.Framework.Modules;
+using SDG.Framework.Utilities;
 using StackCleaner;
 using Stripe;
-using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -153,8 +153,8 @@ public sealed class WarfareModule
 
 #nullable restore
 
+    private ILogger? _gameThreadLogger;
     private IDisposable? _systemConfigChangeToken;
-
     public event Action? LayoutStarted;
     private bool _unloadedHostedServices = true;
     private ILifetimeScope? _activeScope;
@@ -226,6 +226,7 @@ public sealed class WarfareModule
         // will setup the main thread in GameThread before asserting
         GameThread.Setup();
         GameThread.AssertCurrent();
+        TimeUtility.updated += OnUpdate;
 
         // setup UniTask
         InitializeUniTask();
@@ -577,6 +578,12 @@ public sealed class WarfareModule
         _logger.LogInformation("Cleaning up container...");
         ServiceProvider.Dispose();
 
+#if TELEMETRY
+        Interlocked.Exchange(ref _activitySource, null)?.Dispose();
+#endif
+        TimeUtility.updated -= OnUpdate;
+        TickGameThread(true);
+
 #if PROFILING
         _logger.LogTrace("Flushing profiler data...");
         ProfilerUtil.Flush();
@@ -586,6 +593,23 @@ public sealed class WarfareModule
             Singleton = null;
 
         CommandWindow.Log("Done - Shutting down");
+    }
+    private void OnUpdate()
+    {
+        TickGameThread(false);
+    }
+
+    private void TickGameThread(bool flush)
+    {
+        if (_gameThreadLogger == null)
+        {
+            if (ServiceProvider == null)
+                return;
+
+            _gameThreadLogger = ServiceProvider.Resolve<ILoggerFactory>().CreateLogger(typeof(GameThread));
+        }
+
+        GameThread.ProcessGameThreadActions(_gameThreadLogger, flush);
     }
 
     private void ConfigureServices(ContainerBuilder bldr)
@@ -997,9 +1021,8 @@ public sealed class WarfareModule
         bldr.RegisterType<DefaultSkillsetConfiguration>()
             .SingleInstance();
 
-        if (false && ItemUtility.SupportsFastKits)
+        if (ItemUtility.SupportsFastKits)
         {
-            // todo: this needs fixed
             bldr.RegisterType<FastItemDistributionService>()
                 .As<IItemDistributionService>();
         }
@@ -1007,6 +1030,7 @@ public sealed class WarfareModule
         {
             bldr.RegisterType<FallbackItemDistributionService>()
                 .As<IItemDistributionService>();
+            _logger.LogWarning("Fast item distribution failed to load.");
         }
 
         bldr.Register<IServiceProvider, IKitItemResolver>((_, serviceProvider) =>
@@ -2091,10 +2115,6 @@ public sealed class WarfareModule
     {
         // calls IModuleNexus.shutdown()
         ServiceProvider.Resolve<Module>().isEnabled = false;
-
-#if TELEMETRY
-        Interlocked.Exchange(ref _activitySource, null)?.Dispose();
-#endif
     }
 
     private void InitializeUniTask()
@@ -2134,9 +2154,8 @@ public sealed class WarfareModule
             else
             {
                 Exception ex2 = ex;
-                UniTask.Create(async () =>
+                GameThread.Queue(() =>
                 {
-                    await UniTask.SwitchToMainThread();
                     CommandWindow.LogError("UniTask caught an unobserved exception.");
                     CommandWindow.LogError(ex2);
                 });

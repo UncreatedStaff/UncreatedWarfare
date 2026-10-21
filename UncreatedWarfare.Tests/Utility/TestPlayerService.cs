@@ -20,6 +20,9 @@ internal class TestPlayerService : IPlayerService, IDisposable
     public bool IsEmpty => Players.Count == 0;
 
     /// <inheritdoc />
+    public int Count => Players.Count;
+
+    /// <inheritdoc />
     public ReadOnlyTrackingList<WarfarePlayer> OnlinePlayers => Players.Values.ToReadOnlyTrackingList();
 
     /// <inheritdoc />

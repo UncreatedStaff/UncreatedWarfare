@@ -1,4 +1,3 @@
-using System;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -250,7 +249,7 @@ partial class DualSidedLeaderboardUI
             bool isMax = voteCt != 0 && voteCt == max;
 
             UnturnedLabel oldVoteLabel = VoteButtons[vote].Votes;
-            foreach (LanguageSet set in _translationService.SetOf.AllPlayers())
+            foreach (LanguageSet set in _translationService.SetOf.AllPlayers(TranslationOptions.PerCultureTranslation))
             {
                 string str = voteCt.ToString(set.Culture);
                 if (isMax)

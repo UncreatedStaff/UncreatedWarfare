@@ -1,32 +1,45 @@
-using SDG.Framework.Utilities;
+using System.Buffers;
 using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Translations;
 
-public ref struct LanguageSetEnumerator : IEnumerator<LanguageSet>
+public struct LanguageSetEnumerator : IEnumerator<LanguageSet>
 {
-    private readonly bool _pooled;
-    private List<LanguageSet>? _list;
-    private List<WarfarePlayer>? _players;
-    private int _index; // -2 means Set is single
+    // ReSharper disable once NotDisposedResource
+    public static readonly LanguageSetEnumerator Empty = new LanguageSetEnumerator
+    {
+        _index = -4
+    };
+
+    private readonly int _count;
+    private LanguageSet[]? _list;
+    private WarfarePlayer[]? _players;
+    private int _index; // -2 means Set is single, -3 enumerated single, -4 = empty
+    
     public LanguageSet Set;
+
     public LanguageSet Current => Set;
-    readonly object IEnumerator.Current => Set;
+
+    public bool IsEmpty => _index == -4;
+    
+
     internal LanguageSetEnumerator(LanguageSet single)
     {
         Set = single;
+        _count = 1;
         _index = -2;
     }
     internal LanguageSetEnumerator(WarfarePlayer player)
     {
         Set = new LanguageSet(player);
+        _count = 1;
         _index = -2;
     }
-    internal LanguageSetEnumerator(List<LanguageSet> pooledList, List<WarfarePlayer> players, bool pooled)
+    internal LanguageSetEnumerator(LanguageSet[] pooledList, int count, WarfarePlayer[] players)
     {
         _list = pooledList;
+        _count = count;
         _players = players;
-        _pooled = pooled;
         _index = -1;
     }
 
@@ -34,7 +47,7 @@ public ref struct LanguageSetEnumerator : IEnumerator<LanguageSet>
     {
         if (_index < -1)
         {
-            if (_index == -3)
+            if (_index <= -3)
                 return false;
 
             _index = -3;
@@ -42,7 +55,7 @@ public ref struct LanguageSetEnumerator : IEnumerator<LanguageSet>
         }
 
         ++_index;
-        if (_list == null || _index >= _list.Count)
+        if (_list == null || _index >= _count)
             return false;
 
         Set = _list[_index];
@@ -53,6 +66,9 @@ public ref struct LanguageSetEnumerator : IEnumerator<LanguageSet>
     {
         if (_index < -1)
         {
+            if (_index < -3)
+                return;
+            
             _index = -2;
             return;
         }
@@ -64,61 +80,38 @@ public ref struct LanguageSetEnumerator : IEnumerator<LanguageSet>
     {
         if (_players != null)
         {
-            if (_pooled)
-                ListPool<WarfarePlayer>.release(_players);
+            ArrayPool<WarfarePlayer>.Shared.Return(_players);
             _players = null;
         }
         
         if (_list == null)
             return;
 
-        if (_pooled)
-            ListPool<LanguageSet>.release(_list);
+        for (int i = 0; i < _count; ++i)
+        {
+            ref LanguageSet set = ref _list[i];
+            set.Dispose();
+        }
+
+        ArrayPool<LanguageSet>.Shared.Return(_list);
         _list = null;
     }
 
-    public Cache ToCache()
+    // [MustDisposeResource]
+    //[HandlesResourceDisposal]
+    //public LanguageSetEnumerator GetEnumerator()
+    //{
+    //    return this;
+    //}
+
+    readonly object IEnumerator.Current => Set;
+}
+
+public static class LanguageSetEnumeratorExtensions
+{
+    [MustDisposeResource]
+    public static LanguageSetEnumerator GetEnumerator([HandlesResourceDisposal] this LanguageSetEnumerator enumerable)
     {
-        return new Cache(in this);
-    }
-
-    public LanguageSetEnumerator GetEnumerator()
-    {
-        return this;
-    }
-    public readonly struct Cache : IEnumerable<LanguageSet>
-    {
-        public readonly LanguageSet[]? Sets;
-        internal Cache(LanguageSet single)
-        {
-            Sets = [ single ];
-        }
-
-        internal Cache(in LanguageSetEnumerator enumerator)
-        {
-            using IDisposable? profiler = ProfilerUtil.Profile();
-
-            Sets = enumerator._list?.ToArray();
-            WarfarePlayer[]? players = enumerator._players?.ToArray();
-
-            if (Sets == null || players == null)
-                return;
-
-            for (int i = 0; i < Sets.Length; ++i)
-            {
-                ref LanguageSet s = ref Sets[i];
-                s.SetPlayers(new ArraySegment<WarfarePlayer>(players, s.StartIndex, s.Count));
-            }
-        }
-
-        public IEnumerator<LanguageSet> GetEnumerator()
-        {
-            return ((IEnumerable<LanguageSet>)Sets!).GetEnumerator();
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return Sets!.GetEnumerator();
-        }
+        return enumerable;
     }
 }

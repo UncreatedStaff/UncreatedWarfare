@@ -11,24 +11,24 @@ namespace Uncreated.Warfare.Signs;
 /// Handles direct translations in signs.
 /// </summary>
 [SignPrefix("sign_")]
-internal class TranslatableSignInstanceProvider : ISignInstanceProvider
+internal class TranslatableSignInstanceProvider : BaseSignInstanceProvider
 {
     private readonly ITranslationService _translationService;
     private string _translationKey = null!;
     private SignTranslation? _translation;
 
     /// <inheritdoc />
-    bool ISignInstanceProvider.CanBatchTranslate => true;
+    public override string FallbackText => _translationKey;
 
     /// <inheritdoc />
-    string ISignInstanceProvider.FallbackText => _translationKey;
+    public override TranslationOptions GroupOptions => TranslationOptions.PerLanguageTranslation;
 
-    public TranslatableSignInstanceProvider(ITranslationService translationService)
+    public TranslatableSignInstanceProvider(BarricadeDrop barricade, ITranslationService translationService) : base(barricade)
     {
         _translationService = translationService;
     }
 
-    void ISignInstanceProvider.Initialize(BarricadeDrop barricade, string extraInfo, IServiceProvider serviceProvider)
+    public override void Initialize(BarricadeDrop barricade, string extraInfo, IServiceProvider serviceProvider)
     {
         _translationKey = extraInfo;
 
@@ -39,7 +39,7 @@ internal class TranslatableSignInstanceProvider : ISignInstanceProvider
             .FirstOrDefault(x => string.Equals(x.SignId, _translationKey, StringComparison.Ordinal));
     }
 
-    public string Translate(ITranslationValueFormatter formatter, IServiceProvider serviceProvider, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
+    public override string Translate(ITranslationValueFormatter formatter, IServiceProvider serviceProvider, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
     {
         return _translation == null ? _translationKey : _translation.Translate(language);
     }

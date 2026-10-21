@@ -215,10 +215,8 @@ public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementP
         if (newVehicles.Count == 0)
             return;
 
-        UniTask.Create(async () =>
+        GameThread.Queue(() =>
         {
-            await UniTask.SwitchToMainThread();
-
             _disposableConfigurationRoots.AddRange(newDisposables);
 
             List<WarfareVehicleInfo> vehicles = new List<WarfareVehicleInfo>(_vehicles.Count + newVehicles.Count);
@@ -264,10 +262,8 @@ public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementP
             state.UpdateFrom(newVehicle);
         }
 
-        UniTask.Create(async () =>
+        GameThread.Queue(() =>
         {
-            await UniTask.SwitchToMainThread(_warfare.UnloadToken);
-
             int index = _vehicles.FindIndex(x => ReferenceEquals(x, state));
             if (index == -1)
             {

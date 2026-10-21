@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Uncreated.Warfare.Util.Timing;
+﻿namespace Uncreated.Warfare.Util.Timing;
 
 /// <summary>
 /// Uses a system <see cref="Timer"/>.
@@ -127,7 +125,7 @@ public class TimerLoopTicker<TState> : ILoopTicker<TState>
     {
         if (QueueOnGameThread && !GameThread.IsCurrent)
         {
-            InvokeMainThread();
+            GameThread.Queue(InvokeEvent);
         }
         else
         {
@@ -149,15 +147,6 @@ public class TimerLoopTicker<TState> : ILoopTicker<TState>
         {
             _lastInvokedAt = utcNow;
         }
-    }
-
-    private void InvokeMainThread()
-    {
-        UniTask.Create(async () =>
-        {
-            await UniTask.SwitchToMainThread();
-            InvokeEvent();
-        });
     }
 
     /// <inheritdoc />

@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
@@ -300,11 +298,7 @@ public class ZoneRegion : IDisposable
             if (_disposed)
                 return;
 
-            UniTask.Create(async () =>
-            {
-                await UniTask.SwitchToMainThread();
-                DisposeIntl();
-            });
+            GameThread.Queue(DisposeIntl);
         }
     }
 

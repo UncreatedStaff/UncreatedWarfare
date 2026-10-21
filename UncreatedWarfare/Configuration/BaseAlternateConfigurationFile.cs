@@ -5,6 +5,7 @@ using Microsoft.Extensions.Primitives;
 using System;
 using System.IO;
 using Uncreated.Warfare.Maps;
+using Uncreated.Warfare.Util;
 using UnityEngine.SceneManagement;
 
 namespace Uncreated.Warfare.Configuration;
@@ -153,9 +154,8 @@ public abstract class BaseAlternateConfigurationFile : IConfiguration, IDisposab
                     _configuration.GetReloadToken,
                     () =>
                     {
-                        UniTask.Create(async () =>
+                        GameThread.Queue(() =>
                         {
-                            await UniTask.SwitchToMainThread();
                             WarfareModule.Singleton.GlobalLogger.LogInformation($"Configuration file reloaded: {Path.GetFileName(filePath)}");
                             HandleChange(false);
                             OnChange?.Invoke(this);

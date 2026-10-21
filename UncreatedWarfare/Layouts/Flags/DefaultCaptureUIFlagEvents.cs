@@ -42,7 +42,7 @@ public class DefaultCaptureUIFlagEvents :
     {
         using IDisposable? profiler = ProfilerUtil.Profile();
 
-        foreach (LanguageSet set in _translationService.SetOf.PlayersIn(flag.Players))
+        foreach (LanguageSet set in _translationService.SetOf.PlayersIn(flag.Players, CaptureUI.GroupOptions))
         {
             if (!set.Team.IsValid)
             {
@@ -195,7 +195,7 @@ public class DefaultCaptureUIFlagEvents :
 
     UniTask ILayoutPhaseListener<ActionPhase>.OnPhaseEnded(ActionPhase phase, CancellationToken token)
     {
-        foreach (LanguageSet set in _translations.TranslationService.SetOf.AllPlayers())
+        foreach (LanguageSet set in _translations.TranslationService.SetOf.AllPlayers(TranslationOptions.None))
         {
             _ui.HideCaptureUI(set);
         }

@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using System;
 using System.Linq;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Configuration;
@@ -10,7 +9,6 @@ using Uncreated.Warfare.Events.Models.Kits;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Kits.Items;
-using Uncreated.Warfare.Kits.Loadouts;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
@@ -63,7 +61,8 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
     private readonly ITeamManager<Team> _teamManager;
     private readonly ZoneStore _zoneStore;
 
-    private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
+    private readonly LinearDictionary<Team, SemaphoreSlim> _teamSemaphores = new LinearDictionary<Team, SemaphoreSlim>(2);
+    private readonly SemaphoreSlim _fallbackSemaphore = new SemaphoreSlim(1, 1);
 
     private readonly KitRequirementVisitor _requestRequirementVisitor;
 
@@ -120,15 +119,23 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         _kitFavoriteService = kitFavoriteService;
         _teamManager = teamManager;
 
+        foreach (Team team in _teamManager.AllTeams)
+        {
+            _teamSemaphores[team] = new SemaphoreSlim(1, 1);
+        }
+
         _requestRequirementVisitor = new KitRequirementVisitor(this);
+    }
+
+    private SemaphoreSlim GetSemaphore(Team team)
+    {
+        return _teamSemaphores.GetValueOrDefault(team, _fallbackSemaphore);
     }
 
     private void OnKitRemoved(KitModel obj)
     {
-        UniTask.Create(async () =>
+        GameThread.Queue(() =>
         {
-            await UniTask.SwitchToMainThread();
-
             foreach (WarfarePlayer player in _playerService.OnlinePlayers)
             {
                 if (player.Component<KitPlayerComponent>().IsKit(obj.PrimaryKey))
@@ -297,17 +304,17 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
             kit = kit2;
         }
 
+        Team team = player.Team;
+
+        SemaphoreSlim semaphore = GetSemaphore(team);
+
         // one player can request a kit at a time.
-        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        await semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            Kit? activeKit = await player.Component<KitPlayerComponent>().GetActiveKitAsync(KitInclude.Default, token).ConfigureAwait(false);
-
-            await UniTask.SwitchToMainThread(token);
-
-            Team team = player.Team;
-
             KitPlayerComponent component = player.Component<KitPlayerComponent>();
+
+            Kit? activeKit = await player.Component<KitPlayerComponent>().GetActiveKitAsync(KitInclude.Default, token).ConfigureAwait(false);
 
             // already requested
             if (activeKit != null && component.IsKit(kit))
@@ -341,6 +348,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
                 throw new OperationCanceledException("Changed teams before kit could be granted.");
             }
 
+            /*
             if (kit.Type == KitType.Loadout && LoadoutIdHelper.Parse(kit.Id, out CSteamID intendedPlayer) > 0 && intendedPlayer.m_SteamID == player.Steam64.m_SteamID)
             {
                 // todo: ActionLog.Add(ActionLogType.RequestKit, $"Loadout {LoadoutIdHelper.GetLoadoutLetter(LoadoutIdHelper.Parse(kit.Id))}: {kit.Id}, Team {team}, Class: {_valueFormatter.FormatEnum(kit.Class, null)}", player.Steam64);
@@ -349,13 +357,14 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
             {
                 // todo: ActionLog.Add(ActionLogType.RequestKit, $"Kit {kit.Id}, Team {player.Team.Faction.Name}, Class: {_valueFormatter.FormatEnum(kit.Class, null)}", player.Steam64);
             }
+            */
 
-            await GrantKitRequest(player, kit, resultHandler, token).ConfigureAwait(false);
+            await GrantKitRequest(player, kit, resultHandler, token);
             return true;
         }
         finally
         {
-            _semaphore.Release();
+            semaphore.Release();
         }
     }
 
@@ -388,7 +397,11 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
 
         using CombinedTokenSources srcComb = token.CombineTokensIfNeeded(player.DisconnectToken);
 
-        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        Team team = player.Team;
+
+        SemaphoreSlim semaphore = GetSemaphore(team);
+
+        await semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
             if (await _kitAccessService.HasAccessAsync(player.Steam64, levelInfo, token))
@@ -434,7 +447,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         }
         finally
         {
-            _semaphore.Release();
+            semaphore.Release();
         }
 
         return true;
@@ -442,20 +455,28 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
 
     public async Task<bool> GiveUnarmedKitAsync(WarfarePlayer player, bool silent = false, CancellationToken token = default)
     {
-        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        Team team = player.Team;
+
+        SemaphoreSlim semaphore = GetSemaphore(team);
+
+        await semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
             return await GiveUnarmedKitAsyncIntl(player, silent, token).ConfigureAwait(false);
         }
         finally
         {
-            _semaphore.Release();
+            semaphore.Release();
         }
     }
 
     public async Task<bool> GiveAvailableFreeKitAsync(WarfarePlayer player, bool silent = false, bool isLowAmmo = false, CancellationToken token = default)
     {
-        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        Team team = player.Team;
+
+        SemaphoreSlim semaphore = GetSemaphore(team);
+
+        await semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
             uint factionId = player.Team.Faction.PrimaryKey;
@@ -535,7 +556,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         }
         finally
         {
-            _semaphore.Release();
+            semaphore.Release();
         }
     }
 
@@ -624,7 +645,11 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
 
     public async Task RestockKitAsync(WarfarePlayer player, bool resupplyAmmoBags = false, CancellationToken token = default)
     {
-        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        Team team = player.Team;
+
+        SemaphoreSlim semaphore = GetSemaphore(team);
+
+        await semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
             KitPlayerComponent kitComp = player.Component<KitPlayerComponent>();
@@ -650,7 +675,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         }
         finally
         {
-            _semaphore.Release();
+            semaphore.Release();
         }
     }
 
@@ -691,7 +716,11 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
 
     public async Task GiveKitAsync(WarfarePlayer player, KitBestowData kitBestowData, CancellationToken token = default)
     {
-        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        Team team = player.Team;
+
+        SemaphoreSlim semaphore = GetSemaphore(team);
+
+        await semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
             kitBestowData.Start();
@@ -700,7 +729,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         finally
         {
             kitBestowData.Stop();
-            _semaphore.Release();
+            semaphore.Release();
         }
     }
 
@@ -726,18 +755,21 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
             }, CancellationToken.None);
     }
 
-    private async Task GrantKitRequest(WarfarePlayer player, Kit kit, IRequestResultHandler resultHandler, CancellationToken token)
+    private async UniTask GrantKitRequest(WarfarePlayer player, Kit kit, IRequestResultHandler resultHandler, CancellationToken token)
     {
-        // assumes _semaphore is locked
+        // assumes team semaphore is locked
 
-        await UniTask.SwitchToMainThread(token);
+        await UniTask.SwitchToMainThread();
 
-        await _droppedItemTracker.DestroyItemsDroppedByPlayerAsync(player.Steam64, false, token);
-        
+        UniTask destroyDroppedItemsTask = _droppedItemTracker.DestroyItemsDroppedByPlayerAsync(player.Steam64, false, token);
+
         await GiveKitIntlAsync(player, new KitBestowData(kit, "GrantKitRequest")
         {
             IsLowAmmo = _zoneStore.IsInWarRoom(player) && !player.Save.IsFirstLife
         }, true, token).ConfigureAwait(false);
+
+        await destroyDroppedItemsTask;
+        await UniTask.SwitchToMainThread();
 
         resultHandler.Success(player, kit);
 
@@ -898,7 +930,12 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
 
     void IDisposable.Dispose()
     {
-        _semaphore.Dispose();
+        _fallbackSemaphore.Dispose();
+        foreach (SemaphoreSlim semaphore in _teamSemaphores.Values)
+        {
+            semaphore.Dispose();
+        }
+        _teamSemaphores.Clear();
         _kitDataStore.KitRemoved -= OnKitRemoved;
     }
 

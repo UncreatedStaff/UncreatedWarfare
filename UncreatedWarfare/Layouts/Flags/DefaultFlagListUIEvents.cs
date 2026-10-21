@@ -1,4 +1,3 @@
-using System;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Flags;
 using Uncreated.Warfare.Events.Models.Players;
@@ -99,13 +98,13 @@ public class DefaultFlagListUIEvents :
         if (_hudManager.IsHiddenForAllPlayers)
             return;
 
-        foreach (LanguageSet set in _translationService.SetOf.PlayersWhere(x => x.Team.IsValid))
+        foreach (LanguageSet set in _translationService.SetOf.PlayersWhere(x => x.Team.IsValid, TranslationOptions.PerTeamTranslation))
         {
             UpdateFlagList(set, ticketsOnly: false);
         }
     }
 
-    UniTask ILayoutStartingListener.HandleLayoutStartingAsync(Layout layout, CancellationToken token = default)
+    UniTask ILayoutStartingListener.HandleLayoutStartingAsync(Layout layout, CancellationToken token)
     {
         UpdateFlagListForAllPlayers();
         return UniTask.CompletedTask;
@@ -116,7 +115,7 @@ public class DefaultFlagListUIEvents :
         using IDisposable? profiler = ProfilerUtil.Profile();
 
         bool ticketsOnly = false;
-        foreach (LanguageSet set in e.EnumerateApplicableSets(_translationService, ref ticketsOnly))
+        foreach (LanguageSet set in e.EnumerateApplicableSets(_translationService, TranslationOptions.PerTeamTranslation, ref ticketsOnly))
         {
             UpdateFlagList(set, ticketsOnly);
         }

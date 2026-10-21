@@ -164,7 +164,7 @@ public class CosmeticInstancer : IAsyncEventListener<PlayerDutyStatusChanged>, I
     /// </summary>
     public void UpdateClothesForPlayer(WarfarePlayer viewPlayer, WarfarePlayer onPlayer, CancellationToken token = default)
     {
-        if (!_isEnabledIntl)
+        if (!_isEnabledIntl || !viewPlayer.IsOnline || !onPlayer.IsOnline)
             return;
 
         using IDisposable? profiler = ProfilerUtil.Profile();
@@ -224,8 +224,10 @@ public class CosmeticInstancer : IAsyncEventListener<PlayerDutyStatusChanged>, I
         int ctOnThisFrame = 0;
         const int perFrame = 2;
 
-        foreach (WarfarePlayer otherPlayer in _playerService.OnlinePlayers)
+        // using for loop to avoid rare collection modified exception (cause of next frame thing)
+        for (int i = 0; i < _playerService.OnlinePlayers.Count; i++)
         {
+            WarfarePlayer otherPlayer = _playerService.OnlinePlayers[i];
             if (otherPlayer.Equals(player))
                 continue;
 

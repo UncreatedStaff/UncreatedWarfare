@@ -1,4 +1,3 @@
-using System;
 using System.Linq;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts.Teams;

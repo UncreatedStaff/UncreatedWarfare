@@ -1,12 +1,11 @@
 using Microsoft.Extensions.Configuration;
-using System;
 using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Requests;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Costs;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Interaction.Requests;
 
@@ -56,11 +55,10 @@ public class RequestCommandResultHandler : IRequestResultHandler
 
     public void MissingDonorOwnership(WarfarePlayer player, IRequestable<object> value, decimal usdCost)
     {
-        _chatService.Send(player, _translations.RequestNotOwnedDonor, $"$ {usdCost.ToString("N2", player.Locale.CultureInfo)} USD");
-
-        UniTask.Create(async () =>
+        GameThread.Queue(() =>
         {
-            await UniTask.SwitchToMainThread();
+            _chatService.Send(player, _translations.RequestNotOwnedDonor, $"$ {usdCost.ToString("N2", player.Locale.CultureInfo)} USD");
+
             string domain = _systemConfig["domain"] ?? "https://uncreated.network";
             if (!player.IsOnline)
                 return;

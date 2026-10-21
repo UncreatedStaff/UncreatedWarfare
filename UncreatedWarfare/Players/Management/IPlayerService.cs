@@ -12,6 +12,11 @@ public interface IPlayerService
     /// Whether or not the server has <c>0</c> players. Threadsafe (kinda).
     /// </summary>
     bool IsEmpty { get; }
+    
+    /// <summary>
+    /// Number of online players. Threadsafe (kinda).
+    /// </summary>
+    int Count { get; }
 
     /// <summary>
     /// List of all online players. Not to be accessed from any thread other than the game thread.

@@ -111,7 +111,7 @@ public class WarfarePlayerLocale
     public bool IsDefaultCulture { get; private set; }
     public bool IsUtcTime { get; private set; }
 
- #pragma warning disable CS8618
+#pragma warning disable CS8618
     public WarfarePlayerLocale(WarfarePlayer player, LanguagePreferences preferences, IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
@@ -141,42 +141,34 @@ public class WarfarePlayerLocale
         // ReSharper disable once ConstantConditionalAccessQualifier
         if (GameThread.IsCurrent)
         {
-            try
-            {
-                LocaleUpdated?.Invoke(this);
-            }
-            catch (Exception ex)
-            {
-                ILogger<WarfarePlayerLocale> logger = _serviceProvider.GetRequiredService<ILogger<WarfarePlayerLocale>>();
-                logger.LogError(ex, "Error updating locale for {0}.", Player);
-            }
-
-            PlayerLocaleUpdated args = new PlayerLocaleUpdated { Player = Player };
-
-            _ = _eventDispatcher.DispatchEventAsync(args);
+            InvokeLocaleUpdated();
         }
         else
         {
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread(CancellationToken.None);
-                if (!Player.IsOnline)
-                    return;
-
-                try
+                if (Player.IsOnline)
                 {
-                    LocaleUpdated?.Invoke(this);
+                    InvokeLocaleUpdated();
                 }
-                catch (Exception ex)
-                {
-                    ILogger<WarfarePlayerLocale> logger = _serviceProvider.GetRequiredService<ILogger<WarfarePlayerLocale>>();
-                    logger.LogError(ex, "Error updating locale for {0}.", Player);
-                }
-
-                PlayerLocaleUpdated args = new PlayerLocaleUpdated { Player = Player };
-
-                _ = _eventDispatcher.DispatchEventAsync(args);
             });
         }
+    }
+
+    private void InvokeLocaleUpdated()
+    {
+        try
+        {
+            LocaleUpdated?.Invoke(this);
+        }
+        catch (Exception ex)
+        {
+            ILogger<WarfarePlayerLocale> logger = _serviceProvider.GetRequiredService<ILogger<WarfarePlayerLocale>>();
+            logger.LogError(ex, "Error updating locale for {0}.", Player);
+        }
+
+        PlayerLocaleUpdated args = new PlayerLocaleUpdated { Player = Player };
+
+        _ = _eventDispatcher!.DispatchEventAsync(args);
     }
 }

@@ -1,4 +1,4 @@
-using System;
+using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 
 namespace Uncreated.Warfare.Util;
@@ -9,8 +9,7 @@ namespace Uncreated.Warfare.Util;
 public static class GameThread
 {
     [ThreadStatic]
-    // ReSharper disable once FieldCanBeMadeReadOnly.Local (this is broken in mono for some reason)
-    private static bool _isCurrent = true;
+    private static bool _isCurrent;
 
     /// <summary>
     /// <see langword="true"/> when fetched on the main thread, otherwise <see langword="false"/>.
@@ -19,7 +18,7 @@ public static class GameThread
     public static bool IsCurrent
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get { return _isCurrent; }
+        get => _isCurrent;
     }
 
 
@@ -60,8 +59,84 @@ public static class GameThread
     [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
     internal static void Setup()
     {
-        _isCurrent = true;
         ThreadUtil.assertIsGameThread();
+        _isCurrent = true;
+    }
+
+    /// <summary>
+    /// Execute an action on the game thread.
+    /// </summary>
+    /// <param name="action">Code to run on the game thread.</param>
+    public static void QueueOrRun(Action action)
+    {
+        if (IsCurrent)
+            action();
+        else
+            GameThreadActions.Enqueue(action);
+    }
+
+    /// <summary>
+    /// Execute an action on the game thread.
+    /// </summary>
+    /// <param name="action">Code to run on the game thread.</param>
+    public static void Queue(Action action)
+    {
+        GameThreadActions.Enqueue(action);
+    }
+
+    internal static readonly ConcurrentQueue<Action> GameThreadActions = new ConcurrentQueue<Action>();
+
+    /// <summary>
+    /// At least this many actions from the queue are processed every frame, assuming there's this many queued.
+    /// </summary>
+    private const int MinDequeuedPerFrame = 16;
+
+    /// <summary>
+    /// Called every tick.
+    /// </summary>
+    internal static void ProcessGameThreadActions(ILogger logger, bool fullFlush = false)
+    {
+        int ct = GameThreadActions.Count;
+        if (ct == 0)
+            return;
+
+#if DEBUG
+        using IDisposable? profiler = ProfilerUtil.Profile();
+#endif
+
+        // don't dequeue them all at once, just dequeue some to avoid lag spikes when a bunch of things get queued at once
+        int toDequeue;
+        if (fullFlush)
+        {
+            toDequeue = int.MaxValue;
+        }
+        else if (ct > MinDequeuedPerFrame * MinDequeuedPerFrame)
+        {
+            toDequeue = (int)MathF.Sqrt(ct);
+        }
+        else
+        {
+            toDequeue = MinDequeuedPerFrame;
+        }
+
+        int i = 0;
+        do
+        {
+            try
+            {
+                // avoid try-block in loop, kinda weird but works fine
+                for (; i < toDequeue && GameThreadActions.TryDequeue(out Action action); ++i)
+                {
+                    action();
+                }
+
+                break;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error thrown from game thread callback.");
+            }
+        } while (i < toDequeue);
     }
 }
 

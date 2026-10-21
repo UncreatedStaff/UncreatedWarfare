@@ -343,6 +343,9 @@ public class SquadMenuUI :
 
     public void OpenUI(WarfarePlayer player, KitRequestState? forRequest = null)
     {
+        if (!player.IsOnline)
+            return;
+
         SquadMenuUIPlayerData data = GetOrAddData(player);
         KitRequestService? kitReqSvc = _kitRequestService?.Value;
         if (kitReqSvc == null)
@@ -473,6 +476,9 @@ public class SquadMenuUI :
 
     private void UpdateForPlayer(WarfarePlayer player)
     {
+        if (!player.IsOnline)
+            return;
+
         List<Squad> friendlySquads = GetVisibleSquadList(player).ToList();
 
         if (player.IsSquadLeader())
@@ -502,6 +508,9 @@ public class SquadMenuUI :
 
     private void SendMySquadDetail(WarfarePlayer player)
     {
+        if (!player.IsOnline)
+            return;
+
         Squad squad = player.GetSquad()!;
 
         MySquad.Name.SetText(player, squad.Name);
@@ -532,6 +541,9 @@ public class SquadMenuUI :
 
     private void SendSquadDetail(SquadMenuElement element, Squad squad, WarfarePlayer player)
     {
+        if (!player.IsOnline)
+            return;
+
         element.SquadName.SetText(player, squad.Name);
         element.SquadNumber.SetText(player, squad.TeamIdentificationNumber.ToString());
         element.MemberCount.SetText(player, $"{squad.Members.Length.ToString(player.Locale.CultureInfo)}/{Squad.MaxMembers.ToString(player.Locale.CultureInfo)}");

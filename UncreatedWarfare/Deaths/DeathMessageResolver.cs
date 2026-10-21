@@ -1,4 +1,3 @@
-using System;
 using System.Globalization;
 using System.IO;
 using System.Text.Json;
@@ -538,9 +537,7 @@ public class DeathMessageResolver
         // red if its a teamkill, otherwise white
         bool tk = (e.MessageFlags & DeathFlags.Suicide) != DeathFlags.Suicide && e.WasTeamkill;
         Color32 color = tk ? new Color32(255, 153, 153, 255) : new Color32(255, 255, 255, 255);
-        string? str = null;
-
-        foreach (LanguageSet set in _translationService.SetOf.AllPlayers().ToCache().Sets!)
+        foreach (LanguageSet set in _translationService.SetOf.AllPlayers(LanguageSets.DefaultTranslationOptions | TranslationOptions.ConsiderIMGUI))
         {
             string msg = await TranslateMessage(set.Language, set.Culture, e, false, set.IMGUI ? TranslationOptions.UseUnityRichText : TranslationOptions.TMProUI, token);
             while (set.MoveNext())
@@ -549,7 +546,7 @@ public class DeathMessageResolver
             }
         }
 
-        str = await TranslateMessage(_languageService.GetDefaultLanguage(), CultureInfo.InvariantCulture, e, true, TranslationOptions.ForTerminal, token);
+        string? str = await TranslateMessage(_languageService.GetDefaultLanguage(), CultureInfo.InvariantCulture, e, true, TranslationOptions.ForTerminal, token);
         _logger.LogInformation(str);
 
         e.DefaultMessage = str!;

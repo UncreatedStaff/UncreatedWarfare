@@ -68,9 +68,8 @@ public class WarfareProjectile : MonoBehaviour
             }
 
             ProjectileSolved v = value;
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
                 AddProjectileSolvedContinuation(v);
             });
         }
@@ -84,9 +83,8 @@ public class WarfareProjectile : MonoBehaviour
             }
 
             ProjectileSolved v = value;
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
                 if (!_solved && CanSolve)
                     _onProjectileSolved -= v;
             });

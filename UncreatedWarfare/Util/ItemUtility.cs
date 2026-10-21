@@ -1024,6 +1024,33 @@ public static class ItemUtility
     }
 
     /// <summary>
+    /// Find an item in an inventory by it's <see cref="Item"/> reference in the given <paramref name="page"/>.
+    /// </summary>
+    public static bool TryFindItem(PlayerInventory inventory, Item item, Page page, out byte x, out byte y, out byte rot)
+    {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
+        Items pageGrp = inventory.items[(int)page];
+        int itemCt = pageGrp.getItemCount();
+        for (int i = 0; i < itemCt; ++i)
+        {
+            ItemJar jar = pageGrp.getItem((byte)i);
+            if (ReferenceEquals(jar.item, item))
+            {
+                x = jar.x;
+                y = jar.y;
+                rot = jar.rot;
+                return true;
+            }
+        }
+
+        x = byte.MaxValue;
+        y = byte.MaxValue;
+        rot = 0;
+        return false;
+    }
+
+    /// <summary>
     /// Check if a player has any items or clothes equipped (if <paramref name="clothes"/> is <see langword="true"/>).
     /// </summary>
     public static bool HasAnyItems(WarfarePlayer player, bool clothes = true)

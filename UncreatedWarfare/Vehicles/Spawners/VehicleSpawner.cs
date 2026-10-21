@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using System;
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
@@ -9,7 +8,6 @@ using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Locations;
-using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Translations;
@@ -403,7 +401,7 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
                         _logger.LogInformation($"Updated out-of-date sign text of spawner {SpawnInfo.Id} sign {i}. Update: {signInfo.text} -> {expectedSignText}.");
                     }
                     BarricadeUtility.SetServersideSignText(drop, expectedSignText);
-                    _signInstancer.UpdateSign(drop);
+                    _signInstancer.UpdateSignImmediate(drop);
                 }
 
                 outDescriptors[i] = new BuildableDescriptor(buildable);
@@ -658,11 +656,7 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
         }
         else
         {
-            UniTask.Create(async () =>
-            {
-                await UniTask.SwitchToMainThread();
-                TryDestroyLinkedVehicleOnMainThread();
-            });
+            GameThread.Queue(TryDestroyLinkedVehicleOnMainThread);
         }
     }
 
@@ -688,7 +682,7 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
             if (sign.IsStructure || !sign.Alive)
                 continue;
 
-            _signInstancer.UpdateSign(sign.GetDrop<BarricadeDrop>());
+            _signInstancer.UpdateSignImmediate(sign.GetDrop<BarricadeDrop>());
         }
     }
 

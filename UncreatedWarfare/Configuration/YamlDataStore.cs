@@ -1,5 +1,5 @@
-using System;
 using System.IO;
+using Uncreated.Warfare.Util;
 using YamlDotNet.Serialization;
 using ISerializer = YamlDotNet.Serialization.ISerializer;
 
@@ -131,9 +131,8 @@ public class YamlDataStore<T> : IDisposable
     }
     private void OnChanged(object source, FileSystemEventArgs e)
     {
-        UniTask.Create(async () =>
+        GameThread.Queue(() =>
         {
-            await UniTask.SwitchToMainThread();
 
             lock (_lock)
             {
