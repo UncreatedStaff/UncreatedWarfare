@@ -106,7 +106,7 @@ public partial class FobManager :
         }
     }
 
-    [EventListener(RequireNextFrame = true)]
+    [EventListener(RequireNextFrame = true, RequireActiveLayout = true)]
     void IEventListener<IBuildablePlacedEvent>.HandleEvent(IBuildablePlacedEvent e, IServiceProvider serviceProvider)
     {
         using IDisposable? profiler = ProfilerUtil.Profile();

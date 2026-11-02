@@ -237,7 +237,7 @@ public class CosmeticInstancer : IAsyncEventListener<PlayerDutyStatusChanged>, I
                 ctOnThisFrame = 0;
                 await UniTask.NextFrame(token);
 
-                if (player.Save.ViewEnemyCosmetics != enemies || player.Save.ViewFriendlyCosmetics != friendlies)
+                if (player.Save.ViewEnemyCosmetics != enemies || player.Save.ViewFriendlyCosmetics != friendlies || !player.IsOnline)
                     return;
             }
 

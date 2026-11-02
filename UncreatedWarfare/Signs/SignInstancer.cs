@@ -87,6 +87,8 @@ public class SignInstancer : ILayoutHostedService,
             CheckBarricadeForInit(barricade.Drop);
         }
 
+        _updateQueue.Clear();
+
         TimeUtility.updated += OnUpdate;
         return UniTask.CompletedTask;
     }
