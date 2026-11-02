@@ -1,7 +1,5 @@
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Uncreated.Warfare.Layouts.Teams;
@@ -79,6 +77,8 @@ public static class RequestHelper
             throw new ArgumentException($"Request result handler type must implement {Accessor.ExceptionFormatter.Format<IRequestResultHandler>()}.");
         }
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Type requestSourceType = requestable.GetType();
 
         // get value of IRequestable< ? > for 'requestable'
@@ -110,6 +110,8 @@ public static class RequestHelper
 
     public static IRequestable<object>? GetRequestable(Transform transform, SignInstancer signInstancer)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         IRequestable<object>? requestable = ContainerHelper.FindComponent<IRequestable<object>>(transform);
         if (requestable != null || !transform.CompareTag("Barricade") && !transform.CompareTag("Vehicle"))
         {
@@ -122,7 +124,7 @@ public static class RequestHelper
             return null;
         }
 
-        ISignInstanceProvider? provider = signInstancer.GetSignProvider(barricade);
+        BaseSignInstanceProvider? provider = signInstancer.GetSignProvider(barricade);
         return provider as IRequestable<object>;
     }
 }

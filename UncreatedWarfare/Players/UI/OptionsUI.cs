@@ -10,6 +10,7 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Kits.Cosmetics;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Steam;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
@@ -150,10 +151,12 @@ public class OptionsUI : UnturnedUI
                     saveUpdated = true;
                 }
 
+                bool trackQuestsUpdated = false;
                 if (_trackQuestsOption.TryGetValue(player.UnturnedPlayer, out value) && player.Save.TrackQuests != value)
                 {
                     player.Save.TrackQuests = value;
                     saveUpdated = true;
+                    trackQuestsUpdated = true;
                 }
 
                 bool cosmeticsUpdated = false;
@@ -169,6 +172,12 @@ public class OptionsUI : UnturnedUI
                     player.Save.ViewFriendlyCosmetics = value;
                     saveUpdated = true;
                     cosmeticsUpdated = true;
+                }
+
+                if (trackQuestsUpdated && _module.IsLayoutActive())
+                {
+                    QuestService? questService = _module.ScopedProvider.ResolveOptional<QuestService>();
+                    questService?.ApplyTrackedQuestOption(player);
                 }
 
                 if (saveUpdated)
@@ -1170,10 +1179,10 @@ public class OptionsUITranslations : TranslationCollection
     public readonly Translation<string> CultureInfoFormatDeselected = new Translation<string>("{0}", TranslationOptions.TMProUI);
 
     [TranslationData("Format for extra information about a time zone when it's the selected time zone.", "System time zone code (America/New_York, etc)")]
-    public readonly Translation<string, DateTime> TimeZoneInfoFormatSelected = new Translation<string, DateTime>("<#0f0>selected</color> <#444>|</color> {0} <#444>|</color> <#fff>{1}", TranslationOptions.TMProUI, arg1Fmt: "t");
+    public readonly Translation<string, DateTime> TimeZoneInfoFormatSelected = new Translation<string, DateTime>("<#0f0>selected</color> <#444>|</color> {0} <#444>|</color> <#fff>{1}", TranslationOptions.TMProUI | TranslationOptions.PerTimeZoneTranslation, arg1Fmt: "t");
 
     [TranslationData("Format for extra information about a time zone when it's not the selected time zone.", "System time zone code (America/New_York, etc)", IsPriorityTranslation = false)]
-    public readonly Translation<string, DateTime> TimeZoneInfoFormatDeselected = new Translation<string, DateTime>("{0} <#444>|</color> <#fff>{1}", TranslationOptions.TMProUI, arg1Fmt: "t");
+    public readonly Translation<string, DateTime> TimeZoneInfoFormatDeselected = new Translation<string, DateTime>("{0} <#444>|</color> <#fff>{1}", TranslationOptions.TMProUI | TranslationOptions.PerTimeZoneTranslation, arg1Fmt: "t");
 
     [TranslationData("Title of the contributors section of a language.")]
     public readonly Translation LanguageContributorsTitle = new Translation("Contributors", TranslationOptions.TMProUI);

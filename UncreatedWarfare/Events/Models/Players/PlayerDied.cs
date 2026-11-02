@@ -1,5 +1,3 @@
-using Humanizer;
-using System;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events.Logging;

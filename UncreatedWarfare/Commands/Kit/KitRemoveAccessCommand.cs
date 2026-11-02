@@ -33,7 +33,7 @@ internal sealed class KitRemoveAccessCommand : IExecutableCommand
 
     public async UniTask ExecuteAsync(CancellationToken token)
     {
-        (CSteamID? steam64, WarfarePlayer? onlinePlayer) = await Context.TryGetPlayer(0).ConfigureAwait(false);
+        (CSteamID? steam64, WarfarePlayer? onlinePlayer) = await Context.TryGetPlayer(0);
 
         if (!steam64.HasValue || !Context.TryGet(1, out string? kitName))
         {
@@ -49,27 +49,41 @@ internal sealed class KitRemoveAccessCommand : IExecutableCommand
             throw Context.Reply(_translations.KitNotFound, kitName);
         }
 
-        bool hasAccess = await _kitAccessService.HasAccessAsync(steam64.Value, kit.Key, token).ConfigureAwait(false);
+        IPlayer player = await _playerService.GetOfflinePlayer(steam64.Value, _userDataService, token);
 
-        IPlayer player = await _playerService.GetOfflinePlayer(steam64.Value, _userDataService, token).ConfigureAwait(false);
-
-        if (!hasAccess)
+        if (kit.TryGetLevel(out PublicKitLevel publicKitLevel))
         {
-            throw Context.Reply(_translations.KitAlreadyMissingAccess, player, kit);
+            if (!await _kitAccessService.HasAccessAsync(steam64.Value, publicKitLevel, token)
+                || !await _kitAccessService.UpdateAccessAsync(steam64.Value, publicKitLevel, hasAccess: false, Context.CallerId, token))
+            {
+                throw Context.Reply(_translations.KitAlreadyMissingLevelAccess, player, publicKitLevel.Class, publicKitLevel.Level);
+            }
+
+            await UniTask.SwitchToMainThread(token);
+
+            Context.Reply(_translations.KitLevelAccessRevoked, player, player, publicKitLevel.Class, publicKitLevel.Level);
+
+            if (onlinePlayer != null)
+            {
+                _chatService.Send(onlinePlayer, _translations.KitLevelAccessRevokedDm, publicKitLevel.Class, publicKitLevel.Level);
+            }
         }
-
-        if (!await _kitAccessService.UpdateAccessAsync(steam64.Value, kit.Key, null, Context.CallerId, token).ConfigureAwait(false))
+        else
         {
-            throw Context.Reply(_translations.KitAlreadyMissingAccess, player, kit);
-        }
+            if (!await _kitAccessService.HasAccessAsync(steam64.Value, kit.Key, token)
+                || !await _kitAccessService.UpdateAccessAsync(steam64.Value, kit.Key, null, Context.CallerId, token))
+            {
+                throw Context.Reply(_translations.KitAlreadyMissingAccess, player, kit);
+            }
 
-        await UniTask.SwitchToMainThread(token);
-        
-        Context.Reply(_translations.KitAccessRevoked, player, player, kit);
+            await UniTask.SwitchToMainThread(token);
 
-        if (onlinePlayer != null)
-        {
-            _chatService.Send(onlinePlayer, _translations.KitAccessRevokedDm, kit);
+            Context.Reply(_translations.KitAccessRevoked, player, player, kit);
+
+            if (onlinePlayer != null)
+            {
+                _chatService.Send(onlinePlayer, _translations.KitAccessRevokedDm, kit);
+            }
         }
     }
 }

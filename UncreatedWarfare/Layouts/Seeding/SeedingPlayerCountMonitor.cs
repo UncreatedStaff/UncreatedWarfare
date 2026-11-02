@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Primitives;
-using System;
 using System.IO;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
@@ -11,7 +10,9 @@ using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Stats.EventHandlers;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
+using UnityEngine.SceneManagement;
 
 namespace Uncreated.Warfare.Layouts.Seeding;
 
@@ -163,9 +164,8 @@ internal class SeedingPlayerCountMonitor :
 
         if (Rules.Enabled)
         {
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
                 CheckShouldStartVote();
                 if (!VoteManager.IsVoting && !IsSeeding)
                     CheckShouldAwaitStart();
@@ -232,6 +232,8 @@ internal class SeedingPlayerCountMonitor :
 
     private void UpdateGlobals(bool isSeeding)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         QuestService? questService = _layoutHost.IsLayoutActive() ? _layoutHost.ScopedProvider.ResolveOptional<QuestService>() : null;
         if (isSeeding)
         {
@@ -276,7 +278,21 @@ internal class SeedingPlayerCountMonitor :
             }
             return UniTask.CompletedTask;
         }
-        
+
+        if (LevelNavigation.flagData == null /* first thing to load on level load */)
+        {
+            SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+        else
+        {
+            TryStartSeeding();
+        }
+
+        return UniTask.CompletedTask;
+    }
+
+    private void TryStartSeeding()
+    {
         try
         {
             StartSeeding(delayStart: true);
@@ -285,8 +301,12 @@ internal class SeedingPlayerCountMonitor :
         {
             _logger.LogWarning(ex, "No seeding layouts configured, booting into a normal layout.");
         }
+    }
 
-        return UniTask.CompletedTask;
+    private void OnSceneLoaded(Scene arg0, LoadSceneMode arg1)
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+        TryStartSeeding();
     }
 
     UniTask IHostedService.StopAsync(CancellationToken token)
@@ -297,6 +317,8 @@ internal class SeedingPlayerCountMonitor :
     [EventListener(MustRunInstantly = true)]
     void IEventListener<PlayerJoined>.HandleEvent(PlayerJoined e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!Rules.Enabled)
             return;
 
@@ -309,6 +331,8 @@ internal class SeedingPlayerCountMonitor :
 
     private void CheckShouldAwaitStart()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!IsSeeding || IsAwaitingStart)
         {
             return;
@@ -333,6 +357,8 @@ internal class SeedingPlayerCountMonitor :
 
     private void CheckShouldStartVote(bool playerLeaving = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int playerCount = Provider.clients.Count - (playerLeaving ? 1 : 0);
 
         if (IsSeeding)
@@ -370,6 +396,8 @@ internal class SeedingPlayerCountMonitor :
     [EventListener(MustRunInstantly = true)]
     void IEventListener<PlayerLeft>.HandleEvent(PlayerLeft e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!Rules.Enabled)
             return;
 
@@ -382,6 +410,8 @@ internal class SeedingPlayerCountMonitor :
 
     private void StartVote()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _pendingLayout?.Dispose();
         try
         {
@@ -426,6 +456,8 @@ internal class SeedingPlayerCountMonitor :
 
     private void AwaitStartCompleted(ILoopTicker ticker, TimeSpan timeSinceStart, TimeSpan deltaTime)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // assume on game thread
         if (DateTime.UtcNow >= AwaitDoneTime)
         {
@@ -449,6 +481,8 @@ internal class SeedingPlayerCountMonitor :
 
     private void EndSeeding()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // assume on game thread
         if (!IsSeeding)
             return;
@@ -464,6 +498,8 @@ internal class SeedingPlayerCountMonitor :
     [MemberNotNull(nameof(_playHud))]
     private void MoveToSeedingState()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (IsSeeding)
             throw new InvalidOperationException("Already seeding.");
 
@@ -481,6 +517,8 @@ internal class SeedingPlayerCountMonitor :
 
     private void StartSeeding(bool delayStart = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (IsSeeding)
             return;
 
@@ -525,6 +563,7 @@ internal class SeedingPlayerCountMonitor :
         _changeToken.Dispose();
         Interlocked.Exchange(ref _pendingLayout, null)?.Dispose();
         Interlocked.Exchange(ref _awaitStartTicker, null)?.Dispose();
+        SceneManager.sceneLoaded -= OnSceneLoaded;
 
         if (VoteManager is IDisposable disp)
             disp.Dispose();

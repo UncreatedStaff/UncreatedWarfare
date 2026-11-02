@@ -9,6 +9,8 @@ partial class EventDispatcher
 {
     private void OnPlayerChooseSpawnAfterLogin(SteamPlayerID playerID, ref Vector3 point, ref float yaw, ref EPlayerStance initialStance, ref bool needsNewSpawnpoint)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Layout? currentLayout = WarfareModule.Singleton.IsLayoutActive() ? WarfareModule.Singleton.GetActiveLayout() : null;
 
         BinaryPlayerSave playerSave = new BinaryPlayerSave(playerID.steamID, _logger);
@@ -39,6 +41,8 @@ partial class EventDispatcher
     }
     private void OnPlayerChooseSpawnAfterDeath(PlayerLife sender, bool wantsToSpawnAtHome, ref Vector3 position, ref float yaw)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         WarfarePlayer player = _playerService.GetOnlinePlayer(sender.player);
 
         PlayerChooseSpawnAfterDeath args = new PlayerChooseSpawnAfterDeath

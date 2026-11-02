@@ -25,6 +25,8 @@ internal static class TranslationArgumentModifiers
     /// </remarks>
     public static unsafe string ReplaceModifiers(ReadOnlySpan<char> input, ReadOnlySpan<char> collection, ReadOnlySpan<int> indices, ReadOnlySpan<ArgumentSpan> arguments, int argumentStartIndexOffset = 0)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (arguments.Length != indices.Length)
             throw new ArgumentException("Arguments and indices lists must match in length.");
 
@@ -140,6 +142,8 @@ internal static class TranslationArgumentModifiers
     /// <param name="modifierChar">The character to look for.</param>
     public static unsafe ArgumentSpan[] ExtractModifiers(out string? text, ReadOnlySpan<char> input, char modifierChar)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int count = 0;
         int index = 0;
         ArgumentSpan span = default;

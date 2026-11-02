@@ -32,6 +32,8 @@ public class VehicleHUD : UnturnedUI
     
     public void ShowForPlayer(WarfarePlayer player, WarfareVehicle vehicle, bool displayFlareCount)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         SendToPlayer(player.Connection);
 
         MissileWarning.SetVisibility(player.Connection, false);
@@ -44,6 +46,8 @@ public class VehicleHUD : UnturnedUI
 
     public void UpdateFlaresForRelevantPassengers(WarfareVehicle vehicle)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         for (int i = 0; i < vehicle.Vehicle.passengers.Length; i++)
         {
             Passenger passenger = vehicle.Vehicle.passengers[i];
@@ -68,6 +72,8 @@ public class VehicleHUD : UnturnedUI
     
     public void ToggleMissileWarning(WarfareVehicle vehicle, bool isEnabled)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         for (byte i = 0; i < vehicle.Vehicle.passengers.Length; i++)
         {
             Passenger passenger = vehicle.Vehicle.passengers[i];

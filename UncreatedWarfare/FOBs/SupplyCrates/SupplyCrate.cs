@@ -42,6 +42,8 @@ public class SupplyCrate : RestockableBuildableFobEntity<SupplyCrateInfo>
             if (Mathf.Approximately(field, value))
                 return;
 
+            using IDisposable? profiler = ProfilerUtil.Profile();
+
             field = value;
             OnSupplyCountUpdated?.Invoke();
         }
@@ -82,6 +84,8 @@ public class SupplyCrate : RestockableBuildableFobEntity<SupplyCrateInfo>
 
     private void TryDespawnIfNoPlayersAround(IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         IPlayerService? playerService = serviceProvider.GetService<IPlayerService>();
         if (playerService == null || !playerService.OnlinePlayersOnTeam(Team).Any(p => IsWithinRadius(p.Position)))
         {
@@ -92,6 +96,8 @@ public class SupplyCrate : RestockableBuildableFobEntity<SupplyCrateInfo>
     // called when a nearby buildable is destroyed to try to fall to the ground if needed
     internal void RecheckSupport()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!BuildableExtensions.TryGetBuildableBounds(Buildable.Asset, out Bounds localBounds))
         {
             return;
@@ -134,7 +140,7 @@ public class SupplyCrate : RestockableBuildableFobEntity<SupplyCrateInfo>
         }
 
         Buildable.SetPositionAndRotation(position, rotation * BarricadeUtility.DefaultBarricadeRotation);
-        Icon.Update();
+        Icon?.Update();
     }
 
     public bool IsWithinRadius(Vector3 point) => MathUtility.WithinRange(Buildable.Position, point, Radius);

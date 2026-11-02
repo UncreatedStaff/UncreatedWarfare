@@ -8,6 +8,7 @@ using Uncreated.Warfare.Exceptions;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Profiling;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
 using Uncreated.Warfare.Zones;
@@ -49,6 +50,8 @@ internal sealed class FtdmDualSidedTeamManager : TwoSidedTeamManager
     /// <inheritdoc />
     public override Vector4? GetSpawnPointWhenRespawningAtMain(IPlayer player, Team team, ZoneStore globalZoneStore)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!Spawns.TryGetValue(team, out FtdmLocationSpawn spawnLocation))
         {
             return null;
@@ -64,6 +67,8 @@ internal sealed class FtdmDualSidedTeamManager : TwoSidedTeamManager
     /// <inheritdoc />
     public override async UniTask InitializeAsync(IServiceProvider serviceProvider, CancellationToken token = default)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _layout = serviceProvider.GetRequiredService<Layout>();
         _warfareModule = serviceProvider.GetRequiredService<WarfareModule>();
 

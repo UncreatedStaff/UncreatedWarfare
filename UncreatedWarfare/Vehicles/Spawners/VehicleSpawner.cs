@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using System;
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
@@ -9,7 +8,6 @@ using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Locations;
-using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Translations;
@@ -66,6 +64,8 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
         get => _state;
         private set
         {
+            using IDisposable? profiler = ProfilerUtil.Profile();
+
             if (_state == value)
                 return;
 
@@ -98,6 +98,8 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
         ILoopTicker updateTicker,
         IServiceProvider layoutServiceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         _logger = layoutServiceProvider.GetRequiredService<ILogger<VehicleSpawner>>();
@@ -145,6 +147,8 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
     /// <exception cref="AssetNotFoundException">Vehicle asset not found.</exception>
     public void UpdateSpawnInfo(VehicleSpawnerInfo newInfo)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (newInfo == null)
@@ -166,6 +170,8 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
     [MemberNotNull(nameof(VehicleInfo))]
     private void LoadVehicleInfo()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         VehicleAsset? vehicleAsset = Assets.find<VehicleAsset>(SpawnInfo.VehicleId);
         if (vehicleAsset == null)
         {
@@ -192,6 +198,8 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
 
     private void ResolveBuildable()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         IBuildable? buildable = null;
 
         AssetConfiguration config = _serviceProvider.GetRequiredService<AssetConfiguration>();
@@ -255,12 +263,46 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
 
             _vehicleSpawnerService.SpawnerBuildableMap[SpawnInfo.Id] = buildables;
             _vehicleSpawnerService.SpawnerBuildableMapIsDirty = true;
+
+            if (Regions.tryGetCoordinate(spawnPos, out byte x, out byte y) && buildable.Asset != null)
+            {
+                // destroy bays with the same position
+                List<BarricadeDrop> bdrops = BarricadeManager.regions[x, y].drops;
+                for (int i = bdrops.Count - 1; i >= 0; i--)
+                {
+                    BarricadeDrop drop = bdrops[i];
+                    if (buildable.Equals(drop))
+                        continue;
+
+                    BarricadeData data = drop.GetServersideData();
+                    if (data.point.IsNearlyEqual(spawnPos) && data.barricade.asset != null && data.barricade.asset.GUID == buildable.Asset.GUID)
+                    {
+                        BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
+                    }
+                }
+
+                List<StructureDrop> sdrops = StructureManager.regions[x, y].drops;
+                for (int i = sdrops.Count - 1; i >= 0; i--)
+                {
+                    StructureDrop drop = sdrops[i];
+                    if (buildable.Equals(drop))
+                        continue;
+
+                    StructureData data = drop.GetServersideData();
+                    if (data.point.IsNearlyEqual(spawnPos) && data.structure.asset != null && data.structure.asset.GUID == buildable.Asset.GUID)
+                    {
+                        StructureManager.destroyStructure(drop, x, y, Vector3.zero);
+                    }
+                }
+            }
         }
 
         Buildable = buildable;
     }
     private void ResolveSigns()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         AssetConfiguration config = _serviceProvider.GetRequiredService<AssetConfiguration>();
         IAssetLink<ItemBarricadeAsset> bay = config.GetAssetLink<ItemBarricadeAsset>(
             "Buildables:Gameplay:VehicleSpawnerSign"
@@ -359,7 +401,7 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
                         _logger.LogInformation($"Updated out-of-date sign text of spawner {SpawnInfo.Id} sign {i}. Update: {signInfo.text} -> {expectedSignText}.");
                     }
                     BarricadeUtility.SetServersideSignText(drop, expectedSignText);
-                    _signInstancer.UpdateSign(drop);
+                    _signInstancer.UpdateSignImmediate(drop);
                 }
 
                 outDescriptors[i] = new BuildableDescriptor(buildable);
@@ -402,6 +444,8 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
     /// </summary>
     public TimeSpan GetRespawnDueTime()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         TimeSpan timeSpentIdle = DateTime.Now - _timeStartedIdle;
         if (State == VehicleSpawnerState.Idle)
         {
@@ -426,6 +470,8 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
 
     private void Update(ILoopTicker ticker, TimeSpan timeSinceStart, TimeSpan deltaTime)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (Buildable == null || _isSpawningVehicle)
             return;
 
@@ -551,6 +597,8 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
 
     private bool IsIdle(InteractableVehicle vehicle)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (vehicle.isDrowned || Provider.clients.Count == 0)
             return true;
 
@@ -565,6 +613,8 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
 
     private void CheckRespawn()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (State is not VehicleSpawnerState.Idle and not VehicleSpawnerState.Destroyed and not VehicleSpawnerState.LayoutDisabled)
             return;
 
@@ -606,16 +656,14 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
         }
         else
         {
-            UniTask.Create(async () =>
-            {
-                await UniTask.SwitchToMainThread();
-                TryDestroyLinkedVehicleOnMainThread();
-            });
+            GameThread.Queue(TryDestroyLinkedVehicleOnMainThread);
         }
     }
 
     private void TryDestroyLinkedVehicleOnMainThread()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (LinkedVehicle == null || LinkedVehicle.isExploded || LinkedVehicle.isDead)
             return;
 
@@ -623,25 +671,10 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
         UnlinkVehicle();
     }
 
-    /// <remarks>Thread-safe</remarks>
-    private void UpdateLinkedSigns()
-    {
-        if (GameThread.IsCurrent)
-        {
-            UpdateLinkedSignsOnMainThread();
-        }
-        else
-        {
-            UniTask.Create(async () =>
-            {
-                await UniTask.SwitchToMainThread();
-                UpdateLinkedSignsOnMainThread();
-            });
-        }
-    }
-
     private void UpdateLinkedSignsOnMainThread()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (Provider.clients.Count == 0)
             return;
         foreach (IBuildable sign in Signs)
@@ -649,34 +682,17 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
             if (sign.IsStructure || !sign.Alive)
                 continue;
 
-            _signInstancer.UpdateSign(sign.GetDrop<BarricadeDrop>());
+            _signInstancer.UpdateSignImmediate(sign.GetDrop<BarricadeDrop>());
         }
     }
 
-    public static void StartLinkingSign(VehicleSpawner spawner, WarfarePlayer player)
-    {
-        GameThread.AssertCurrent();
-
-        VehicleSpawnerLinkComponent comp = player.UnturnedPlayer.gameObject.GetOrAddComponent<VehicleSpawnerLinkComponent>();
-        comp.Spawner = spawner;
-    }
-
-    public static VehicleSpawner? EndLinkingSign(WarfarePlayer player)
-    {
-        GameThread.AssertCurrent();
-
-        VehicleSpawnerLinkComponent? comp = player.UnturnedPlayer.GetComponent<VehicleSpawnerLinkComponent>();
-        if (comp == null || comp.Spawner == null)
-            return null;
-
-        Object.Destroy(comp);
-        return comp.Spawner;
-    }
     /// <summary>
     /// Link this spawn to a vehicle.
     /// </summary>
     internal void LinkVehicle(WarfareVehicle vehicle)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (vehicle.Vehicle == LinkedVehicle)
@@ -703,6 +719,8 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
     /// </summary>
     internal void UnlinkVehicle(bool holdSignLink = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         InteractableVehicle? oldVehicle = LinkedVehicle;
@@ -734,6 +752,8 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
     }
     public TimeSpan GetLayoutDelayTimeLeft()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (_vehicleSpawnerSelector == null || Layout == null)
             return TimeSpan.Zero;
 

@@ -1,12 +1,10 @@
 ﻿using Microsoft.Extensions.Configuration;
-using System;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Presets;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Kits.Loadouts;
-using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Users;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Cooldowns;
@@ -275,10 +273,10 @@ partial class KitSelectionUI
             try
             {
                 Kit? oldKit = player.Component<KitPlayerComponent>().GetActiveEffectiveKit()?.CachedKit;
-                requested = await _kitRequestService.RequestAsync(player, kit, new RequestCommandResultHandler(_chatService, _configuration, _requestTranslations), player.DisconnectToken);
+                requested = await _kitRequestService.RequestAsync(player, kit, new RequestCommandResultHandler(_serviceProvider, _chatService, _configuration, _requestTranslations), player.DisconnectToken);
                 if (oldKit != null)
                 {
-                    await UpdateKitAsync(oldKit, player, player.DisconnectToken);
+                    await UpdateKitAsync(default, oldKit, player, player.DisconnectToken);
                 }
             }
             catch (OperationCanceledException) when (!player.IsOnline) { }
@@ -292,7 +290,7 @@ partial class KitSelectionUI
                 if (!requested)
                     button.Show(player);
                 else
-                    await UpdateKitAsync(kit, player, player.DisconnectToken);
+                    await UpdateKitAsync(default, kit, player, player.DisconnectToken);
             }
         });
     }
@@ -425,7 +423,7 @@ partial class KitSelectionUI
                             if (result.Success)
                                 await CloseAsync(player);
                             else if (!result.IsOnCooldown)
-                                await UpdateKitAsync(kit, player, player.DisconnectToken);
+                                await UpdateKitAsync(default, kit, player, player.DisconnectToken);
                         }
                     });
                     break;
@@ -438,10 +436,13 @@ partial class KitSelectionUI
                 case PurchaseButtonState.CreditCost:
                     _ = TempCloseAsync(player);
 
+                    PublicKitLevel levelInfo = PublicKitLevel.FromKit(kit);
+                    double creditCost = _publicKitLevelConfig.CreditCostBylevel.GetValueOrDefault(levelInfo);
+
                     // confirm purchase kit modal
                     ToastMessage message = ToastMessage.Popup(
                         _requestKitsTranslations.ModalConfirmPurchaseKitHeading.Translate(player),
-                        _requestKitsTranslations.ModalConfirmPurchaseKitDescription.Translate(kit, kit.CreditCost, player),
+                        _requestKitsTranslations.ModalConfirmPurchaseKitDescription.Translate(levelInfo.Class, levelInfo.Level, (int)Math.Round(creditCost), player),
                         _requestKitsTranslations.ModalConfirmPurchaseKitAcceptButton.Translate(player),
                         _requestKitsTranslations.ModalConfirmPurchaseKitCancelButton.Translate(player),
                         callbacks: new PopupCallbacks((player, _, in _, ref _, ref _) =>
@@ -450,9 +451,9 @@ partial class KitSelectionUI
                             {
                                 try
                                 {
-                                    await _kitRequestService.BuyKitAsync(player, kit, player.UnturnedPlayer.look.aim.position + player.UnturnedPlayer.look.aim.forward * 0.3f, player.DisconnectToken);
+                                    await _kitRequestService.BuyKitLevelAsync(player, levelInfo, player.UnturnedPlayer.look.aim.position + player.UnturnedPlayer.look.aim.forward * 0.3f, player.DisconnectToken);
                                     await TempUncloseAsync(player);
-                                    await UpdateKitAsync(kit, player);
+                                    await UpdateKitAsync(default, kit, player);
                                 }
                                 catch (OperationCanceledException) when (!player.IsOnline) { }
                                 catch (Exception ex)
@@ -488,7 +489,7 @@ partial class KitSelectionUI
                         break;
 
                     _ = CloseAsync(player);
-                    _squadMenu.OpenUI(player, new SquadMenuUI.KitRequestState(kit, new RequestCommandResultHandler(_chatService, _configuration, _requestTranslations)));
+                    _squadMenu.OpenUI(player, new SquadMenuUI.KitRequestState(kit, new RequestCommandResultHandler(_serviceProvider, _chatService, _configuration, _requestTranslations)));
                     break;
 
                 case PurchaseButtonState.OpenDiscordForBoosts:
@@ -547,7 +548,7 @@ partial class KitSelectionUI
                                             if (!player.IsOnline) return;
                                             await TempUncloseAsync(player);
                                             if (!player.IsOnline) return;
-                                            await UpdateKitAsync(kit, player);
+                                            await UpdateKitAsync(default, kit, player);
                                         }
                                         catch (OperationCanceledException) when (!player.IsOnline) { }
                                         catch (Exception ex)
@@ -635,6 +636,8 @@ partial class KitSelectionUI
 
     private bool TryGetTargetKit(Func<KitInfo, UnturnedButton> selector, UnturnedButton button, out Class @class, out int kitIndex, [NotNullWhen(true)] out KitInfo? kitInfo)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ReadOnlySpan<char> name = button.Name.Span;
         if (name.Length >= 12 && name[4] == 'P')
         {

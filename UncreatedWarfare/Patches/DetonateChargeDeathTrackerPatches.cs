@@ -46,6 +46,8 @@ internal sealed class DetonateChargeDeathTrackerPatches : IHarmonyPatch
     /// </summary>
     private static void Prefix(CSteamID killer, InteractableCharge __instance)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Player? player = PlayerTool.getPlayer(killer);
         if (player == null)
             return;
@@ -64,6 +66,8 @@ internal sealed class DetonateChargeDeathTrackerPatches : IHarmonyPatch
     /// </summary>
     private static void Postfix(CSteamID killer)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Player? player = PlayerTool.getPlayer(killer);
         if (player == null)
             return;

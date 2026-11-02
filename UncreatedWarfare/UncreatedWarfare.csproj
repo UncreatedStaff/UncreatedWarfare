@@ -7,10 +7,13 @@
 
     <PropertyGroup>
 
-        <Version>4.1.1</Version>
+        <Version>4.2.0</Version>
 
         <!-- Enable this for telemetry tracking -->
         <DefineConstants>$(DefineConstants);TELEMETRY</DefineConstants>
+
+        <!-- Enable this for manual profiling with ProfilerUtil -->
+        <DefineConstants>$(DefineConstants);PROFILING</DefineConstants>
 
     </PropertyGroup>
 
@@ -35,6 +38,7 @@
         <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
 
         <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
+        <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
         <PackageIcon>icon.png</PackageIcon>
         <PackageReadmeFile>README.md</PackageReadmeFile>
 
@@ -93,6 +97,7 @@
 
       <!--<DefineConstants>$(DefineConstants);MAP_TACK_UI_DEBUG_LOGGING</DefineConstants>-->
       <!--<DefineConstants>$(DefineConstants);FALLING_EFFECT_DEBUG_LOGGING</DefineConstants>-->
+      <!--<DefineConstants>$(DefineConstants);ITEM_DISTRO_DEBUG</DefineConstants>-->
 
     </PropertyGroup>
 
@@ -103,7 +108,6 @@
     <ItemGroup>
         <None Remove="Commands\AmmoCommand.meta.yml" />
         <None Remove="Commands\AttachCommand.meta.yml" />
-        <None Remove="Commands\BuyCommand.meta.yml" />
         <None Remove="Commands\DeployCommand.meta.yml" />
         <None Remove="Commands\Kit\KitCommand.meta.yml" />
         <None Remove="Commands\Request\RequestCommand.meta.yml" />
@@ -229,7 +233,7 @@
     <!-- Documentation -->
     <ItemGroup>
         <None Include="../Documentation/**">
-          <Link>%(RecursiveDir)/Documentation/%(Filename)%(Extension)</Link>
+            <Link>%(RecursiveDir)/Documentation/%(Filename)%(Extension)</Link>
         </None>
     </ItemGroup>
 
@@ -278,7 +282,6 @@
 
         <EmbeddedResource Include="Commands\DiscordCommand.meta.yml" />
         <EmbeddedResource Include="Commands\DeployCommand.meta.yml" />
-        <EmbeddedResource Include="Commands\BuyCommand.meta.yml" />
         <EmbeddedResource Include="Commands\AttachCommand.meta.yml" />
         <EmbeddedResource Include="Commands\Clear\ClearCommand.meta.yml" />
         <EmbeddedResource Include="Commands\AbandonVehicleCommand.meta.yml" />
@@ -307,9 +310,11 @@
         <Using Include="Steamworks" />
         <Using Include="System.Collections" />
         <Using Include="UnityEngine" />
+        <Using Include="System" />
         <Using Include="System.Threading" />
         <Using Include="System.Threading.Tasks" />
         <Using Include="Cysharp.Threading.Tasks" />
+        <Using Include="Uncreated.Warfare.Profiling" />
         <Using Include="UnityEngine.Object">
             <Alias>Object</Alias>
         </Using>
@@ -372,6 +377,14 @@
         <Publicize Include="Assembly-CSharp:SDG.Unturned.AssetsWorker.AssetDefinition" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.Assets.LoadFile" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.Assets.AddAssetsFromOriginToCurrentMapping" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.Assets+AssetMapping" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.Assets.currentAssetMapping" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.Assets.assetOrigins" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.Assets.allMasterBundles" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.Assets.ApplyServerAssetMapping" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.PhysicsMaterialNetTable.ServerPopulateTable" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.Level.instance" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.Level.ReturnToMainMenu" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.NetMessages" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.CommandLogMemoryUsage.OnExecuted" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.ClientAssetIntegrity" />
@@ -391,6 +404,9 @@
         <Publicize Include="Assembly-CSharp:SDG.Unturned.BarricadeManager.YAW_BIT_COUNT" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.StructureManager.POSITION_FRAC_BIT_COUNT" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.StructureManager.YAW_BIT_COUNT" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.Provider+ServerRequiredWorkshopFile" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.Provider.ServerRequiredWorkshopFile.fileId" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.DedicatedUGC.itemsQueried" />
 
     </ItemGroup>
 
@@ -406,6 +422,6 @@
 
   <!-- Copy this build to the nuget packages folder to make it easier to edit plugins without publishing. -->
   <Target Name="Uncreated_CopyToNugetPackage" AfterTargets="Build" Condition="'$(Configuration)' == 'Release' And exists('$(NuGetPackageRoot)/uncreated.warfare/$(Version)/lib/$(TargetFramework)')">
-    <Copy SourceFiles="$(OutDir)/$(AssemblyName).dll;$(OutDir)/$(AssemblyName).pdb;$(OutDir)/$(AssemblyName).runtimeconfig.json;$(OutDir)/$(AssemblyName).xml" DestinationFolder="$(NuGetPackageRoot)/uncreated.warfare/$(Version)/lib/$(TargetFramework)" SkipUnchangedFiles="true" OverwriteReadOnlyFiles="true" />
+      <Copy SourceFiles="$(OutDir)/$(AssemblyName).dll;$(OutDir)/$(AssemblyName).pdb;$(OutDir)/$(AssemblyName).runtimeconfig.json;$(OutDir)/$(AssemblyName).xml" DestinationFolder="$(NuGetPackageRoot)/uncreated.warfare/$(Version)/lib/$(TargetFramework)" SkipUnchangedFiles="true" OverwriteReadOnlyFiles="true" />
   </Target>
 </Project>

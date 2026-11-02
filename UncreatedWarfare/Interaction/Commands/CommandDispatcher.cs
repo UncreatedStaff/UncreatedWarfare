@@ -1,6 +1,5 @@
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
-using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
@@ -167,7 +166,7 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
 
         return parentCommands;
 
-        bool IsSubCommandRecursive(CommandInfo c1, CommandInfo c2)
+        static bool IsSubCommandRecursive(CommandInfo c1, CommandInfo c2)
         {
             foreach (CommandInfo subCommand in c1.SubCommands)
             {
@@ -190,6 +189,8 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
     /// </summary>
     void IEventListener<PlayerLeft>.HandleEvent(PlayerLeft e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         foreach (CommandInfo commandType in Commands)
         {
             lock (commandType.WaitTasks)
@@ -276,6 +277,8 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
     /// </summary>
     public CommandInfo? FindCommand(string search)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         CommandInfo? cmd = CollectionUtility.StringFind(Commands.OrderByDescending(x => x.Priority).ThenBy(x => x.CommandName.Length), x => x.CommandName, search, equalsOnly: true);
         if (cmd != null)
             return cmd;
@@ -295,6 +298,8 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
     /// </summary>
     public CommandInfo? FindCommand(Type commandType)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         foreach (CommandInfo command in Commands)
         {
             if (command.Type == commandType)
@@ -438,6 +443,8 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
     {
         GameThread.AssertCurrent();
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // take off common trailing slash when missing the enter key
         if (originalMessage.EndsWith('\\') /* not quoted */ && args.Length > 0 && args[^1].EndsWith('\\'))
         {
@@ -576,6 +583,8 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
 
     private static void ResolveSubCommand(ref CommandInfo command, IReadOnlyList<string> args, out int offset)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         offset = 0;
         if (command.SubCommands.Count == 0)
             return;
@@ -1070,6 +1079,8 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
 
     private void OnChatProcessing(SteamPlayer player, string text, ref bool shouldExecuteCommand, ref bool shouldList)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         WarfarePlayer? pl = _playerService.GetOnlinePlayer(player);
         if (pl is null || string.IsNullOrWhiteSpace(text)) return;
         shouldExecuteCommand = false;
@@ -1093,6 +1104,8 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
     [UsedImplicitly]
     private bool TryRunCommand(ICommandUser user, ReadOnlySpan<char> textSpan, ref bool shouldList, bool requirePrefix)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ParsedCommandInfo info = Parser.ParseCommandInput(textSpan, requirePrefix);
         if (info.CommandName == null)
             return false;
@@ -1109,6 +1122,8 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
 
     private CommandInfo? FindCommandForExecution(string commandName)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         using IEnumerator<CommandInfo> enumerator = Commands.GetEnumerator();
 
         while (enumerator.MoveNext())
@@ -1159,6 +1174,8 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
 
     internal bool CheckCommandOnCooldown(CommandContext context)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (context.Player == null
             // todo || context.Player.OnDuty()
             || _cooldownManager == null

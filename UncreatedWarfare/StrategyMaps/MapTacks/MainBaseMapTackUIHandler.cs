@@ -73,6 +73,8 @@ internal class MainBaseMapTackUIHandler : IMapTackUIHandler, IDisposable,
 
     private void UpdateVehicleCounts(bool notify, MapTackVehicleType type = MapTackVehicleType.Other)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int oldValue = 0;
         if (type == MapTackVehicleType.Other)
         {

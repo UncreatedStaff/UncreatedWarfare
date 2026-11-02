@@ -1,5 +1,4 @@
 using StackCleaner;
-using System;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
@@ -10,7 +9,10 @@ using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Interaction;
 
-public class ChatService
+/// <summary>
+/// Service that enables systems to send chat messages and hints to players using translations.
+/// </summary>
+public sealed class ChatService
 {
     public delegate void SendingChatMessage(WarfarePlayer recipient, string text, Color color, EChatMode mode, string? iconURL, bool richText, WarfarePlayer? fromPlayer, ref bool shouldReplicate);
 
@@ -39,6 +41,8 @@ public class ChatService
     /// </summary>
     public void Send(WarfarePlayer player, string text, Color color, EChatMode mode, string? iconUrl, bool richText, WarfarePlayer? fromPlayer = null)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (richText)
         {
             Color? c = TranslationFormattingUtility.ExtractColor(text, out int index, out int length);
@@ -61,10 +65,8 @@ public class ChatService
             string? icon2 = iconUrl;
             bool rt = richText;
             WarfarePlayer? fromPlayer2 = fromPlayer;
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
-
                 if (wp.IsOnline)
                     SendRawMessage(text2, c2, mode2, icon2, rt, wp, fromPlayer2);
             });
@@ -93,9 +95,8 @@ public class ChatService
             EChatMode mode2 = mode;
             string? icon2 = iconUrl;
             WarfarePlayer? fromPlayer2 = fromPlayer;
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
                 BroadcastRichTextGameThread(text2, c2, mode2, icon2, fromPlayer2);
             });
         }
@@ -120,10 +121,10 @@ public class ChatService
                 string? icon2 = iconUrl;
                 LanguageSet set = players.Preserve();
                 WarfarePlayer? fromPlayer2 = fromPlayer;
-                UniTask.Create(async () =>
+                GameThread.Queue(() =>
                 {
-                    await UniTask.SwitchToMainThread();
                     BroadcastNonRichTextGameThread(text2, c2, mode2, icon2, set, fromPlayer2);
+                    set.Dispose();
                 });
             }
             return;
@@ -141,10 +142,10 @@ public class ChatService
             string? icon2 = iconUrl;
             LanguageSet set = players.Preserve();
             WarfarePlayer? fromPlayer2 = fromPlayer;
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
                 BroadcastRichTextGameThread(text2, c2, mode2, icon2, set, fromPlayer2);
+                set.Dispose();
             });
         }
     }
@@ -162,9 +163,8 @@ public class ChatService
             EChatMode mode2 = mode;
             string? icon2 = iconUrl;
             WarfarePlayer? fromPlayer2 = null;
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
                 BroadcastNonRichTextGameThread(text2, c2, mode2, icon2, fromPlayer2);
             });
         }
@@ -172,7 +172,7 @@ public class ChatService
 
     private void BroadcastRichTextGameThread(string text, Color color, EChatMode mode, string? iconUrl, WarfarePlayer? fromPlayer)
     {
-        foreach (LanguageSet set in _translationService.SetOf.AllPlayers())
+        foreach (LanguageSet set in _translationService.SetOf.AllPlayers(TranslationOptions.ConsiderIMGUI))
         {
             BroadcastRichTextGameThread(text, color, mode, iconUrl, set, fromPlayer);
         }
@@ -300,10 +300,8 @@ public class ChatService
             Color cl2 = textColor ?? Color.white;
             bool rt2 = rt;
             WarfarePlayer? fromPlayer2 = fromPlayer;
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
-
                 if (wp.IsOnline)
                     SendRawMessage(vl2, cl2, EChatMode.SAY, null, rt2, wp, fromPlayer2);
             });
@@ -390,10 +388,8 @@ public class ChatService
             Color cl2 = textColor;
             bool rt2 = rt;
             WarfarePlayer? fromPlayer2 = fromPlayer;
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
-
                 if (wp.IsOnline)
                     SendRawMessage(vl2, cl2, EChatMode.SAY, null, rt2, wp, fromPlayer2);
             });
@@ -1128,20 +1124,15 @@ public class ChatService
             return;
         }
 
-        LanguageSetEnumerator.Cache c = set.ToCache();
-        set.Dispose();
-
         Translation t = translation;
         WarfarePlayer? fromPlayer2 = fromPlayer;
-        UniTask.Create(async () =>
+        GameThread.Queue(() =>
         {
-            await UniTask.SwitchToMainThread();
-
-            LanguageSet[] sets = c.Sets!;
-            for (int i = 0; i < sets.Length; ++i)
+            while (set.MoveNext())
             {
-                Broadcast(in sets[i], t, fromPlayer2);
+                Broadcast(in set.Set, t, fromPlayer2);
             }
+            set.Dispose();
         });
     }
 
@@ -1163,21 +1154,16 @@ public class ChatService
             return;
         }
 
-        LanguageSetEnumerator.Cache c = set.ToCache();
-        set.Dispose();
-
         T0 a0 = arg0;
         Translation<T0> t = translation;
         WarfarePlayer? fromPlayer2 = fromPlayer;
-        UniTask.Create(async () =>
+        GameThread.Queue(() =>
         {
-            await UniTask.SwitchToMainThread();
-
-            LanguageSet[] sets = c.Sets!;
-            for (int i = 0; i < sets.Length; ++i)
+            while (set.MoveNext())
             {
-                Broadcast(in sets[i], t, a0, fromPlayer2);
+                Broadcast(in set.Set, t, a0, fromPlayer2);
             }
+            set.Dispose();
         });
     }
 
@@ -1199,21 +1185,16 @@ public class ChatService
             return;
         }
 
-        LanguageSetEnumerator.Cache c = set.ToCache();
-        set.Dispose();
-
         T0 a0 = arg0; T1 a1 = arg1;
         Translation<T0, T1> t = translation;
         WarfarePlayer? fromPlayer2 = fromPlayer;
-        UniTask.Create(async () =>
+        GameThread.Queue(() =>
         {
-            await UniTask.SwitchToMainThread();
-
-            LanguageSet[] sets = c.Sets!;
-            for (int i = 0; i < sets.Length; ++i)
+            while (set.MoveNext())
             {
-                Broadcast(in sets[i], t, a0, a1, fromPlayer2);
+                Broadcast(in set.Set, t, a0, a1, fromPlayer2);
             }
+            set.Dispose();
         });
     }
 
@@ -1235,21 +1216,16 @@ public class ChatService
             return;
         }
 
-        LanguageSetEnumerator.Cache c = set.ToCache();
-        set.Dispose();
-
         T0 a0 = arg0; T1 a1 = arg1; T2 a2 = arg2;
         Translation<T0, T1, T2> t = translation;
         WarfarePlayer? fromPlayer2 = fromPlayer;
-        UniTask.Create(async () =>
+        GameThread.Queue(() =>
         {
-            await UniTask.SwitchToMainThread();
-
-            LanguageSet[] sets = c.Sets!;
-            for (int i = 0; i < sets.Length; ++i)
+            while (set.MoveNext())
             {
-                Broadcast(in sets[i], t, a0, a1, a2, fromPlayer2);
+                Broadcast(in set.Set, t, a0, a1, a2, fromPlayer2);
             }
+            set.Dispose();
         });
     }
 
@@ -1271,21 +1247,16 @@ public class ChatService
             return;
         }
 
-        LanguageSetEnumerator.Cache c = set.ToCache();
-        set.Dispose();
-
         T0 a0 = arg0; T1 a1 = arg1; T2 a2 = arg2; T3 a3 = arg3;
         Translation<T0, T1, T2, T3> t = translation;
         WarfarePlayer? fromPlayer2 = fromPlayer;
-        UniTask.Create(async () =>
+        GameThread.Queue(() =>
         {
-            await UniTask.SwitchToMainThread();
-
-            LanguageSet[] sets = c.Sets!;
-            for (int i = 0; i < sets.Length; ++i)
+            while (set.MoveNext())
             {
-                Broadcast(in sets[i], t, a0, a1, a2, a3, fromPlayer2);
+                Broadcast(in set.Set, t, a0, a1, a2, a3, fromPlayer2);
             }
+            set.Dispose();
         });
     }
 
@@ -1307,21 +1278,16 @@ public class ChatService
             return;
         }
 
-        LanguageSetEnumerator.Cache c = set.ToCache();
-        set.Dispose();
-
         T0 a0 = arg0; T1 a1 = arg1; T2 a2 = arg2; T3 a3 = arg3; T4 a4 = arg4;
         Translation<T0, T1, T2, T3, T4> t = translation;
         WarfarePlayer? fromPlayer2 = fromPlayer;
-        UniTask.Create(async () =>
+        GameThread.Queue(() =>
         {
-            await UniTask.SwitchToMainThread();
-
-            LanguageSet[] sets = c.Sets!;
-            for (int i = 0; i < sets.Length; ++i)
+            while (set.MoveNext())
             {
-                Broadcast(in sets[i], t, a0, a1, a2, a3, a4, fromPlayer2);
+                Broadcast(in set.Set, t, a0, a1, a2, a3, a4, fromPlayer2);
             }
+            set.Dispose();
         });
     }
 
@@ -1343,21 +1309,16 @@ public class ChatService
             return;
         }
 
-        LanguageSetEnumerator.Cache c = set.ToCache();
-        set.Dispose();
-
         T0 a0 = arg0; T1 a1 = arg1; T2 a2 = arg2; T3 a3 = arg3; T4 a4 = arg4; T5 a5 = arg5;
         Translation<T0, T1, T2, T3, T4, T5> t = translation;
         WarfarePlayer? fromPlayer2 = fromPlayer;
-        UniTask.Create(async () =>
+        GameThread.Queue(() =>
         {
-            await UniTask.SwitchToMainThread();
-
-            LanguageSet[] sets = c.Sets!;
-            for (int i = 0; i < sets.Length; ++i)
+            while (set.MoveNext())
             {
-                Broadcast(in sets[i], t, a0, a1, a2, a3, a4, a5, fromPlayer2);
+                Broadcast(in set.Set, t, a0, a1, a2, a3, a4, a5, fromPlayer2);
             }
+            set.Dispose();
         });
     }
 
@@ -1379,21 +1340,16 @@ public class ChatService
             return;
         }
 
-        LanguageSetEnumerator.Cache c = set.ToCache();
-        set.Dispose();
-
         T0 a0 = arg0; T1 a1 = arg1; T2 a2 = arg2; T3 a3 = arg3; T4 a4 = arg4; T5 a5 = arg5; T6 a6 = arg6;
         Translation<T0, T1, T2, T3, T4, T5, T6> t = translation;
         WarfarePlayer? fromPlayer2 = fromPlayer;
-        UniTask.Create(async () =>
+        GameThread.Queue(() =>
         {
-            await UniTask.SwitchToMainThread();
-
-            LanguageSet[] sets = c.Sets!;
-            for (int i = 0; i < sets.Length; ++i)
+            while (set.MoveNext())
             {
-                Broadcast(in sets[i], t, a0, a1, a2, a3, a4, a5, a6, fromPlayer2);
+                Broadcast(in set.Set, t, a0, a1, a2, a3, a4, a5, a6, fromPlayer2);
             }
+            set.Dispose();
         });
     }
 
@@ -1415,21 +1371,16 @@ public class ChatService
             return;
         }
 
-        LanguageSetEnumerator.Cache c = set.ToCache();
-        set.Dispose();
-
         T0 a0 = arg0; T1 a1 = arg1; T2 a2 = arg2; T3 a3 = arg3; T4 a4 = arg4; T5 a5 = arg5; T6 a6 = arg6; T7 a7 = arg7;
         Translation<T0, T1, T2, T3, T4, T5, T6, T7> t = translation;
         WarfarePlayer? fromPlayer2 = fromPlayer;
-        UniTask.Create(async () =>
+        GameThread.Queue(() =>
         {
-            await UniTask.SwitchToMainThread();
-
-            LanguageSet[] sets = c.Sets!;
-            for (int i = 0; i < sets.Length; ++i)
+            while (set.MoveNext())
             {
-                Broadcast(in sets[i], t, a0, a1, a2, a3, a4, a5, a6, a7, fromPlayer2);
+                Broadcast(in set.Set, t, a0, a1, a2, a3, a4, a5, a6, a7, fromPlayer2);
             }
+            set.Dispose();
         });
     }
 
@@ -1451,21 +1402,16 @@ public class ChatService
             return;
         }
 
-        LanguageSetEnumerator.Cache c = set.ToCache();
-        set.Dispose();
-
         T0 a0 = arg0; T1 a1 = arg1; T2 a2 = arg2; T3 a3 = arg3; T4 a4 = arg4; T5 a5 = arg5; T6 a6 = arg6; T7 a7 = arg7; T8 a8 = arg8;
         Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> t = translation;
         WarfarePlayer? fromPlayer2 = fromPlayer;
-        UniTask.Create(async () =>
+        GameThread.Queue(() =>
         {
-            await UniTask.SwitchToMainThread();
-
-            LanguageSet[] sets = c.Sets!;
-            for (int i = 0; i < sets.Length; ++i)
+            while (set.MoveNext())
             {
-                Broadcast(in sets[i], t, a0, a1, a2, a3, a4, a5, a6, a7, a8, fromPlayer2);
+                Broadcast(in set.Set, t, a0, a1, a2, a3, a4, a5, a6, a7, a8, fromPlayer2);
             }
+            set.Dispose();
         });
     }
 
@@ -1487,21 +1433,16 @@ public class ChatService
             return;
         }
 
-        LanguageSetEnumerator.Cache c = set.ToCache();
-        set.Dispose();
-
         T0 a0 = arg0; T1 a1 = arg1; T2 a2 = arg2; T3 a3 = arg3; T4 a4 = arg4; T5 a5 = arg5; T6 a6 = arg6; T7 a7 = arg7; T8 a8 = arg8; T9 a9 = arg9;
         Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> t = translation;
         WarfarePlayer? fromPlayer2 = fromPlayer;
-        UniTask.Create(async () =>
+        GameThread.Queue(() =>
         {
-            await UniTask.SwitchToMainThread();
-
-            LanguageSet[] sets = c.Sets!;
-            for (int i = 0; i < sets.Length; ++i)
+            while (set.MoveNext())
             {
-                Broadcast(in sets[i], t, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, fromPlayer2);
+                Broadcast(in set.Set, t, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, fromPlayer2);
             }
+            set.Dispose();
         });
     }
 
@@ -1513,7 +1454,7 @@ public class ChatService
     /// <exception cref="ArgumentException">The translation has arguments.</exception>
     public void Broadcast(Translation translation, WarfarePlayer? fromPlayer = null)
     {
-        Broadcast(_translationService.SetOf.AllPlayers(), translation, fromPlayer);
+        Broadcast(_translationService.SetOf.AllPlayers(translation.Options | (LanguageSets.DefaultTranslationOptions & ~TranslationOptions.PerCultureTranslation) | TranslationOptions.ConsiderIMGUI), translation, fromPlayer);
     }
 
     /// <summary>
@@ -1523,7 +1464,7 @@ public class ChatService
     /// <exception cref="ArgumentNullException"/>
     public void Broadcast<T0>(Translation<T0> translation, T0 arg0, WarfarePlayer? fromPlayer = null)
     {
-        Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, fromPlayer);
+        Broadcast(_translationService.SetOf.AllPlayers(translation.Options | LanguageSets.DefaultTranslationOptions | TranslationOptions.ConsiderIMGUI), translation, arg0, fromPlayer);
     }
 
     /// <summary>
@@ -1533,7 +1474,7 @@ public class ChatService
     /// <exception cref="ArgumentNullException"/>
     public void Broadcast<T0, T1>(Translation<T0, T1> translation, T0 arg0, T1 arg1, WarfarePlayer? fromPlayer = null)
     {
-        Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, fromPlayer);
+        Broadcast(_translationService.SetOf.AllPlayers(translation.Options | LanguageSets.DefaultTranslationOptions | TranslationOptions.ConsiderIMGUI), translation, arg0, arg1, fromPlayer);
     }
 
     /// <summary>
@@ -1543,7 +1484,7 @@ public class ChatService
     /// <exception cref="ArgumentNullException"/>
     public void Broadcast<T0, T1, T2>(Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2, WarfarePlayer? fromPlayer = null)
     {
-        Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, arg2, fromPlayer);
+        Broadcast(_translationService.SetOf.AllPlayers(translation.Options | LanguageSets.DefaultTranslationOptions | TranslationOptions.ConsiderIMGUI), translation, arg0, arg1, arg2, fromPlayer);
     }
 
     /// <summary>
@@ -1553,7 +1494,7 @@ public class ChatService
     /// <exception cref="ArgumentNullException"/>
     public void Broadcast<T0, T1, T2, T3>(Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, WarfarePlayer? fromPlayer = null)
     {
-        Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, arg2, arg3, fromPlayer);
+        Broadcast(_translationService.SetOf.AllPlayers(translation.Options | LanguageSets.DefaultTranslationOptions | TranslationOptions.ConsiderIMGUI), translation, arg0, arg1, arg2, arg3, fromPlayer);
     }
 
     /// <summary>
@@ -1563,7 +1504,7 @@ public class ChatService
     /// <exception cref="ArgumentNullException"/>
     public void Broadcast<T0, T1, T2, T3, T4>(Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, WarfarePlayer? fromPlayer = null)
     {
-        Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, arg2, arg3, arg4, fromPlayer);
+        Broadcast(_translationService.SetOf.AllPlayers(translation.Options | LanguageSets.DefaultTranslationOptions | TranslationOptions.ConsiderIMGUI), translation, arg0, arg1, arg2, arg3, arg4, fromPlayer);
     }
 
     /// <summary>
@@ -1573,7 +1514,7 @@ public class ChatService
     /// <exception cref="ArgumentNullException"/>
     public void Broadcast<T0, T1, T2, T3, T4, T5>(Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, WarfarePlayer? fromPlayer = null)
     {
-        Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, arg2, arg3, arg4, arg5, fromPlayer);
+        Broadcast(_translationService.SetOf.AllPlayers(translation.Options | LanguageSets.DefaultTranslationOptions | TranslationOptions.ConsiderIMGUI), translation, arg0, arg1, arg2, arg3, arg4, arg5, fromPlayer);
     }
 
     /// <summary>
@@ -1583,7 +1524,7 @@ public class ChatService
     /// <exception cref="ArgumentNullException"/>
     public void Broadcast<T0, T1, T2, T3, T4, T5, T6>(Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, WarfarePlayer? fromPlayer = null)
     {
-        Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, fromPlayer);
+        Broadcast(_translationService.SetOf.AllPlayers(translation.Options | LanguageSets.DefaultTranslationOptions | TranslationOptions.ConsiderIMGUI), translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, fromPlayer);
     }
 
     /// <summary>
@@ -1593,7 +1534,7 @@ public class ChatService
     /// <exception cref="ArgumentNullException"/>
     public void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7>(Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, WarfarePlayer? fromPlayer = null)
     {
-        Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, fromPlayer);
+        Broadcast(_translationService.SetOf.AllPlayers(translation.Options | LanguageSets.DefaultTranslationOptions | TranslationOptions.ConsiderIMGUI), translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, fromPlayer);
     }
 
     /// <summary>
@@ -1603,7 +1544,7 @@ public class ChatService
     /// <exception cref="ArgumentNullException"/>
     public void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7, T8>(Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, WarfarePlayer? fromPlayer = null)
     {
-        Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, fromPlayer);
+        Broadcast(_translationService.SetOf.AllPlayers(translation.Options | LanguageSets.DefaultTranslationOptions | TranslationOptions.ConsiderIMGUI), translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, fromPlayer);
     }
 
     /// <summary>
@@ -1613,7 +1554,7 @@ public class ChatService
     /// <exception cref="ArgumentNullException"/>
     public void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, WarfarePlayer? fromPlayer = null)
     {
-        Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, fromPlayer);
+        Broadcast(_translationService.SetOf.AllPlayers(translation.Options | LanguageSets.DefaultTranslationOptions | TranslationOptions.ConsiderIMGUI), translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, fromPlayer);
     }
 
     /// <summary>
@@ -1621,6 +1562,8 @@ public class ChatService
     /// </summary>
     private void SendRawMessage(string text, Color color, EChatMode mode, string? iconURL, bool richText, WarfarePlayer recipient, WarfarePlayer? fromPlayer)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         iconURL ??= string.Empty;
@@ -1668,6 +1611,8 @@ public class ChatService
     /// </summary>
     private void SendRawMessageBatch(string text, Color color, EChatMode mode, string? iconURL, bool richText, PooledTransportConnectionList transportConnections, WarfarePlayer? fromPlayer)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         iconURL ??= string.Empty;
@@ -1708,10 +1653,8 @@ public class ChatService
             Color cl2 = textColor;
             Translation tr2 = translation;
             WarfarePlayer? fromPlayer2 = null;
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
-
                 if (!pl2.IsOnline)
                     return;
 
@@ -1731,9 +1674,8 @@ public class ChatService
         {
             string vl2 = value;
             ICommandUser user2 = user;
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
                 user2.SendMessage(vl2);
             });
         }
@@ -1765,21 +1707,26 @@ public class ChatService
             Translation tr2 = translation;
             LanguageSet set2 = set.Preserve();
             WarfarePlayer? fromPlayer2 = fromPlayer;
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
-
-                CheckTranslationLength(lang, ref vl2, tr2, ref cl2, imgui);
-
-                PooledTransportConnectionList list = set2.GatherTransportConnections();
-                if (OnSendingChatMessage != null)
+                try
                 {
-                    RemoveDisallowedFromTcList(ref set2, vl2, cl2, EChatMode.SAY, null, list, fromPlayer2);
-                    if (list.Count == 0)
-                        return;
-                }
+                    CheckTranslationLength(lang, ref vl2, tr2, ref cl2, imgui);
 
-                SendRawMessageBatch(vl2, cl2, EChatMode.SAY, null, (tr2.Options & TranslationOptions.NoRichText) == 0, list, fromPlayer2);
+                    PooledTransportConnectionList list = set2.GatherTransportConnections();
+                    if (OnSendingChatMessage != null)
+                    {
+                        RemoveDisallowedFromTcList(ref set2, vl2, cl2, EChatMode.SAY, null, list, fromPlayer2);
+                        if (list.Count == 0)
+                            return;
+                    }
+
+                    SendRawMessageBatch(vl2, cl2, EChatMode.SAY, null, (tr2.Options & TranslationOptions.NoRichText) == 0, list, fromPlayer2);
+                }
+                finally
+                {
+                    set2.Dispose();
+                }
             });
         }
     }
@@ -1835,9 +1782,8 @@ public class ChatService
             WarfarePlayer wp = player;
             string text2 = text;
             float d2 = duration;
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
                 SendRawHint(wp, text2, d2);
             });
         }

@@ -26,11 +26,6 @@ public struct WarfareTraceLoggerInterpolatedStringHandler
         WarfareLoggerInterpolatedStringHandlerHelper.AppendLiteral(_buffer, ref _bufferIndex, s);
     }
 
-    public void AppendFormatted(object? value)
-    {
-        WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList, value);
-    }
-
     public void AppendFormatted<TValue>(TValue? value, string? format) where TValue : IFormattable
     {
         WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList,
@@ -49,14 +44,19 @@ public struct WarfareTraceLoggerInterpolatedStringHandler
             new FormattedValue { Value = value, Type = typeof(TValue), Alignment = alignment });
     }
 
+    public void AppendFormatted(object? value)
+    {
+        WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList, value);
+    }
+
+    public void AppendFormatted<TValue>(TValue value)
+    {
+        WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList, value);
+    }
+
     public void AppendFormatted(scoped ReadOnlySpan<char> value)
     {
         WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList, new string(value));
-    }
-
-    public void AppendFormatted(string? value)
-    {
-        WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList, value);
     }
 
     internal void GetResult(out StringParameterList parameterList, out string literal)
@@ -86,11 +86,6 @@ public struct WarfareDebugLoggerInterpolatedStringHandler
         WarfareLoggerInterpolatedStringHandlerHelper.AppendLiteral(_buffer, ref _bufferIndex, s);
     }
 
-    public void AppendFormatted(object? value)
-    {
-        WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList, value);
-    }
-
     public void AppendFormatted<TValue>(TValue? value, string? format) where TValue : IFormattable
     {
         WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList,
@@ -109,14 +104,19 @@ public struct WarfareDebugLoggerInterpolatedStringHandler
             new FormattedValue { Value = value, Type = typeof(TValue), Alignment = alignment });
     }
 
+    public void AppendFormatted(object? value)
+    {
+        WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList, value);
+    }
+
+    public void AppendFormatted<TValue>(TValue value)
+    {
+        WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList, value);
+    }
+
     public void AppendFormatted(scoped ReadOnlySpan<char> value)
     {
         WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList, new string(value));
-    }
-
-    public void AppendFormatted(string? value)
-    {
-        WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList, value);
     }
 
     internal void GetResult(out StringParameterList parameterList, out string literal)
@@ -169,14 +169,14 @@ public struct WarfareInformationLoggerInterpolatedStringHandler
         WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList, value);
     }
 
+    public void AppendFormatted<TValue>(TValue value)
+    {
+        WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList, value);
+    }
+
     public void AppendFormatted(scoped ReadOnlySpan<char> value)
     {
         WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList, new string(value));
-    }
-
-    public void AppendFormatted(string? value)
-    {
-        WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList, value);
     }
 
     internal void GetResult(out StringParameterList parameterList, out string literal)
@@ -229,14 +229,14 @@ public struct WarfareWarningLoggerInterpolatedStringHandler
         WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList, value);
     }
 
+    public void AppendFormatted<TValue>(TValue value)
+    {
+        WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList, value);
+    }
+
     public void AppendFormatted(scoped ReadOnlySpan<char> value)
     {
         WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList, new string(value));
-    }
-
-    public void AppendFormatted(string? value)
-    {
-        WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList, value);
     }
 
     internal void GetResult(out StringParameterList parameterList, out string literal)
@@ -289,14 +289,14 @@ public struct WarfareErrorLoggerInterpolatedStringHandler
         WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList, value);
     }
 
+    public void AppendFormatted<TValue>(TValue value)
+    {
+        WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList, value);
+    }
+
     public void AppendFormatted(scoped ReadOnlySpan<char> value)
     {
         WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList, new string(value));
-    }
-
-    public void AppendFormatted(string? value)
-    {
-        WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList, value);
     }
 
     internal void GetResult(out StringParameterList parameterList, out string literal)

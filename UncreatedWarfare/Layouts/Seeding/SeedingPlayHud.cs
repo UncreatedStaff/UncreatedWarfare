@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using System;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
@@ -65,6 +64,8 @@ internal class SeedingPlayHud : UnturnedUI, IEventListener<PlayerJoined>, IHudUI
 
     public void UpdateStage()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
         GetLogger().LogInformation("Sending to all players...");
 
@@ -100,11 +101,15 @@ internal class SeedingPlayHud : UnturnedUI, IEventListener<PlayerJoined>, IHudUI
         if (sendToAll)
         {
             SendToAllPlayers(layoutName, desc);
-            enumerator = _translationService.SetOf.AllPlayers();
+            enumerator = _translationService.SetOf.AllPlayers(TranslationOptions.PerLanguageTranslation);
         }
         else
         {
-            enumerator = _translationService.SetOf.PlayersWhere(p => !_hudManager.IsHidden(p));
+            enumerator = _translationService.SetOf.PlayersWhere(
+                _hudManager,
+                static (p, hud) => !hud.IsHidden(p),
+                TranslationOptions.PerLanguageTranslation
+            );
         }
 
         _isEnabled = true;
@@ -144,6 +149,8 @@ internal class SeedingPlayHud : UnturnedUI, IEventListener<PlayerJoined>, IHudUI
 
     public void SendToPlayer(WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GetLogger().LogInformation("Sending to player...");
         if (_hudManager.IsHidden(player))
             return;
@@ -180,6 +187,8 @@ internal class SeedingPlayHud : UnturnedUI, IEventListener<PlayerJoined>, IHudUI
 
     public void UpdateProgress()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (!_isEnabled || _hudManager.IsHiddenForAllPlayers)
@@ -187,7 +196,7 @@ internal class SeedingPlayHud : UnturnedUI, IEventListener<PlayerJoined>, IHudUI
 
         float p = GetProgressValue();
 
-        foreach (LanguageSet set in _translationService.SetOf.AllPlayers())
+        foreach (LanguageSet set in _translationService.SetOf.AllPlayers(TranslationOptions.PerCultureTranslation))
         {
             string label = GetProgressLabel(set.Culture);
             while (set.MoveNext())
@@ -243,6 +252,8 @@ internal class SeedingPlayHud : UnturnedUI, IEventListener<PlayerJoined>, IHudUI
 
     private void SendFullToPlayer(WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!_isEnabled || _hudManager.IsHidden(player))
             return;
 

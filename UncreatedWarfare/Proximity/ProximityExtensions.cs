@@ -21,6 +21,8 @@ public static class ProximityExtensions
     /// <exception cref="NotSupportedException">Can not caluclate the nearest point for <paramref name="proximity"/>.</exception>
     public static Vector3 GetNearestPointOnBorder(this IProximity proximity, in Vector3 fromLocation)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (proximity is not INearestPointProximity proxNearestPointImpl)
             throw new NotSupportedException($"Can not calculate the nearest point for a {Accessor.ExceptionFormatter.Format(proximity.GetType())}, it must implement {Accessor.ExceptionFormatter.Format(typeof(INearestPointProximity))}.");
 
@@ -32,6 +34,8 @@ public static class ProximityExtensions
     /// </summary>
     public static Vector3 GetNearestPointOnBorder(ISphereProximity proximity, in Vector3 fromLocation)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         BoundingSphere sphere = proximity.Sphere;
         if (sphere.position.IsNearlyEqual(fromLocation))
         {
@@ -46,6 +50,8 @@ public static class ProximityExtensions
     /// </summary>
     public static Vector3 GetNearestPointOnBorder(IAABBProximity proximity, in Vector3 fromLocation)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Bounds bounds = proximity.Dimensions;
         Vector3 min = bounds.min;
         Vector3 max = bounds.max;
@@ -124,6 +130,8 @@ public static class ProximityExtensions
     /// </summary>
     public static Vector3 GetNearestPointOnBorder(IPolygonProximity proximity, in Vector3 fromLocation)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         float? minHeight = proximity.MinHeight, maxHeight = proximity.MaxHeight;
         Vector3 fromLoc = fromLocation;
         if (minHeight.HasValue && fromLocation.y < minHeight.Value)
@@ -180,6 +188,8 @@ public static class ProximityExtensions
     /// <exception cref="ArgumentException">Axis is not X, Y, or Z in <paramref name="proximity"/>.</exception>
     public static Vector3 GetNearestPointOnBorder(IAACylinderProximity proximity, in Vector3 fromLocation)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Vector3 center = proximity.Center;
         SnapAxis axis = proximity.Axis;
 
@@ -238,6 +248,7 @@ public static class ProximityExtensions
         };
     }
 
+    // note: this is unused and kinda broken anyways
     public static Mesh CreateMesh(this IPolygonProximity proximity, int triCount, Vector3? originOverride, out Vector3 origin)
     {
         IReadOnlyList<Vector2> pointList = proximity.Points;

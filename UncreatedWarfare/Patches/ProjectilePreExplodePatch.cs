@@ -9,11 +9,9 @@ using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Emit;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
-using System;
 using System.Reflection;
 using System.Reflection.Emit;
 using Uncreated.Warfare.Projectiles;
-using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Patches;
 
@@ -119,6 +117,8 @@ internal sealed class ProjectilePreExplodePatch : IHarmonyPatch
 
     private static void OnExploded(Rocket rocket, Collider other)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (rocket.TryGetComponent(out WarfareProjectile projectile) && WarfareProjectile.ExplodingProjectile == projectile)
         {
             WarfareProjectile.ExplodingProjectile = null;
@@ -134,6 +134,8 @@ internal sealed class ProjectilePreExplodePatch : IHarmonyPatch
 
     private static bool InvokeExploding(ref ExplosionParameters parameters, Rocket rocket, Collider other)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // handles rockets blowing up from their position during the previous frame
         // also handles correcting for the distance between the rocket's origin and it's collider bounds (where it'll actually hit)
         const float maxRocketSpeedMetersPerSec = 500;

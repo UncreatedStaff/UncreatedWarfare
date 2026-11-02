@@ -40,6 +40,8 @@ internal sealed class PreviewKitTweaks : IEventListener<PlayerExitedZone>
         if (e.Zone.Type is not ZoneType.MainBase)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         KitPlayerComponent component = e.Player.Component<KitPlayerComponent>();
 
         if (component.ActiveKit is not { IsPreview: true } || e.Player.IsOnDuty || _zoneStore.IsInMainBase(e.Player))

@@ -22,6 +22,8 @@ public class Translation<T0> : Translation
 
     public string Translate(scoped in TranslationArguments args, T0? arg0)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _argAccessor ??= new ArgumentAccessor();
         _argAccessor.Arg0 = arg0;
 
@@ -83,6 +85,8 @@ public class Translation<T0, T1> : Translation
 
     public string Translate(scoped in TranslationArguments args, T0? arg0, T1? arg1)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _argAccessor ??= new ArgumentAccessor();
         _argAccessor.Arg0 = arg0;
         _argAccessor.Arg1 = arg1;
@@ -167,6 +171,8 @@ public class Translation<T0, T1, T2> : Translation
 
     public string Translate(scoped in TranslationArguments args, T0? arg0, T1? arg1, T2? arg2)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _argAccessor ??= new ArgumentAccessor();
         _argAccessor.Arg0 = arg0;
         _argAccessor.Arg1 = arg1;
@@ -263,6 +269,8 @@ public class Translation<T0, T1, T2, T3> : Translation
 
     public string Translate(scoped in TranslationArguments args, T0? arg0, T1? arg1, T2? arg2, T3? arg3)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _argAccessor ??= new ArgumentAccessor();
         _argAccessor.Arg0 = arg0;
         _argAccessor.Arg1 = arg1;
@@ -383,6 +391,8 @@ public class Translation<T0, T1, T2, T3, T4> : Translation
 
     public string Translate(scoped in TranslationArguments args, T0? arg0, T1? arg1, T2? arg2, T3? arg3, T4? arg4)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _argAccessor ??= new ArgumentAccessor();
         _argAccessor.Arg0 = arg0;
         _argAccessor.Arg1 = arg1;
@@ -491,6 +501,8 @@ public class Translation<T0, T1, T2, T3, T4, T5> : Translation
 
     public string Translate(scoped in TranslationArguments args, T0? arg0, T1? arg1, T2? arg2, T3? arg3, T4? arg4, T5? arg5)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _argAccessor ??= new ArgumentAccessor();
         _argAccessor.Arg0 = arg0;
         _argAccessor.Arg1 = arg1;
@@ -623,6 +635,8 @@ public class Translation<T0, T1, T2, T3, T4, T5, T6> : Translation
 
     public string Translate(scoped in TranslationArguments args, T0? arg0, T1? arg1, T2? arg2, T3? arg3, T4? arg4, T5? arg5, T6? arg6)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _argAccessor ??= new ArgumentAccessor();
         _argAccessor.Arg0 = arg0;
         _argAccessor.Arg1 = arg1;
@@ -767,6 +781,8 @@ public class Translation<T0, T1, T2, T3, T4, T5, T6, T7> : Translation
 
     public string Translate(scoped in TranslationArguments args, T0? arg0, T1? arg1, T2? arg2, T3? arg3, T4? arg4, T5? arg5, T6? arg6, T7? arg7)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _argAccessor ??= new ArgumentAccessor();
         _argAccessor.Arg0 = arg0;
         _argAccessor.Arg1 = arg1;
@@ -923,6 +939,8 @@ public class Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> : Translation
 
     public string Translate(scoped in TranslationArguments args, T0? arg0, T1? arg1, T2? arg2, T3? arg3, T4? arg4, T5? arg5, T6? arg6, T7? arg7, T8? arg8)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _argAccessor ??= new ArgumentAccessor();
         _argAccessor.Arg0 = arg0;
         _argAccessor.Arg1 = arg1;
@@ -1091,6 +1109,8 @@ public class Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> : Translation
 
     public string Translate(scoped in TranslationArguments args, T0? arg0, T1? arg1, T2? arg2, T3? arg3, T4? arg4, T5? arg5, T6? arg6, T7? arg7, T8? arg8, T9? arg9)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _argAccessor ??= new ArgumentAccessor();
         _argAccessor.Arg0 = arg0;
         _argAccessor.Arg1 = arg1;

@@ -19,7 +19,7 @@ namespace Uncreated.Warfare.Zones;
 /// <summary>
 /// Stores a full list of active zones.
 /// </summary>
-public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
+public class ZoneStore : IHostedService, ILevelHostedService, IEarlyLevelHostedService, IDisposable
 {
     private readonly List<IZoneProvider> _zoneProviders;
     private int _init;
@@ -62,38 +62,75 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
 
     async UniTask IHostedService.StartAsync(CancellationToken token)
     {
-        if (Level.isLoaded && _init == 0)
+        // flagData loads first
+        if (LevelNavigation.flagData != null && _init == 0)
         {
             await Initialize(token);
         }
     }
 
+    UniTask IHostedService.StopAsync(CancellationToken token) => UniTask.CompletedTask;
+
+    public async UniTask EarlyLoadLevelAsync(CancellationToken token)
+    {
+        foreach (IEarlyLevelHostedService zoneProvider in _zoneProviders.OfType<IEarlyLevelHostedService>())
+        {
+            await zoneProvider.EarlyLoadLevelAsync(token);
+            await UniTask.SwitchToMainThread(token);
+        }
+
+        if (_init == 0)
+            await Initialize(token);
+    }
+
+    async UniTask ILevelHostedService.LoadLevelAsync(CancellationToken token)
+    {
+        foreach (ILevelHostedService zoneProvider in _zoneProviders.OfType<ILevelHostedService>())
+        {
+            await zoneProvider.LoadLevelAsync(token);
+            await UniTask.SwitchToMainThread(token);
+        }
+
+        if (_init == 0)
+            await Initialize(token);
+    }
+
+    async UniTask ILevelHostedService.UnloadLevelAsync(CancellationToken token)
+    {
+        foreach (ILevelHostedService zoneProvider in _zoneProviders.OfType<ILevelHostedService>())
+        {
+            await zoneProvider.UnloadLevelAsync(token);
+            await UniTask.SwitchToMainThread(token);
+        }
+
+        _init = 0;
+        Zones = ImmutableArray<Zone>.Empty;
+        DisposeProximityZones();
+    }
+
     /// <inheritdoc />
     public void Dispose()
     {
-        if (ProximityZones.IsDefault)
+        foreach (IDisposable disp in _zoneProviders.OfType<IDisposable>())
+        {
+            disp.Dispose();
+        }
+
+        DisposeProximityZones();
+    }
+
+    private void DisposeProximityZones()
+    {
+        ImmutableArray<ZoneProximity> proxZones = ProximityZones;
+        if (proxZones.IsDefault)
             return;
-        
-        foreach (ZoneProximity prox in ProximityZones)
+
+        ProximityZones = ImmutableArray<ZoneProximity>.Empty;
+        foreach (ZoneProximity prox in proxZones)
         {
             if (prox.Proximity is IDisposable disp)
                 disp.Dispose();
         }
-
-        ProximityZones = ImmutableArray<ZoneProximity>.Empty;
-    }
-
-    UniTask IHostedService.StopAsync(CancellationToken token)
-    {
-        return UniTask.CompletedTask;
-    }
-
-    public UniTask EarlyLoadLevelAsync(CancellationToken token)
-    {
-        if (_init == 0)
-            return Initialize(token);
-
-        return UniTask.CompletedTask;
     }
 
     /// <summary>
@@ -115,7 +152,6 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
 
         Zones = zones.DrainToImmutable();
         _logger.LogInformation("Discovered {0} zone(s) with {1} provider(s).", Zones.Length, _zoneProviders.Count);
-        _zoneProviders.Clear();
 
         if (!IsGlobal)
             return;
@@ -167,6 +203,8 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public ITrackingProximity<WarfarePlayer> CreateColliderForZone(Zone zone)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         // avoid making GameObject if it'll error
@@ -201,6 +239,8 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public IProximity CreateProximityForZone(Zone zone)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         IProximity prox;
         Vector3 center = zone.Center;
         switch (zone.Shape)
@@ -250,6 +290,8 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
     /// </summary>
     public Zone? FindClosestZone(in Vector3 point, out float sqrDistance, ZoneType? type = null, float maxRange = float.NaN)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (ProximityZones.IsDefault)
         {
             sqrDistance = float.NaN;
@@ -289,6 +331,8 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
     /// </summary>
     public Zone? FindClosestZone(Vector2 point, out float sqrDistance, ZoneType? type = null, float maxRange = float.NaN)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (ProximityZones.IsDefault)
         {
             sqrDistance = float.NaN;
@@ -361,6 +405,8 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
     /// </summary>
     public string GetClosestLocationName(Vector3 position, bool shortName = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Zone? zone = GetClosestZone(position, null, null, isForLocation: true);
         if (zone != null)
         {
@@ -386,6 +432,8 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
 
     internal Zone? GetClosestZone(Vector3 position, ZoneType? type, FactionInfo? faction, bool isForLocation)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Zone? closest = null;
         float closestSqrDist = 0;
         if (!ProximityZones.IsDefault)
@@ -438,6 +486,8 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
     /// </summary>
     public Zone? SearchZone(ZoneType type, FactionInfo? faction = null)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         return faction == null
             ? Zones.FirstOrDefault(zone => zone.IsPrimary && zone.Type == type)
             : Zones.FirstOrDefault(zone => zone.IsPrimary && zone.Type == type && string.Equals(zone.Faction, faction.FactionId, StringComparison.Ordinal));
@@ -448,9 +498,24 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
     /// </summary>
     public bool IsInsideZone(Vector3 point, ZoneType type, FactionInfo? faction)
     {
-        return faction == null
-            ? EnumerateInsideZones(point).Any(zone => zone.Type == type)
-            : EnumerateInsideZones(point).Any(zone => zone.Type == type && string.Equals(zone.Faction, faction.FactionId, StringComparison.Ordinal));
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
+        if (ProximityZones.IsDefault)
+            return false;
+
+        foreach (ZoneProximity proximity in ProximityZones)
+        {
+            if (proximity.Zone.Type != type)
+                continue;
+            if (!proximity.Proximity.TestPoint(in point))
+                continue;
+            if (faction != null && !string.Equals(proximity.Zone.Faction, faction.FactionId, StringComparison.Ordinal))
+                continue;
+
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -458,9 +523,24 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
     /// </summary>
     public bool IsInsideZone(Vector2 point, ZoneType type, FactionInfo? faction)
     {
-        return faction == null
-            ? EnumerateInsideZones(point).Any(zone => zone.Type == type)
-            : EnumerateInsideZones(point).Any(zone => zone.Type == type && string.Equals(zone.Faction, faction.FactionId, StringComparison.Ordinal));
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
+        if (ProximityZones.IsDefault)
+            return false;
+
+        foreach (ZoneProximity proximity in ProximityZones)
+        {
+            if (proximity.Zone.Type != type)
+                continue;
+            if (!proximity.Proximity.TestPoint(in point))
+                continue;
+            if (faction != null && !string.Equals(proximity.Zone.Faction, faction.FactionId, StringComparison.Ordinal))
+                continue;
+
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -468,6 +548,8 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
     /// </summary>
     public Zone? SearchZone(string term, FactionInfo? relevantFaction = null)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int index = CollectionUtility.StringIndexOf(Zones, x => x.Name, term);
         if (index < 0)
         {
@@ -530,6 +612,8 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
     /// <param name="noOverlap">If <see langword="null"/> should be returned if more than one zone match.</param>
     public Zone? FindInsideZone(Vector3 pos, bool noOverlap)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (ProximityZones.IsDefault)
             return null;
 
@@ -568,6 +652,8 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
     /// <param name="noOverlap">If <see langword="null"/> should be returned if more than one zone match.</param>
     public Zone? FindInsideZone(Vector2 pos, bool noOverlap)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (ProximityZones.IsDefault)
             return null;
 

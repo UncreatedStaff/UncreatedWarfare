@@ -1,5 +1,4 @@
 using SDG.Framework.Utilities;
-using System;
 
 namespace Uncreated.Warfare.Util.Timing;
 
@@ -85,9 +84,8 @@ public class UnityLoopTicker<TState> : ILoopTicker<TState>
         {
             DateTime st = DateTime.UtcNow;
             _component = component;
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
                 TimeSpan dif = DateTime.UtcNow - st;
                 TimeSpan newInitialDelay = InitialDelay - dif;
                 bool invokedAlready = false;
@@ -182,11 +180,9 @@ public class UnityLoopTicker<TState> : ILoopTicker<TState>
         {
             if (coroutine != null && component is not null)
             {
-                UniTask.Create(async () =>
+                GameThread.Queue(() =>
                 {
-                    await UniTask.SwitchToMainThread();
-
-                    if (coroutine != null && component != null)
+                    if (component != null)
                         component.StopCoroutine(coroutine);
                 });
             }

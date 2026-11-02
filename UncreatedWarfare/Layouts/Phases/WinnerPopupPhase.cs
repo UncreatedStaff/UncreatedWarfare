@@ -60,6 +60,8 @@ public class WinnerPopupPhase : BasePhase<PhaseTeamSettings>
 
     protected virtual void SendUI(LanguageSet languageSet, Team winner)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int teamCount = _teamManager.AllTeams.Count;
 
         string[] args = new string[teamCount * 2 + 1];

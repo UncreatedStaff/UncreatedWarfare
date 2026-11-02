@@ -98,6 +98,8 @@ public abstract class DualSidedFlagService :
     /// </summary>
     protected virtual void Discover(Team team, int amount, bool noRaise = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (amount <= 0)
             return;
 
@@ -214,8 +216,10 @@ public abstract class DualSidedFlagService :
             throw new LayoutConfigurationException("Unable to create zone path.");
         }
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // create zones as objects with colliders
-        
+
         List<FlagObjective> flagList = new List<FlagObjective>(PathingResult.Count);
         int flagIndex = 0;
         for (int i = 1; i < PathingResult.Count - 1; i++)
@@ -246,12 +250,23 @@ public abstract class DualSidedFlagService :
             .ToArray();
 
         ActiveFlags = new ReadOnlyCollection<FlagObjective>(_flags);
-        
-        StartingTeamRegion = new ZoneRegion(t1Zones, TeamManager);
-        StartingTeam = TeamManager.AllTeams.First(x => x.Faction.FactionId.Equals(StartingTeamRegion.Primary.Zone.Faction, StringComparison.Ordinal));
-        
-        EndingTeamRegion = new ZoneRegion(t2Zones, TeamManager);
-        EndingTeam = TeamManager.AllTeams.First(x => x.Faction.FactionId.Equals(EndingTeamRegion.Primary.Zone.Faction, StringComparison.Ordinal));
+
+        try
+        {
+            StartingTeamRegion = new ZoneRegion(t1Zones, TeamManager);
+            StartingTeam = TeamManager.AllTeams.First(x => x.Faction.FactionId.Equals(StartingTeamRegion.Primary.Zone.Faction, StringComparison.Ordinal));
+
+            EndingTeamRegion = new ZoneRegion(t2Zones, TeamManager);
+            EndingTeam = TeamManager.AllTeams.First(x => x.Faction.FactionId.Equals(EndingTeamRegion.Primary.Zone.Faction, StringComparison.Ordinal));
+        }
+        catch (InvalidOperationException) // thrown by First()
+        {
+            Logger.LogError(
+                $"One or both teams are missing a main base with the correct faction IDs configured. " +
+                $"Starting: \"{StartingTeamRegion.Primary.Zone.Faction}\". Ending: \"{EndingTeamRegion.Primary.Zone.Faction}\"."
+            );
+            throw new LayoutConfigurationException("Unable to identify starting and ending teams.");
+        }
         
         IsActive = true;
 
@@ -283,6 +298,8 @@ public abstract class DualSidedFlagService :
 
     protected virtual void OnTick(ILoopTicker ticker, TimeSpan timeSinceStart, TimeSpan deltaTime)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         foreach (FlagObjective flag in ActiveFlags)
         {
             FlagContestState contestState = GetContestResult(flag, Layout.TeamManager.AllTeams);
@@ -363,22 +380,30 @@ public abstract class DualSidedFlagService :
     [EventListener(Priority = int.MaxValue)]
     public void HandleEvent(PlayerEnteredFlagRegion e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         e.Flag.SetCurrentContestState(GetContestResult(e.Flag, TeamManager.AllTeams));
     }
     
     [EventListener(Priority = int.MaxValue)]
     public void HandleEvent(PlayerExitedFlagRegion e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         e.Flag.SetCurrentContestState(GetContestResult(e.Flag, TeamManager.AllTeams));
     }
     
     void IEventListener<FlagNeutralized>.HandleEvent(FlagNeutralized e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         RecalculateObjectives();
     }
     
     void IEventListener<FlagCaptured>.HandleEvent(FlagCaptured e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         OnFlagCaptured(e);
     }
 
@@ -422,11 +447,16 @@ public abstract class DualSidedFlagService :
 
     public bool IsEnemyObjective(FlagObjective flag, Team friendlyTeam)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         return Layout.TeamManager.AllTeams.Where(t => t != friendlyTeam)
             .Any(t => ReferenceEquals(GetObjective(t), flag));
     }
+
     public bool IsDefenseObjective(FlagObjective flag, Team friendlyTeam)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         return flag.Owner == friendlyTeam && IsEnemyObjective(flag, friendlyTeam);
     }
 
@@ -465,6 +495,8 @@ public abstract class DualSidedFlagService :
 
     protected virtual FlagListUIEntry GetFlagListEntry(FlagObjective flag, in LanguageSet set, FlagObjective? displayTeamObjective)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!flag.IsDiscovered(set.Team))
         {
             return new FlagListUIEntry(FlagTranslations.UndiscoveredFlag.Translate(in set), FlagIcon.None);

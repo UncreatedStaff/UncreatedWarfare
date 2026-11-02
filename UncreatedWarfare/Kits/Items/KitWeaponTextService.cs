@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Configuration;
-using System;
 using System.IO;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Util.Inventory;
@@ -13,7 +12,7 @@ public sealed class KitWeaponTextService : BaseAlternateConfigurationFile
     public KitWeaponTextService(IServiceProvider serviceProvider) : base(serviceProvider, Path.Combine("Kits", "Ignored Weapons.yml"), mapSpecific: false)
     {
         _blacklist = new List<IAssetLink<ItemGunAsset>>(2);
-        HandleChange();
+        HandleChange(true);
     }
 
     public bool IsBlacklisted(IAssetLink<Asset> asset)
@@ -32,7 +31,7 @@ public sealed class KitWeaponTextService : BaseAlternateConfigurationFile
         }
     }
 
-    protected override void HandleChange()
+    protected override void HandleChange(bool isMapChange)
     {
         lock (_blacklist)
         {
@@ -49,6 +48,8 @@ public sealed class KitWeaponTextService : BaseAlternateConfigurationFile
 
     public string GetWeaponText(IReadOnlyCollection<IItem> items)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         SortedList<Page, ItemAsset> guns = new SortedList<Page, ItemAsset>(4);
         lock (_blacklist)
         {

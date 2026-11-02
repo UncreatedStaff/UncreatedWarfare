@@ -1,4 +1,3 @@
-using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using Uncreated.Warfare.Services;
@@ -123,53 +122,58 @@ public class ServerHeartbeatTimer : IHostedService, IDisposable
 
     private void Beat(ILoopTicker ticker, TimeSpan timeSinceStart, TimeSpan deltaTime)
     {
-        _semaphore.Wait();
-        Thread.BeginCriticalRegion();
-        try
-        {
-            string? dir = Path.GetDirectoryName(_path);
-            if (dir != null)
-                Directory.CreateDirectory(dir);
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
-            if (File.Exists(_path))
+        Task.Run(() =>
+        {
+            _semaphore.Wait();
+            Thread.BeginCriticalRegion();
+            try
             {
-                try
+                string? dir = Path.GetDirectoryName(_path);
+                if (dir != null)
+                    Directory.CreateDirectory(dir);
+
+                if (File.Exists(_path))
                 {
-                    File.Copy(_path, _backupPath, true);
                     try
                     {
-                        File.SetAttributes(_backupPath, FileAttributes.Hidden);
+                        File.Copy(_path, _backupPath, true);
+                        try
+                        {
+                            File.SetAttributes(_backupPath, FileAttributes.Hidden);
+                        }
+                        catch { /* ignored */ }
                     }
-                    catch { /* ignored */ }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to copy backup heartbeat.");
+                    }
                 }
-                catch (Exception ex)
+
+                using (FileStream stream = new FileStream(_path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read, 1, FileOptions.SequentialScan))
                 {
-                    _logger.LogError(ex, "Failed to copy backup heartbeat.");
+                    Span<byte> dtInfo = stackalloc byte[sizeof(long)];
+
+                    long unix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                    MemoryMarshal.Write(dtInfo, ref unix);
+
+                    stream.Write(dtInfo);
+                    stream.SetLength(8);
                 }
-            }
 
-            using (FileStream stream = new FileStream(_path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read, 1, FileOptions.SequentialScan))
+                TrySetHidden(_path, true);
+            }
+            catch (Exception ex)
             {
-                Span<byte> dtInfo = stackalloc byte[sizeof(long)];
-
-                long unix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-                MemoryMarshal.Write(dtInfo, ref unix);
-
-                stream.Write(dtInfo);
-                stream.SetLength(8);
+                _logger.LogError(ex, "Error writing heartbeat.");
             }
-
-            TrySetHidden(_path, true);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error writing heartbeat.");
-        }
-        finally
-        {
-            _semaphore.Release();
-            Thread.EndCriticalRegion();
-        }
+            finally
+            {
+                _semaphore.Release();
+                Thread.EndCriticalRegion();
+            }
+        });
     }
 
     private void TrySetHidden(string file, bool isHidden)

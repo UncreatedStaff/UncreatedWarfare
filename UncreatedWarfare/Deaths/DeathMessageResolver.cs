@@ -1,4 +1,3 @@
-using System;
 using System.Globalization;
 using System.IO;
 using System.Text.Json;
@@ -499,7 +498,18 @@ public class DeathMessageResolver
             [
                 new DeathTranslation(DeathFlags.None, "{0} tried to consume dangerous food."),
                 new DeathTranslation(DeathFlags.Item, "{0} tried to consume {3}."), // tested
-                new DeathTranslation(DeathFlags.Item | DeathFlags.Killer, "{0} suicide bombed {1} with a {3}.") // tested
+                new DeathTranslation(DeathFlags.Item | DeathFlags.Killer, "{1} suicide bombed {0} with a {3}.") // tested
+            ]
+        },
+        new CauseGroup
+        {
+            // for consumables which cause a bleed-out effect to the target
+            // ex. a consumable with "Bleeding_Modifier Cut" in the asset file.
+            CustomKey = "bleed-out-consumable",
+            Translations =
+            [
+                new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Item, "{0} bled out trying to consume {3}."),
+                new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Item | DeathFlags.Killer, "{1} fed {0} a {3} which caused them to bleed out.")
             ]
         },
         new CauseGroup // mortar override
@@ -527,9 +537,7 @@ public class DeathMessageResolver
         // red if its a teamkill, otherwise white
         bool tk = (e.MessageFlags & DeathFlags.Suicide) != DeathFlags.Suicide && e.WasTeamkill;
         Color32 color = tk ? new Color32(255, 153, 153, 255) : new Color32(255, 255, 255, 255);
-        string? str = null;
-
-        foreach (LanguageSet set in _translationService.SetOf.AllPlayers().ToCache().Sets!)
+        foreach (LanguageSet set in _translationService.SetOf.AllPlayers(LanguageSets.DefaultTranslationOptions | TranslationOptions.ConsiderIMGUI))
         {
             string msg = await TranslateMessage(set.Language, set.Culture, e, false, set.IMGUI ? TranslationOptions.UseUnityRichText : TranslationOptions.TMProUI, token);
             while (set.MoveNext())
@@ -538,7 +546,7 @@ public class DeathMessageResolver
             }
         }
 
-        str = await TranslateMessage(_languageService.GetDefaultLanguage(), CultureInfo.InvariantCulture, e, true, TranslationOptions.ForTerminal, token);
+        string? str = await TranslateMessage(_languageService.GetDefaultLanguage(), CultureInfo.InvariantCulture, e, true, TranslationOptions.ForTerminal, token);
         _logger.LogInformation(str);
 
         e.DefaultMessage = str!;

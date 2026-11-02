@@ -20,6 +20,8 @@ public static class PlayerStanceExtensions
     {
         GameThread.AssertCurrent();
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         PlayerStance playerStance = player.UnturnedPlayer.stance;
         if (player.UnturnedPlayer.life.isDead)
         {

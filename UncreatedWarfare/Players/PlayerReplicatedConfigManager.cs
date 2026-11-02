@@ -45,6 +45,8 @@ public sealed class PlayerReplicatedConfigManager
     public IDisposable ReplicateGlobalConfigChange<TState>(ModifyModeConfig<TState> apply, ModifyModeConfig<TState> undo)
         where TState : struct
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         IDisposable disposable = new ReplicatedConfigUpdate<TState>(this, null, apply, undo);
@@ -65,6 +67,8 @@ public sealed class PlayerReplicatedConfigManager
     [MustUseReturnValue, Pure]
     public IDisposable ReplicateGlobalConfigChange(ModifyModeConfig apply, ModifyModeConfig undo)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         IDisposable disposable = new ReplicatedConfigUpdateStateless(this, null, apply, undo);
@@ -140,6 +144,8 @@ public sealed class PlayerReplicatedConfigManager
     /// </summary>
     internal void Apply(ReplicatedConfigComponent? player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         int appliedGlobal = 0, appliedPlayer = 0;
@@ -197,6 +203,8 @@ public sealed class PlayerReplicatedConfigManager
     /// </summary>
     internal void Undo(ReplicatedConfigComponent? player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         List<Exception>? exes = null;

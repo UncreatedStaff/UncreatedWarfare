@@ -1,4 +1,3 @@
-using System;
 using Uncreated.Warfare.Translations.Util;
 
 namespace Uncreated.Warfare.Translations.Addons;

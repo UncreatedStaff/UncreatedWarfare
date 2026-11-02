@@ -90,6 +90,8 @@ public class DeploymentComponent : MonoBehaviour, IPlayerComponent, IEventListen
     {
         GameThread.AssertCurrent();
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         PlayerDeployed args = new PlayerDeployed
         {
             Player = Player,
@@ -266,6 +268,8 @@ public class DeploymentComponent : MonoBehaviour, IPlayerComponent, IEventListen
 
     private bool VerifyDeploymentTick(IDeployable deployable, in DeploySettings settings, ref DeploymentPlayerState startState)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         byte currentHealth = Player.UnturnedPlayer.life.health;
         if (!settings.AllowDamage && startState.Health > currentHealth)
         {

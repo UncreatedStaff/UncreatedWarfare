@@ -35,6 +35,8 @@ public class HotkeyPlayerComponent : IPlayerComponent, IEventListener<ItemDroppe
         if (HotkeyBindings is not { Count: > 0 } || e.Item == null || !e.WasDroppedFromInventory)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // move hotkey to a different item of the same type
         ItemTrackingPlayerComponent trackingComponent = Player.Component<ItemTrackingPlayerComponent>();
 
@@ -51,6 +53,8 @@ public class HotkeyPlayerComponent : IPlayerComponent, IEventListener<ItemDroppe
         ItemAsset itemAsset = item.GetAsset();
         if (itemAsset == null)
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         foreach (KitHotkey binding in HotkeyBindings)
         {
@@ -87,6 +91,8 @@ public class HotkeyPlayerComponent : IPlayerComponent, IEventListener<ItemDroppe
         if (!Player.Equals(e.PickUpPlayer) || HotkeyBindings == null || origX >= byte.MaxValue)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ItemAsset asset = e.Item.GetAsset();
         foreach (KitHotkey binding in HotkeyBindings)
         {
@@ -112,6 +118,8 @@ public class HotkeyPlayerComponent : IPlayerComponent, IEventListener<ItemDroppe
         ItemAsset itemAsset = e.Item.GetAsset();
         if (itemAsset == null)
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         int ct = 0;
         foreach (KitHotkey binding in HotkeyBindings)

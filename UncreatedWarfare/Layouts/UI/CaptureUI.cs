@@ -1,4 +1,3 @@
-using System;
 using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Data;
@@ -9,7 +8,6 @@ using Uncreated.Warfare.Layouts.Flags;
 using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
@@ -23,6 +21,8 @@ public class CaptureUI : UnturnedUI, IHudUIListener
     private readonly WarfareModule _module;
     private readonly ITranslationService _translationService;
     private readonly HudManager _hudManager;
+
+    internal const TranslationOptions GroupOptions = TranslationOptions.PerTeamTranslation | TranslationOptions.PerLanguageTranslation;
 
     public UnturnedLabel Title { get; } = new UnturnedLabel("TitleLabel");
     public ImageProgressBar CaptureProgress { get; } = new ImageProgressBar("CaptureProgress");
@@ -52,6 +52,8 @@ public class CaptureUI : UnturnedUI, IHudUIListener
 
     public void UpdateCaptureUI(LanguageSet set, in CaptureUIState state)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         Color32 color = state.GetColor();
@@ -115,12 +117,16 @@ public class CaptureUI : UnturnedUI, IHudUIListener
     
     public void HideCaptureUI(LanguageSet set)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         while (set.MoveNext())
             HideCaptureUI(set.Next);
     }
 
     public void HideCaptureUI(WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         CaptureUIData data = GetOrAddData(player);
@@ -161,11 +167,11 @@ public class CaptureUI : UnturnedUI, IHudUIListener
     /// <inheritdoc />
     public void Restore(WarfarePlayer? player)
     {
-        Layout layout = _module.GetActiveLayout();
-        IFlagRotationService? rot = layout.ServiceProvider.ResolveOptional<IFlagRotationService>();
-        DefaultCaptureUIFlagEvents? uiEvents = layout.ServiceProvider.ResolveOptional<DefaultCaptureUIFlagEvents>();
+        Layout? layout = _module.IsLayoutActive() ? _module.GetActiveLayout() : null;
+        IFlagRotationService? rot = layout?.ServiceProvider.ResolveOptional<IFlagRotationService>();
+        DefaultCaptureUIFlagEvents? uiEvents = layout?.ServiceProvider.ResolveOptional<DefaultCaptureUIFlagEvents>();
 
-        if (layout.ActivePhase is not ActionPhase)
+        if (layout?.ActivePhase is not ActionPhase)
         {
             return;
         }
@@ -186,7 +192,7 @@ public class CaptureUI : UnturnedUI, IHudUIListener
 
         foreach (FlagObjective flag in rot.ActiveFlags)
         {
-            foreach (LanguageSet set in _translationService.SetOf.PlayersIn(flag.Players))
+            foreach (LanguageSet set in _translationService.SetOf.PlayersIn(flag.Players, GroupOptions))
             {
                 CaptureUIState state = uiEvents.EvaluateCaptureUI(flag, set);
                 UpdateCaptureUI(set, in state);

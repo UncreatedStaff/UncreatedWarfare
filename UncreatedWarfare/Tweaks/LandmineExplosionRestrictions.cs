@@ -14,6 +14,8 @@ internal sealed class LandmineExplosionRestrictions(ITeamManager<Team> teamManag
     [EventListener(Priority = 1)]
     void IEventListener<TriggerTrapRequested>.HandleEvent(TriggerTrapRequested e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (e.TriggeringPlayer != null && e.TriggeringPlayer.ComponentOrNull<VanishPlayerComponent>() is { IsActive: true })
         {
             e.Cancel();
@@ -34,6 +36,8 @@ internal sealed class LandmineExplosionRestrictions(ITeamManager<Team> teamManag
     [EventListener(Priority = 1)]
     void IEventListener<PlaceBarricadeRequested>.HandleEvent(PlaceBarricadeRequested e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (e.OriginalPlacer.IsOnDuty || e.Barricade.asset is not ItemTrapAsset)
         {
             return;

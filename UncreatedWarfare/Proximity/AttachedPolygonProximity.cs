@@ -160,6 +160,8 @@ public class AttachedPolygonProximity : IAttachedPolygonProximity, IFormattable
     /// <inheritdoc />
     public bool TestPoint(in Vector3 position)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         Vector3 worldPos = AttachmentRoot == null ? position : AttachmentRoot.InverseTransformPoint(position);
@@ -169,6 +171,8 @@ public class AttachedPolygonProximity : IAttachedPolygonProximity, IFormattable
     /// <inheritdoc />
     public bool TestPoint(in Vector2 position)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         Vector3 worldPos = AttachmentRoot == null ? position : AttachmentRoot.InverseTransformPoint(position);

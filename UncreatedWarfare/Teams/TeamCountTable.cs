@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Linq;
 using Uncreated.Warfare.Layouts.Teams;
 
@@ -63,6 +61,8 @@ public class TeamCountTable
     /// <exception cref="ArgumentOutOfRangeException">Unknown team.</exception>
     public double IncrementPoints(Team? team, double amount)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         lock (_scores)
         {
             if (team != null)
@@ -109,6 +109,8 @@ public class TeamCountTable
     /// </summary>
     public void SetAllScores(double value, bool ignoreNeutral)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         lock (_scores)
         {
             if (!ignoreNeutral)
@@ -153,6 +155,8 @@ public class TeamCountTable
     /// </summary>
     public double CalcualateMaxScore(bool ignoreNeutral, out Team? maximumTeam)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         lock (_scores)
         {
             double max = ignoreNeutral ? double.NaN : _neutralScore;
@@ -181,6 +185,8 @@ public class TeamCountTable
     /// </summary>
     public double CalcualateMinScore(bool ignoreNeutral, out Team? minimumTeam)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         lock (_scores)
         {
             double min = ignoreNeutral ? double.NaN : _neutralScore;
@@ -204,6 +210,8 @@ public class TeamCountTable
     /// </summary>
     public double GetRelativeScore(bool ignoreNeutral, Team? team)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (ignoreNeutral && (team == null || !team.IsValid))
             throw new InvalidOperationException("Wants to ignore neutral when no team was inputted.");
 
@@ -220,6 +228,8 @@ public class TeamCountTable
 
     private double CalculateTotalIntl(bool ignoreNeutral)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         double ttl = ignoreNeutral ? 0 : _neutralScore;
         for (int i = 0; i < _scores.Length; ++i)
         {
@@ -234,6 +244,8 @@ public class TeamCountTable
     /// </summary>
     public string ToGraph()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         /*
            Creates a graph like this for testing and visualization:
            |                       

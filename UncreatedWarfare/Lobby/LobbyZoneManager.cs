@@ -26,7 +26,6 @@ namespace Uncreated.Warfare.Lobby;
 /// Handles visual effects in the lobby.
 /// </summary>
 public class LobbyZoneManager :
-    IHostedService,
     ILevelHostedService,
     IEventListener<QuestObjectInteracted>,
     ILayoutStartingListener,
@@ -97,6 +96,8 @@ public class LobbyZoneManager :
         if (_zoneCollider == null)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (isLoading)
         {
             foreach (WarfarePlayer player in _zoneCollider.ActiveObjects)
@@ -122,7 +123,7 @@ public class LobbyZoneManager :
 
     UniTask ILevelHostedService.LoadLevelAsync(CancellationToken token)
     {
-        _optionsUi = _module.ServiceProvider.Resolve<OptionsUI>();
+        _optionsUi ??= _module.ServiceProvider.Resolve<OptionsUI>();
 
         // find team flag objects
         List<FlagInfo> flags = new List<FlagInfo>(2);
@@ -203,6 +204,34 @@ public class LobbyZoneManager :
         return UniTask.CompletedTask;
     }
 
+    UniTask ILevelHostedService.UnloadLevelAsync(CancellationToken token)
+    {
+        TeamFlags = null;
+        _behavior.Teams = null;
+
+        LevelDispose();
+
+        return UniTask.CompletedTask;
+    }
+
+    private void LevelDispose()
+    {
+        TimeUtility.physicsUpdated -= OnFixedUpdate;
+
+        _lobbyZone = null;
+
+        if (_zoneCollider == null)
+            return;
+
+        _zoneCollider.OnObjectEntered -= OnObjectEnteredLobby;
+        _zoneCollider.OnObjectExited -= OnObjectExitedLobby;
+
+        if (_zoneCollider is IDisposable d)
+            d.Dispose();
+
+        _zoneCollider = null;
+    }
+
     /// <summary>
     /// Gets a reference to the zone being used as the lobby zone.
     /// </summary>
@@ -271,6 +300,8 @@ public class LobbyZoneManager :
         if (Disabled || TeamFlags == null)
             throw new InvalidOperationException("Lobby is disabled.");
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         PlayerLobbyComponent component = player.Component<PlayerLobbyComponent>();
         if (teamIndex < 0)
         {
@@ -320,6 +351,8 @@ public class LobbyZoneManager :
         if (TeamFlags == null)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         PlayerQuests quests = player.UnturnedPlayer.quests;
         PlayerLobbyComponent component = player.Component<PlayerLobbyComponent>();
         if (component.IsJoining)
@@ -349,6 +382,8 @@ public class LobbyZoneManager :
     {
         if (TeamFlags == null || _zoneCollider == null)
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         ref FlagInfo flag = ref TeamFlags[teamIndex];
         bool canJoinTeam = _behavior.CanJoinTeam(teamIndex, -1);
@@ -386,6 +421,8 @@ public class LobbyZoneManager :
     {
         if (_zoneCollider == null)
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         foreach (WarfarePlayer player in _zoneCollider.ActiveObjects)
         {
@@ -451,13 +488,17 @@ public class LobbyZoneManager :
 
     private void OnObjectEnteredLobby(IEventBasedProximity<WarfarePlayer> prox, WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         UpdatePlayerPositionalData(player);
         player.Component<PlayerLobbyComponent>().EnterLobby();
         UpdateAllFlags(player);
     }
 
-    private void OnObjectExitedLobby(IEventBasedProximity<WarfarePlayer> prox, WarfarePlayer player)
+    private static void OnObjectExitedLobby(IEventBasedProximity<WarfarePlayer> prox, WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         player.Component<PlayerLobbyComponent>().ExitLobby();
     }
 
@@ -507,6 +548,8 @@ public class LobbyZoneManager :
 
     private void UpdateTeamCounts()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _behavior.UpdateTeams();
 
         if (_zoneCollider == null)
@@ -582,33 +625,11 @@ public class LobbyZoneManager :
         await UniTask.WhenAll(tasks);
     }
 
-    UniTask IHostedService.StartAsync(CancellationToken token)
-    {
-        return UniTask.CompletedTask;
-    }
-
-    UniTask IHostedService.StopAsync(CancellationToken token)
-    {
-        TimeUtility.physicsUpdated -= OnFixedUpdate;
-
-        if (_zoneCollider != null)
-        {
-            _zoneCollider.OnObjectEntered -= OnObjectEnteredLobby;
-            _zoneCollider.OnObjectExited -= OnObjectExitedLobby;
-
-            if (_zoneCollider is IDisposable d)
-                d.Dispose();
-
-            _zoneCollider = null!;
-        }
-
-        return UniTask.CompletedTask;
-    }
-
     /// <inheritdoc />
     public void Dispose()
     {
         _layoutFactory.LoadingStateUpdated -= LoadingStateUpdated;
+        LevelDispose();
     }
 
     public struct FlagInfo

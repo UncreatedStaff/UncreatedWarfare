@@ -173,6 +173,8 @@ public class FactionInfo : ICloneable, ITranslationArgument, IEquatable<FactionI
 
     public FactionInfo(Faction model)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         PrimaryKey = model.Key;
         FactionId = model.InternalName;
         Name = model.Name;
@@ -228,6 +230,8 @@ public class FactionInfo : ICloneable, ITranslationArgument, IEquatable<FactionI
 
     internal Faction CreateModel(ICachableLanguageDataStore languageDataStore)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Faction faction = new Faction
         {
             Key = PrimaryKey,
@@ -352,7 +356,9 @@ public class FactionInfo : ICloneable, ITranslationArgument, IEquatable<FactionI
                 Asset = UnturnedAssetReference.FromAssetLink(FOBRadio),
                 Faction = faction,
                 FactionId = faction.Key,
+#pragma warning disable CS0618 // Type or member is obsolete
                 Redirect = RedirectType.Radio
+#pragma warning restore CS0618
             });
         }
         if (MapTackFlag is not null)
@@ -533,7 +539,9 @@ public class FactionInfo : ICloneable, ITranslationArgument, IEquatable<FactionI
         Ammo        = FindAsset(model, RedirectType.AmmoSupply)  ?.Asset.GetAssetLink<ItemAsset>();
         Build       = FindAsset(model, RedirectType.BuildSupply) ?.Asset.GetAssetLink<ItemAsset>();
         RallyPoint  = FindAsset(model, RedirectType.RallyPoint)  ?.Asset.GetAssetLink<ItemBarricadeAsset>();
+#pragma warning disable CS0618 // Type or member is obsolete
         FOBRadio    = FindAsset(model, RedirectType.Radio)       ?.Asset.GetAssetLink<ItemBarricadeAsset>();
+#pragma warning restore CS0618
         MapTackFlag = FindAsset(model, RedirectType.MapTackFlag) ?.Asset.GetAssetLink<ItemPlaceableAsset>();
 
         foreach (FactionAsset asset in model.Assets)

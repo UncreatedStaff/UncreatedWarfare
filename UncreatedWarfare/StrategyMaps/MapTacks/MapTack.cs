@@ -1,5 +1,3 @@
-using System;
-using System.Globalization;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.FOBs.SupplyCrates;

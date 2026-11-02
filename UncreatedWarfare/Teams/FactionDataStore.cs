@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using System;
+using System.Collections.Immutable;
 using System.Linq;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Models.Factions;
@@ -16,7 +16,7 @@ public interface IFactionDataStore
     /// <summary>
     /// List of all registered factions.
     /// </summary>
-    IReadOnlyList<FactionInfo> Factions { get; }
+    ImmutableArray<FactionInfo> Factions { get; }
 
     /// <summary>
     /// Reload <see cref="Factions"/> from wherever it's stored.
@@ -55,6 +55,8 @@ public static class FactionDataStoreExtensions
     /// </summary>
     public static FactionInfo? FindFaction(this IFactionDataStore dataStore, [NotNullWhen(true)] string? search, bool exact = true, bool onlyOneMatch = true)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (search == null)
             return null;
 
@@ -113,7 +115,7 @@ public static class FactionDataStoreExtensions
 public class FactionDataStore : IFactionDataStore, IHostedService
 {
     private readonly IServiceProvider _serviceProvider;
-    public IReadOnlyList<FactionInfo> Factions { get; private set; } = Array.Empty<FactionInfo>();
+    public ImmutableArray<FactionInfo> Factions { get; private set; } = ImmutableArray<FactionInfo>.Empty;
 
     public FactionDataStore(IServiceProvider serviceProvider)
     {
@@ -148,7 +150,7 @@ public class FactionDataStore : IFactionDataStore, IHostedService
             }
         }
 
-        Factions = factions.AsReadOnly();
+        Factions = [ .. factions ];
     }
 
     UniTask IHostedService.StartAsync(CancellationToken token)

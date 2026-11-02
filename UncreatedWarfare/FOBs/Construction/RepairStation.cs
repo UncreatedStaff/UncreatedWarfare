@@ -50,6 +50,8 @@ public class RepairStation : RestockableBuildableFobEntity<ShovelableInfo>
 
     private void RepairTick(ILoopTicker ticker, TimeSpan timeSinceStart, TimeSpan deltaTime)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         float maxRadius = Math.Max(
             _fobManager.Configuration.RepairStationAircraftRepairRadius,
             _fobManager.Configuration.RepairStationGroundVehicleRepairRadius
@@ -109,7 +111,9 @@ public class RepairStation : RestockableBuildableFobEntity<ShovelableInfo>
     {
         if (vehicle.Vehicle.fuel >= vehicle.Vehicle.asset.fuel)
             return;
-        
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         vehicle.Vehicle.askFillFuel(_fobManager.Configuration.RepairStationFuelPerTick);
 
         EffectUtility.TriggerEffect(
@@ -124,6 +128,8 @@ public class RepairStation : RestockableBuildableFobEntity<ShovelableInfo>
 
     private void Repair(WarfareVehicle vehicle)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ushort newHealth = (ushort)Math.Clamp(vehicle.Vehicle.health + _fobManager.Configuration.RepairStationHealthPerTick, 0, vehicle.Vehicle.asset.health);
         if (newHealth >= vehicle.Vehicle.asset.health)
         {

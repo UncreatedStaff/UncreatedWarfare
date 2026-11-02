@@ -20,8 +20,8 @@ internal sealed class DebugLoadLayoutCommand : IExecutableCommand
     /// <inheritdoc />
     public UniTask ExecuteAsync(CancellationToken token)
     {
-        string? layoutName = Context.GetRange(0);
-        if (layoutName == null)
+        string? layoutPath = Context.GetRange(0);
+        if (layoutPath == null)
         {
             throw Context.SendHelp();
         }
@@ -34,10 +34,10 @@ internal sealed class DebugLoadLayoutCommand : IExecutableCommand
 
             try
             {
-                LayoutInfo? layout = _layoutFactory.SelectLayoutByName(layoutName);
+                LayoutInfo? layout = _layoutFactory.SelectLayoutByName(layoutPath);
                 if (layout == null)
                 {
-                    Context.ReplyString($"Layout not found or ambiguous match: <#ddd>{layoutName}</color>.");
+                    Context.ReplyString($"Layout not found or ambiguous match: <#ddd>{layoutPath}</color>.");
                     return;
                 }
 

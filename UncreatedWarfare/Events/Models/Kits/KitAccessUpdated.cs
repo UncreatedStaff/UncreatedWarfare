@@ -6,7 +6,7 @@ namespace Uncreated.Warfare.Events.Models.Kits;
 /// Invoked after a player's kit access is changed.
 /// </summary>
 [EventModel(EventSynchronizationContext.Pure)]
-public sealed class KitAccessUpdated
+public sealed class KitAccessUpdated : IKitAccessUpdated
 {
     /// <summary>
     /// The kit that was updated.
@@ -27,4 +27,9 @@ public sealed class KitAccessUpdated
     /// The type/reason for the player's access.
     /// </summary>
     public required KitAccessType AccessType { get; init; }
+
+    /// <summary>
+    /// The player who instigated the update, if known.
+    /// </summary>
+    public required CSteamID Instigator { get; init; }
 }

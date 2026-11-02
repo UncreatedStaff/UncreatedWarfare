@@ -16,9 +16,9 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using MySqlConnector;
 using SDG.Framework.Modules;
+using SDG.Framework.Utilities;
 using StackCleaner;
 using Stripe;
-using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -154,8 +154,8 @@ public sealed class WarfareModule
 
 #nullable restore
 
+    private ILogger? _gameThreadLogger;
     private IDisposable? _systemConfigChangeToken;
-
     public event Action? LayoutStarted;
     private bool _unloadedHostedServices = true;
     private ILifetimeScope? _activeScope;
@@ -213,6 +213,11 @@ public sealed class WarfareModule
 
     public bool UseFileWatchers { get; private set; }
 
+    /// <summary>
+    /// The maximum number of players that can join the server. <see cref="Provider.maxPlayers"/> can vary due to server list optimization.
+    /// </summary>
+    public byte TrueMaxPlayers { get; private set; }
+
 #nullable restore
 
     internal void Initialize()
@@ -222,6 +227,7 @@ public sealed class WarfareModule
         // will setup the main thread in GameThread before asserting
         GameThread.Setup();
         GameThread.AssertCurrent();
+        TimeUtility.updated += OnUpdate;
 
         // setup UniTask
         InitializeUniTask();
@@ -315,6 +321,11 @@ public sealed class WarfareModule
     }
 #endif
 
+    /// <summary>
+    /// Joining via connection code is only enabled in debug builds.
+    /// </summary>
+    internal bool CanUseConnectionCode { get; private set; }
+
     [MethodImpl(MethodImplOptions.NoInlining)]
     private void Init()
     {
@@ -352,8 +363,17 @@ public sealed class WarfareModule
             ?.GetValue(null) is CommandLineFlag clUseP2PSocket)
         {
             clUseP2PSocket.value = false;
+            CanUseConnectionCode = false;
         }
+        else
+        {
+            CanUseConnectionCode = true;
+        }
+#else
+        CanUseConnectionCode = true;
 #endif
+
+        TrueMaxPlayers = Provider.maxPlayers;
 
         Provider.modeConfigData.Players.Lose_Items_PvP = 0;
         Provider.modeConfigData.Players.Lose_Items_PvE = 0;
@@ -377,6 +397,9 @@ public sealed class WarfareModule
         ConfigurationHelper.AddSourceWithMapOverride(configBuilder, FileProvider, systemConfigLocation);
         Configuration = configBuilder.Build();
 
+#if PROFILING
+        ProfilerUtil.Enabled = Configuration.GetValue<bool>("tests:profiling");
+#endif
         _systemConfigChangeToken = ChangeToken.OnChange(
             () => Configuration.GetReloadToken(),
             HandleSystemConfigUpdated
@@ -496,9 +519,6 @@ public sealed class WarfareModule
 
     internal void Shutdown()
     {
-        if (Singleton == this)
-            Singleton = null;
-
         _dispatcher = null;
 
         _systemConfigChangeToken?.Dispose();
@@ -558,7 +578,39 @@ public sealed class WarfareModule
 
         _logger.LogInformation("Cleaning up container...");
         ServiceProvider.Dispose();
+
+#if TELEMETRY
+        Interlocked.Exchange(ref _activitySource, null)?.Dispose();
+#endif
+        TimeUtility.updated -= OnUpdate;
+        TickGameThread(true);
+
+#if PROFILING
+        _logger.LogTrace("Flushing profiler data...");
+        ProfilerUtil.Flush();
+#endif
+
+        if (Singleton == this)
+            Singleton = null;
+
         CommandWindow.Log("Done - Shutting down");
+    }
+    private void OnUpdate()
+    {
+        TickGameThread(false);
+    }
+
+    private void TickGameThread(bool flush)
+    {
+        if (_gameThreadLogger == null)
+        {
+            if (ServiceProvider == null)
+                return;
+
+            _gameThreadLogger = ServiceProvider.Resolve<ILoggerFactory>().CreateLogger(typeof(GameThread));
+        }
+
+        GameThread.ProcessGameThreadActions(_gameThreadLogger, flush);
     }
 
     private void ConfigureServices(ContainerBuilder bldr)
@@ -569,13 +621,22 @@ public sealed class WarfareModule
         // all module assemblies and plugins
         Assembly[] relevantAssemblies = [ thisAsm ];
 
-        bldr.RegisterType<MapScheduler>()
+        bldr.RegisterRpcType<MapScheduler>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+        bldr.RegisterType<MapSwitchService>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
         bldr.RegisterType<ServerHeartbeatTimer>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
+
+#if PROFILING
+        bldr.RegisterType<ProfilerFlushService>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+#endif
 
         bldr.RegisterType<ActionLoggerService>()
             .AsSelf().AsImplementedInterfaces()
@@ -899,6 +960,8 @@ public sealed class WarfareModule
         // Kits
         bldr.RegisterType<DefaultLoadoutItemsConfiguration>()
             .SingleInstance();
+        bldr.RegisterType<PublicKitLevelConfiguration>()
+            .SingleInstance();
 
         bldr.RegisterType<KitCreateMissingDefaultKitsTweak>().As<ILayoutHostedService>();
         bldr.RegisterType<KitNoSwapStorageClothingTweak>().AsSelf().AsImplementedInterfaces();
@@ -963,9 +1026,8 @@ public sealed class WarfareModule
         bldr.RegisterType<DefaultSkillsetConfiguration>()
             .SingleInstance();
 
-        if (false && ItemUtility.SupportsFastKits)
+        if (ItemUtility.SupportsFastKits)
         {
-            // todo: this needs fixed
             bldr.RegisterType<FastItemDistributionService>()
                 .As<IItemDistributionService>();
         }
@@ -973,6 +1035,7 @@ public sealed class WarfareModule
         {
             bldr.RegisterType<FallbackItemDistributionService>()
                 .As<IItemDistributionService>();
+            _logger.LogWarning("Fast item distribution failed to load.");
         }
 
         bldr.Register<IServiceProvider, IKitItemResolver>((_, serviceProvider) =>
@@ -1357,6 +1420,8 @@ public sealed class WarfareModule
 
             await EventDispatcher.WaitForEvents();
 
+            await InvokeLevelUnloaded(token);
+
             Object.Destroy(_gameObjectHost);
             _gameObjectHost = null!;
 
@@ -1374,6 +1439,7 @@ public sealed class WarfareModule
         await UniTask.SwitchToMainThread(CancellationToken.None);
         UnloadModule();
         Provider.shutdown();
+        Level.onPrePreLevelLoaded -= CartographyUtility.Init;
 
         while (true)
         {
@@ -1705,6 +1771,73 @@ public sealed class WarfareModule
         }
     }
 
+    internal async UniTask InvokeLevelUnloaded(CancellationToken token, bool completeInstantly = false)
+    {
+        if (!IsLayoutActive())
+        {
+            return;
+        }
+
+#if TELEMETRY
+        using Activity? activity = _activitySource.StartActivity("InvokeLevelUnloaded");
+#endif
+        List<ILevelHostedService> hostedServices = GetActiveLayout().ServiceProvider
+            .Resolve<IEnumerable<ILevelHostedService>>()
+            .OrderByDescending(x => x.GetType().GetPriority())
+            .ToList();
+
+        await UniTask.SwitchToMainThread(token);
+
+        _logger.LogDebug("Unhosting {0} services on level unload.", hostedServices.Count);
+        UnhostingTask[] tasks = new UnhostingTask[hostedServices.Count];
+        for (int i = 0; i < hostedServices.Count; i++)
+        {
+            ILevelHostedService hostedService = hostedServices[i];
+#if TELEMETRY
+            using Activity? hostActivity = _activitySource.CreateActivity(
+                $"Unhost {Accessor.ExceptionFormatter.Format(hostedService.GetType())}",
+                ActivityKind.Internal,
+                parentContext: activity?.Context ?? default
+            );
+#endif
+
+            try
+            {
+
+#if TELEMETRY
+                hostActivity?.Start();
+                Activity.Current = hostActivity;
+#endif
+                _logger.LogDebug("Unhosting {0} on level unload.", hostedService.GetType());
+                tasks[i] = hostedService.UnloadLevelAsync(token);
+            }
+            catch (Exception ex)
+            {
+                tasks[i] = UniTask.FromException(ex);
+            }
+#if TELEMETRY
+            tasks[i].Activity = hostActivity;
+#endif
+        }
+
+        try
+        {
+            await UniTask.WhenAll(tasks.Select(x => x.Task));
+        }
+        catch
+        {
+            _logger.LogError("Errors encountered while level-unhosting:");
+            FormattingUtility.PrintTaskErrors(_logger, tasks, hostedServices);
+        }
+        finally
+        {
+            for (int i = 0; i < tasks.Length; ++i)
+            {
+                tasks[i].Dispose();
+            }
+        }
+    }
+
     internal async UniTask InvokeEarlyLevelLoaded(CancellationToken token)
     {
 #if TELEMETRY
@@ -1987,10 +2120,6 @@ public sealed class WarfareModule
     {
         // calls IModuleNexus.shutdown()
         ServiceProvider.Resolve<Module>().isEnabled = false;
-
-#if TELEMETRY
-        Interlocked.Exchange(ref _activitySource, null)?.Dispose();
-#endif
     }
 
     private void InitializeUniTask()
@@ -2030,9 +2159,8 @@ public sealed class WarfareModule
             else
             {
                 Exception ex2 = ex;
-                UniTask.Create(async () =>
+                GameThread.Queue(() =>
                 {
-                    await UniTask.SwitchToMainThread();
                     CommandWindow.LogError("UniTask caught an unobserved exception.");
                     CommandWindow.LogError(ex2);
                 });

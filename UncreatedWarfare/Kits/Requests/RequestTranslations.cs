@@ -3,7 +3,6 @@ using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Cooldowns;
-using Uncreated.Warfare.Players.Costs;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
@@ -292,20 +291,23 @@ public class RequestKitsTranslations : TranslationCollection
     public readonly Translation RequiresNitroBoost = new Translation("Requires <#e00ec9>NITRO BOOST</color> in <#7483c4>Discord</color>");
     
     [TranslationData("Sent when a player successfully purchases a kit.")]
-    public readonly Translation<Kit, int> KitPurchaseSuccess = new Translation<Kit, int>("<#f3e2b4>You have successfully purchased kit <#ffffff>{0}</color> for <#b8ffc1>C</color> <#ffffff>{1}</color> credits.");
+    public readonly Translation<Class, int, int> KitPurchaseSuccess = new Translation<Class, int, int>("<#f3e2b4>You have successfully purchased all <#ffffff>{0} #{1}</color> kits for <#b8ffc1>C</color> <#ffffff>{2}</color> credits.", arg0Fmt: UppercaseAddon.Instance);
 
     
     [TranslationData("Modal heading for when a player is asked if they want to purchase a kit that they don't yet own.")]
-    public readonly Translation ModalConfirmPurchaseKitHeading = new Translation("Purchase Kit", TranslationOptions.TMProUI);
+    public readonly Translation ModalConfirmPurchaseKitHeading = new Translation("Purchase Kits", TranslationOptions.TMProUI);
 
     [TranslationData("Modal description for when a player is asked if they want to purchase a kit that they don't yet own.")]
-    public readonly Translation<Kit, int> ModalConfirmPurchaseKitDescription = new Translation<Kit, int>("Purchase kit <#ffffff>{0}</color> for <#b8ffc1>C</color> <#ffffff>{1}</color> credits?", TranslationOptions.TMProUI);
+    public readonly Translation<Class, int, int> ModalConfirmPurchaseKitDescription = new Translation<Class, int, int>("Purchase all <#ffffff>{0} #{1}</color> kits for <#b8ffc1>C</color> <#ffffff>{2}</color> credits?", TranslationOptions.TMProUI, arg0Fmt: UppercaseAddon.Instance);
 
     [TranslationData("Modal accept button text for when a player is asked if they want to purchase a kit that they don't yet own.")]
     public readonly Translation ModalConfirmPurchaseKitAcceptButton = new Translation("Confirm Purchase", TranslationOptions.TMProUI);
 
     [TranslationData("Modal cancel button text for when a player is asked if they want to purchase a kit that they don't yet own.")]
     public readonly Translation ModalConfirmPurchaseKitCancelButton = new Translation("Cancel", TranslationOptions.TMProUI);
+
+    [TranslationData("Sent when a player tries to request a kit but isn't high enough level.")]
+    public readonly Translation<WarfareRank> RequestNotLevel = new Translation<WarfareRank>("You must be at least <#f4cd57>{0}</color> to use this kit.", arg0Fmt: WarfareRank.FormatName);
 }
 
 public class RequestVehicleTranslations : TranslationCollection
@@ -342,4 +344,8 @@ public class RequestVehicleTranslations : TranslationCollection
 
     [TranslationData("Sent when a player is asset banned over all vehicles for a set time.")]
     public readonly Translation<string, TimeSpan> AssetBanned = new Translation<string, TimeSpan>("Asset banned from: <#ddd>{0}</color> for another <#fff>{1}</color>", arg1Fmt: TimeAddon.Create(TimeSpanFormatType.Short));
+
+    [TranslationData("Sent when a player tries to request a vehicle but isn't high enough level.")]
+    public readonly Translation<WarfareRank> RequestNotLevel = new Translation<WarfareRank>("You must be at least <#f4cd57>{0}</color> to request this vehicle.", arg0Fmt: WarfareRank.FormatName);
+
 }

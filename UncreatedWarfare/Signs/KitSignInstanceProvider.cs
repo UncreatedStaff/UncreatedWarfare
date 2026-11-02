@@ -7,13 +7,13 @@ using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Loadouts;
 using Uncreated.Warfare.Kits.Requests;
-using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
@@ -24,8 +24,10 @@ namespace Uncreated.Warfare.Signs;
 [SignPrefix("kit_")]
 [SignPrefix("loadout_")]
 [SignPrefix("kitfav_")]
-public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>, IKitRequirementVisitor<StringBuilder>
+public class KitSignInstanceProvider : BaseSignInstanceProvider, IRequestable<Kit>, IKitRequirementVisitor<StringBuilder>
 {
+    public const TranslationOptions TranslationOptions = LanguageSets.DefaultTranslationOptions | TranslationOptions.PerPlayerTranslation;
+
     private static readonly StringBuilder KitSignBuffer = new StringBuilder(230);
 
     private readonly IKitDataStore _kitDataStore;
@@ -35,27 +37,31 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
     private readonly KitSignTranslations _translations;
     private readonly TextMeasurementService _measurementService;
     private readonly KitRequirementManager _kitRequirements;
+    private readonly PublicKitLevelConfiguration _kitCostConfig;
     private SignMetrics _signMetrics;
 
     private static readonly Color32 ColorKitFavoritedName = new Color32(255, 255, 153, 255);
     private static readonly Color32 ColorKitUnfavoritedName = new Color32(255, 255, 255, 255);
 
     /// <inheritdoc />
-    bool ISignInstanceProvider.CanBatchTranslate => false;
+    public override TranslationOptions GroupOptions => TranslationOptions;
 
     /// <inheritdoc />
-    string ISignInstanceProvider.FallbackText => KitId ?? ("Loadout " + LoadoutNumber.ToString(CultureInfo.InvariantCulture));
+    public override string FallbackText => KitId ?? ("Loadout " + LoadoutNumber.ToString(CultureInfo.InvariantCulture));
     public string KitId { get; private set; }
     public int LoadoutNumber { get; private set; }
     public int FavoriteIndex { get; private set; }
     public KitSignInstanceProvider(
+        BarricadeDrop barricade,
         IKitDataStore kitDataStore,
         TranslationInjection<KitSignTranslations> translations,
         PlayerNitroBoostService nitroBoostService,
         IConfiguration systemConfig,
         IKitAccessService kitAccessService,
         TextMeasurementService measurementService,
-        KitRequirementManager kitRequirements)
+        KitRequirementManager kitRequirements,
+        PublicKitLevelConfiguration kitCostConfig)
+    : base(barricade)
     {
         _kitDataStore = kitDataStore;
         _nitroBoostService = nitroBoostService;
@@ -64,11 +70,12 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
         _translations = translations.Value;
         _measurementService = measurementService;
         _kitRequirements = kitRequirements;
+        _kitCostConfig = kitCostConfig;
         LoadoutNumber = -1;
         KitId = null!;
     }
 
-    public void Initialize(BarricadeDrop barricade, string extraInfo, IServiceProvider serviceProvider)
+    public override void Initialize(BarricadeDrop barricade, string extraInfo, IServiceProvider serviceProvider)
     {
         _signMetrics = _measurementService.GetSignMetrics(barricade.asset.GUID);
 
@@ -95,8 +102,10 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
         }
     }
 
-    public string Translate(ITranslationValueFormatter formatter, IServiceProvider serviceProvider, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
+    public override string Translate(ITranslationValueFormatter formatter, IServiceProvider serviceProvider, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // reuse the same string builder since this'll be called a lot
 
         if (LoadoutNumber >= 0)
@@ -151,7 +160,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
 
     /*
      *  - KIT NAME WITH A
-     *     MAYBE NEWLINE  or OPEN LINE IF NOT NEEDED
+     *     MAYBE NEWLINE  or  OPEN LINE IF NOT NEEDED
      *  * EMPTY LINE IF NO WEAPON TEXT
      *  - COST
      *  - WEAPON TEXT [optional]
@@ -160,6 +169,8 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
 
     private void TranslateKitSign(StringBuilder bldr, Kit kit, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         string kitName = kit.GetDisplayName(language, true, removeNewLine: true);
 
         // if the name has a newline we want to skip the empty line so all the text is roughly the same size
@@ -190,6 +201,8 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
 
     private void AppendAvailability(StringBuilder bldr, WarfarePlayer player, Kit kit)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         KitPlayerComponent kitPlayerComponent = player.Component<KitPlayerComponent>();
         CurrentKitState? activeKit = kitPlayerComponent.GetActiveEffectiveKit();
         if (activeKit != null && activeKit.Key == kit.Key)
@@ -220,6 +233,8 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
 
     private void AppendCost(StringBuilder bldr, Kit kit, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         string cost;
         if (kit.RequiresServerBoost)
         {
@@ -233,37 +248,42 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
                 return;
             }
         }
-        else if (kit.Type != KitType.Public)
-        {
-            if (player != null && player.Component<KitPlayerComponent>().IsKitAccessible(kit.Key))
-            {
-                cost = _translations.KitPremiumOwned.Translate(language);
-            }
-            else if (kit.Type == KitType.Special)
-            {
-                bldr.Append(_translations.KitExclusive.Translate(language));
-                return;
-            }
-            else
-            {
-                bldr.Append(_translations.KitPremiumCost.Translate(decimal.Round(kit.PremiumCost, 2), language, culture, TimeZoneInfo.Utc));
-                return;
-            }
-        }
         else
         {
-            if (kit.IsFree || _kitAccessService.ArePrimaryKitsGloballyAccessible)
+            KitPlayerComponent? playerComponent = player?.Component<KitPlayerComponent>();
+            if (kit.Type != KitType.Public)
             {
-                cost = _translations.KitFree.Translate(language);
-            }
-            else if (player != null && player.Component<KitPlayerComponent>().IsKitAccessible(kit.Key))
-            {
-                cost = _translations.KitPublicOwned.Translate(language);
+                if (playerComponent != null && playerComponent.IsKitAccessible(kit.Key))
+                {
+                    cost = _translations.KitPremiumOwned.Translate(language);
+                }
+                else if (kit.Type == KitType.Special)
+                {
+                    bldr.Append(_translations.KitExclusive.Translate(language));
+                    return;
+                }
+                else
+                {
+                    bldr.Append(_translations.KitPremiumCost.Translate(decimal.Round(kit.PremiumCost, 2), language, culture, TimeZoneInfo.Utc));
+                    return;
+                }
             }
             else
             {
-                bldr.Append(_translations.KitCreditCost.Translate(kit.CreditCost, language, culture, TimeZoneInfo.Utc));
-                return;
+                if (kit.IsFree(_kitCostConfig, out PublicKitLevel lvl) || _kitAccessService.ArePrimaryKitsGloballyAccessible)
+                {
+                    cost = _translations.KitFree.Translate(language);
+                }
+                else if (playerComponent != null && playerComponent.IsKitAccessible(kit))
+                {
+                    cost = _translations.KitPublicOwned.Translate(language);
+                }
+                else
+                {
+                    double creditCost = lvl.Class <= Class.Unarmed ? 9999 /* unreachable? */ : _kitCostConfig.CreditCostBylevel[lvl];
+                    bldr.Append(_translations.KitCreditCost.Translate((int)Math.Round(creditCost), language, culture, TimeZoneInfo.Utc));
+                    return;
+                }
             }
         }
 
@@ -284,6 +304,8 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
 
     private void TranslateLoadoutSign(StringBuilder bldr, int loadoutIndex, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         KitPlayerComponent? kitPlayerComponent = player?.Component<KitPlayerComponent>();
 
         Kit? kit = kitPlayerComponent?.Loadouts.ElementAtOrDefault(loadoutIndex - 1);
@@ -301,9 +323,11 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
 
     private void TranslateLoadoutSign(StringBuilder bldr, Kit kit, LanguageInfo language, CultureInfo culture, WarfarePlayer player, KitPlayerComponent kitPlayerComponent)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         string kitName = kit.GetDisplayName(language, true, removeNewLine: false);
 
-        bool isFavorited = player != null && kitPlayerComponent!.IsKitFavorited(kit.Key);
+        bool isFavorited = player != null && kitPlayerComponent.IsKitFavorited(kit.Key);
 
         bldr.Append("<b>");
         AppendName(kitName, isFavorited ? ColorKitFavoritedName : ColorKitUnfavoritedName, out bool nameHasNewLine);
@@ -344,6 +368,8 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
 
     private void TranslateFavoriteSign(StringBuilder bldr, int favoriteIndex, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         KitPlayerComponent? kitPlayerComponent = player?.Component<KitPlayerComponent>();
         Kit? kit = kitPlayerComponent?.GetFavoriteAtIndex(favoriteIndex);
 
@@ -366,6 +392,8 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
 
     private void AppendName(string kitName, Color32 color, out bool hasExtraLine)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Span<Range> outRanges = stackalloc Range[2]; // max 2 lines
         int nameSplits = _measurementService.SplitLines(kitName, 1.3f, _signMetrics, outRanges);
 
@@ -464,6 +492,9 @@ public class KitSignTranslations : TranslationCollection
 
     [TranslationData("Shown on a kit sign when the player has not purchased the kit with credits.", IsPriorityTranslation = false)]
     public readonly Translation<int> KitCreditCost = new Translation<int>("<#b8ffc1>C</color> <#fff>{0}</color>", TranslationOptions.TMProSign);
+
+    [TranslationData("Shown on a kit sign when the player is not high enough level to use a kit.", IsPriorityTranslation = false)]
+    public readonly Translation<WarfareRank> KitLevelCost = new Translation<WarfareRank>("<#f0a31c>REQ.</color> <#f4cd57>{0}</color>", TranslationOptions.TMProSign, WarfareRank.FormatAbbreviation);
 
     [TranslationData("Shown on an unused loadout sign.", "The number of the loadout sign.")]
     public readonly Translation<int> LoadoutNumber = new Translation<int>("<b><#7878ff>LOADOUT #{0}</color></b>", TranslationOptions.TMProSign);

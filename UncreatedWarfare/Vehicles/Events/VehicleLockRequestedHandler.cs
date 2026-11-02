@@ -1,4 +1,3 @@
-using System;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Interaction;
@@ -20,6 +19,8 @@ internal class VehicleLockRequestedHandler : IEventListener<ChangeVehicleLockReq
 
     void IEventListener<ChangeVehicleLockRequested>.HandleEvent(ChangeVehicleLockRequested e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (e.IsLocking || e.Vehicle.Vehicle.isDead || e.Player.IsOnDuty)
             return;
 

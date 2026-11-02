@@ -1,7 +1,4 @@
 using DanielWillett.ReflectionTools;
-using SDG.NetTransport;
-using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Events;
@@ -32,7 +29,7 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
     private readonly Dictionary<Item, ulong> _itemsPendingDrop = new Dictionary<Item, ulong>(4);
     private readonly StaticGetter<uint>? _getNextInstanceId = Accessor.GenerateStaticGetter<ItemManager, uint>("instanceCount");
     private readonly StaticSetter<uint>? _setNextInstanceId = Accessor.GenerateStaticSetter<ItemManager, uint>("instanceCount");
-    private readonly ClientStaticMethod<byte, byte, ushort, byte, byte, byte[], Vector3, uint, bool>? SendItem
+    private static readonly ClientStaticMethod<byte, byte, ushort, byte, byte, byte[], Vector3, uint, bool>? SendItem
         = ReflectionUtility.FindRpc<ItemManager, ClientStaticMethod<byte, byte, ushort, byte, byte, byte[], Vector3, uint, bool>>("SendItem");
 
     public DroppedItemTracker(IPlayerService playerService, EventDispatcher eventDispatcher, WarfareModule module)
@@ -65,6 +62,8 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
     public async UniTask<int> DestroyItemsDroppedByPlayerAsync(CSteamID player, bool despawned, CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread(token);
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         if (!_droppedItems.TryGetValue(player, out List<uint>? instanceIds))
         {
@@ -160,6 +159,8 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
     /// <exception cref="GameThreadException"/>
     public void SimulateDroppingItem(WarfarePlayer dropper, Item item, Vector3 position)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (ItemManager.regions == null)
@@ -220,6 +221,8 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
 
     private void OnItemDestroyed(in ItemInfo itemInfo, bool despawned, bool pickedUp, CSteamID pickUpPlayer, Page pickupPage, byte pickupX, byte pickupY, byte pickupRot)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _itemsPendingDrop.Remove(itemInfo.Item.item);
         if (!_itemDroppers.Remove(itemInfo.Item.instanceID, out ulong dropper64))
             return;
@@ -256,6 +259,8 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
             _itemsPendingDrop.Remove(item);
             return;
         }
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         uint instanceId = _getNextInstanceId == null ? uint.MaxValue : _getNextInstanceId() + 1;
         _itemsPendingDrop.Remove(item, out ulong steam64Num);
@@ -324,6 +329,8 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
         if (steam64.GetEAccountType() != EAccountType.k_EAccountTypeIndividual || instanceId == uint.MaxValue)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (_droppedItems.TryGetValue(steam64, out List<uint>? instanceids))
         {
             instanceids.Add(instanceId);
@@ -354,6 +361,8 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
             shouldAllow = false;
             return;
         }
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         Vector3 point = inv.transform.position + inv.transform.forward * 0.5f;
 

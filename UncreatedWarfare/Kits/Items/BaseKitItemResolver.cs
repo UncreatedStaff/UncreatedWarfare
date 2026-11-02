@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using System;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Layouts.Teams;
@@ -22,6 +21,8 @@ public class BaseKitItemResolver : IKitItemResolver
 
     public virtual KitItemResolutionResult ResolveKitItem(IItem item, Kit? kit, Team requestingTeam)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         byte[] state;
         byte amount;
 
@@ -45,6 +46,8 @@ public class BaseKitItemResolver : IKitItemResolver
     /// <inheritdoc />
     public bool ContainsItem(Kit kitWithItems, IAssetLink<ItemAsset> asset, Team requestingTeam, bool includeAttachments = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         IKitItem[] items = kitWithItems.Items;
 
         foreach (IKitItem item in items)
@@ -78,6 +81,8 @@ public class BaseKitItemResolver : IKitItemResolver
     /// <inheritdoc />
     public int CountItems(Kit kitWithItems, IAssetLink<ItemAsset> asset, Team requestingTeam, bool includeAttachments = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         IKitItem[] items = kitWithItems.Items;
 
         int ct = 0;

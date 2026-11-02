@@ -36,6 +36,8 @@ public static class HexStringHelper
     /// </summary>
     public static unsafe bool TryParseHexColor32(ReadOnlySpan<char> hex, out Color32 color)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         hex = hex.Trim();
 
         if (hex.IsEmpty)
@@ -145,6 +147,8 @@ public static class HexStringHelper
     /// </summary>
     public static bool TryParseColor(ReadOnlySpan<char> str, IFormatProvider? formatProvider, out Color color)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         str = str.Trim();
 
         formatProvider ??= CultureInfo.CurrentCulture;
@@ -249,6 +253,8 @@ public static class HexStringHelper
     /// </summary>
     public static bool TryParseColor32(ReadOnlySpan<char> str, IFormatProvider? formatProvider, out Color32 color)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         str = str.Trim();
 
         formatProvider ??= CultureInfo.CurrentCulture;
@@ -362,6 +368,8 @@ public static class HexStringHelper
     /// </summary>
     public static int FormatHexColor(Color32 color, Span<char> output)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         switch (output.Length)
         {
             case 0:

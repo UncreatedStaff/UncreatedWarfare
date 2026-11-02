@@ -1,4 +1,6 @@
-﻿using Uncreated.Warfare.Interaction.Commands;
+﻿using System.Globalization;
+using System.IO;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
@@ -23,8 +25,16 @@ internal sealed class ZoneUtilityLocationCommand : IExecutableCommand
 
         Vector3 p = Context.Player.Position;
         Context.Reply(_translations.ZoneUtilLocation, p.x, p.y, p.z, Context.Player.Yaw);
-        Context.ReplyString($"Reported pitch: {Context.Player.UnturnedPlayer.look.pitch}, yaw: {Context.Player.UnturnedPlayer.look.yaw}");
+        // Context.ReplyString($"Reported pitch: {Context.Player.UnturnedPlayer.look.pitch}, yaw: {Context.Player.UnturnedPlayer.look.yaw}");
 
+#if DEBUG
+        // used for making seeding location lists
+        const string fileOut = @"C:\Users\danny\Downloads\warfare_locations.txt";
+        if (File.Exists(fileOut))
+        {
+            File.AppendAllLines(fileOut, [ $"          - ({p.x.ToString("F2", CultureInfo.InvariantCulture)}, {p.y.ToString("F2", CultureInfo.InvariantCulture)}, {p.z.ToString("F2", CultureInfo.InvariantCulture)})" ]);
+        }
+#endif
         return UniTask.CompletedTask;
     }
 }

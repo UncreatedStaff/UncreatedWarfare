@@ -54,9 +54,11 @@ public sealed partial class KitSelectionUI : UnturnedUI,
     IEventListener<SquadUpdated>,
     IEventListener<SquadMemberLeft>,
     IAsyncEventListener<KitAccessUpdated>,
+    IAsyncEventListener<KitLevelAccessUpdated>,
     IAsyncEventListener<KitUpdated>,
     IEventListener<PlayerLeft>
 {
+    private readonly IServiceProvider _serviceProvider;
     private readonly IKitDataStore _kitDataStore;
     private readonly IKitItemResolver _kitItemResolver;
     private readonly IConfiguration _configuration;
@@ -85,6 +87,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
     private readonly AccountLinkingService? _acountLinkingService;
     private readonly SemaphoreSlim _dbSemaphore;
     private readonly KitSelectionUITranslations _translations;
+    private readonly PublicKitLevelConfiguration _publicKitLevelConfig;
 
     public const string CooldownKitRequestInField = "RequestKitInField";
 
@@ -115,6 +118,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
 
 
     public KitSelectionUI(
+        IServiceProvider serviceProvider,
         ILoggerFactory loggerFactory,
         AssetConfiguration assetConfig,
         IKitDataStore kitDataStore,
@@ -138,6 +142,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         PointsService pointsService,
         HudManager hudManager,
         KitRearmService rearmService,
+        PublicKitLevelConfiguration publicKitLevelConfig,
         CommandDispatcher? commandDispatcher = null,
         SquadManager? squadManager = null,
         CooldownManager? cooldownService = null,
@@ -151,6 +156,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         )
     {
         _translations = translations.Value;
+        _serviceProvider = serviceProvider;
         _kitsDbContext = kitsDbContext;
         _playerService = playerService;
         _zoneStore = zoneStore;
@@ -172,6 +178,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         _nitroBoostService = nitroBoostService;
         _weaponTextService = weaponTextService;
         _kitRequestService = kitRequestService;
+        _publicKitLevelConfig = publicKitLevelConfig;
 
         if (_nitroBoostService != null)
         {
@@ -244,6 +251,8 @@ public sealed partial class KitSelectionUI : UnturnedUI,
 
     private bool CanPlayerRequestKit(KitSelectionUIData data, WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!CanRequestKit(data))
             return false;
 
@@ -313,23 +322,31 @@ public sealed partial class KitSelectionUI : UnturnedUI,
     /// </summary>
     /// <param name="kit">The kit to update.</param>
     /// <param name="player">Optional player to update it for. If <see langword="null"/>, updates for all players.</param>
-    public async UniTask UpdateKitAsync(Kit kit, WarfarePlayer? player = null, CancellationToken token = default)
+    public async UniTask UpdateKitAsync(PublicKitLevel level, Kit? kit, WarfarePlayer? player = null, CancellationToken token = default)
     {
-        try
+        if (kit != null)
         {
-            _ = kit.Items;
-            _ = kit.UnlockRequirements;
-            _ = kit.FactionFilter;
-            _ = kit.MapFilter;
-            _ = kit.Delays;
-        }
-        catch (NotIncludedException)
-        {
-            Kit? fullKit = await _kitDataStore.QueryKitAsync(kit.Key, KitInclude.UI, token);
-            if (fullKit == null)
-                return;
+            try
+            {
+                _ = kit.Items;
+                _ = kit.UnlockRequirements;
+                _ = kit.FactionFilter;
+                _ = kit.MapFilter;
+                _ = kit.Delays;
+            }
+            catch (NotIncludedException)
+            {
+                Kit? fullKit = await _kitDataStore.QueryKitAsync(kit.Key, KitInclude.UI, token);
+                if (fullKit == null)
+                    return;
 
-            kit = fullKit;
+                kit = fullKit;
+            }
+        }
+        else if (level.Class <= Class.Unarmed || level.Class > ClassConverter.MaxClass)
+        {
+            // both are default
+            return;
         }
 
         if (player == null)
@@ -341,13 +358,12 @@ public sealed partial class KitSelectionUI : UnturnedUI,
                 if (playerData is not { HasUI: true })
                     continue;
 
-                await UpdateKitAsync(kit, pl, token);
+                await UpdateKitAsync(level, kit, pl, token);
             }
 
             return;
         }
-
-
+        
         await UniTask.SwitchToMainThread(token);
 
         KitSelectionUIData? data = GetData<KitSelectionUIData>(player.Steam64);
@@ -367,9 +383,9 @@ public sealed partial class KitSelectionUI : UnturnedUI,
                 if (info.Kit == null)
                     break;
 
-                if (info.Kit.Key == kit.Key)
+                if (kit == null ? level.AppliesTo(info.Kit) : info.Kit.Key == kit.Key)
                 {
-                    SendKitInfo(panel.Kits[kitIndex], player, kit, playerComp, data, false, kitIndex, cl);
+                    SendKitInfo(panel.Kits[kitIndex], player, kit ?? info.Kit, playerComp, data, false, kitIndex, cl);
                     if (data.GetCachedState(cl, kitIndex).LabelState == StatusState.ServerBoostRequired)
                         nitroCheckPanel = true;
                 }
@@ -385,16 +401,16 @@ public sealed partial class KitSelectionUI : UnturnedUI,
                 if (info.Kit == null)
                     break;
 
-                if (info.Kit.Key == kit.Key)
+                if (kit == null ? level.AppliesTo(info.Kit) : info.Kit.Key == kit.Key)
                 {
-                    SendKitInfo(_listResults[kitIndex], player, kit, playerComp, data, false, kitIndex);
+                    SendKitInfo(_listResults[kitIndex], player, kit ?? info.Kit, playerComp, data, false, kitIndex);
                     if (data.GetCachedState(kitIndex).LabelState == StatusState.ServerBoostRequired)
                         nitroCheckList = true;
                 }
             }
         }
         
-        if (playerComp.IsKitFavorited(kit.Key))
+        if (kit != null && playerComp.IsKitFavorited(kit.Key))
         {
             // kit favorites
             for (int i = 0; i < _favoriteKits.Length; ++i)
@@ -465,7 +481,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
                 }
             }
 
-            bool requested = await _kitRequestService.RequestAsync(player, kit, new RequestCommandResultHandler(_chatService, _configuration, _requestTranslations), player.DisconnectToken);
+            bool requested = await _kitRequestService.RequestAsync(player, kit, new RequestCommandResultHandler(_serviceProvider, _chatService, _configuration, _requestTranslations), player.DisconnectToken);
 
             if (requested && data.AmmoStorage != null && ammoCost > 0)
             {
@@ -613,7 +629,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
                     return;
 
                 UpdateFavoriteList(player, data, favoriteKits, false);
-                await UpdateKitAsync(kit, player, player.DisconnectToken);
+                await UpdateKitAsync(default, kit, player, player.DisconnectToken);
             }
             catch (OperationCanceledException) when (!player.IsOnline) { }
             catch (Exception ex)
@@ -694,12 +710,36 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         if (data is not { HasUI: true })
             return UniTask.CompletedTask;
 
-        return UpdateKitAsync(e.Kit, player, token);
+        return UpdateKitAsync(default, e.Kit, player, token);
+    }
+
+    UniTask IAsyncEventListener<KitLevelAccessUpdated>.HandleEventAsync(KitLevelAccessUpdated e, IServiceProvider serviceProvider, CancellationToken token)
+    {
+        if (_playerService.GetOnlinePlayerOrNull(e.PlayerId) is not { } player)
+            return UniTask.CompletedTask;
+
+        KitSelectionUIData? data = GetData<KitSelectionUIData>(e.PlayerId);
+        if (data is not { HasUI: true })
+            return UniTask.CompletedTask;
+
+        return UpdateKitAsync(e.KitLevel, null, player, token);
     }
 
     UniTask IAsyncEventListener<KitUpdated>.HandleEventAsync(KitUpdated e, IServiceProvider serviceProvider, CancellationToken token)
     {
-        return UpdateKitAsync(e.Kit, token: token);
+        return UpdateKitAsync(default, e.Kit, token: token);
+    }
+
+    void IEventListener<PlayerLeft>.HandleEvent(PlayerLeft e, IServiceProvider serviceProvider)
+    {
+        if (GetData<KitSelectionUIData>(e.Player.Steam64) is not { } data)
+            return;
+
+        data.HasUI = false;
+        data.DisposeHandles();
+        data.ResetState();
+        // not really necessary but eh whatever
+        e.Player.Locale.LocaleUpdated -= OnLocaleUpdated;
     }
 
     private void OnPointsChanged(WarfarePlayer player, double deltaXp, double deltaCredits, double deltaReputation)
@@ -720,6 +760,8 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         KitSelectionUIData? data = GetData<KitSelectionUIData>(player.Steam64);
         if (data is not { HasUI: true })
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         KitPlayerComponent kpc = player.Component<KitPlayerComponent>();
         for (int i = 0; i < _panels.Length; ++i)
@@ -1051,6 +1093,8 @@ public sealed partial class KitSelectionUI : UnturnedUI,
     {
         GameThread.AssertCurrent();
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Kit? kit = player.Component<KitPlayerComponent>()?.GetActiveEffectiveKit()?.CachedKit;
         if (data.AmmoStorage == null || kit is not { Class: not Class.None and not Class.Unarmed })
         {
@@ -1120,6 +1164,8 @@ public sealed partial class KitSelectionUI : UnturnedUI,
 
     private void UpdateFavoriteList(WarfarePlayer player, KitSelectionUIData data, Kit[] kits, bool fromDefaults)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ITransportConnection c = player.Connection;
 
         int uiIndex = 0;
@@ -1155,6 +1201,8 @@ public sealed partial class KitSelectionUI : UnturnedUI,
 
     private void SendFavoriteKit(int index, Kit kit, WarfarePlayer player, KitSelectionUIData data, bool fromDefaults)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         FavoriteKitInfo ui = _favoriteKits[index];
@@ -1351,7 +1399,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
             // filter out irrelevant loadouts and public kits
             q = q.Where(x =>
                 (x.Type != KitType.Loadout || x.Access.Any(x => x.Steam64 == steam64))
-                && (x.Type != KitType.Public || x.Faction != null && factionIds.Contains(x.Faction.Key) && x.Season >= WarfareModule.Season)
+                && (x.Type != KitType.Public || x.Faction != null && factionIds.Contains(x.Faction.Key) && x.Season == WarfareModule.Season)
             );
 
             if (!doSort)
@@ -1440,6 +1488,8 @@ public sealed partial class KitSelectionUI : UnturnedUI,
 
     private void SendKitInfo(KitInfo ui, WarfarePlayer player, Kit kit, KitPlayerComponent kitAccessComp, KitSelectionUIData data, bool fromDefaultValues, int index, Class @class = Class.None)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ITransportConnection c = player.Connection;
         ui.Flag.SetText(c, kit.Faction.Sprite);
         ui.Class.SetText(c, kit.Class.GetIconString());
@@ -1532,14 +1582,19 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         UpdateStatusLabels(ui, fromDefaultValues, data, @class, index, player, kit, kitAccessComp);
     }
 
-    private static void UpdateActionButtons(Kit kit, WarfarePlayer player, KitInfo ui, KitSelectionUIData data, int index, Class @class = Class.None, bool fromDefaultValues = false)
+    private void UpdateActionButtons(Kit kit, WarfarePlayer player, KitInfo ui, KitSelectionUIData data, int index, Class @class = Class.None, bool fromDefaultValues = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ITransportConnection c = player.Connection;
         KitPlayerComponent kitAccessComp = player.Component<KitPlayerComponent>();
 
         bool canPreview = data.IsInMainOrWarRoom;
-
-        if (!canPreview || kit.IsFree || kitAccessComp.IsKitAccessible(kit.Key) || data.IsBoosting is true && data.GetCachedState(@class, index).LabelState == StatusState.ServerBoostRequired)
+        
+        if (!canPreview
+            || kit.IsFree(_publicKitLevelConfig)
+            || kitAccessComp.IsKitAccessible(kit)
+            || data.IsBoosting is true && data.GetCachedState(@class, index).LabelState == StatusState.ServerBoostRequired)
         {
             ui.PreviewButtonParent.Hide(c);
             //ui.RequestButtonParent.Show(c);
@@ -1560,7 +1615,6 @@ public sealed partial class KitSelectionUI : UnturnedUI,
             ui.UnfavoriteButtonParent.Hide(c);
             ui.FavoriteButtonParent.Show(c);
         }
-
     }
 
     private KitInfo GetKitInfoUI(Class @class, int index)
@@ -1576,6 +1630,8 @@ public sealed partial class KitSelectionUI : UnturnedUI,
 
     private void UpdateStatusLabels(KitInfo ui, bool fromDefaultValues, KitSelectionUIData data, Class @class, int index, WarfarePlayer player, Kit kit, KitPlayerComponent kitAccessComp, bool force = true)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         ITransportConnection c = player.Connection;
@@ -1783,6 +1839,8 @@ public sealed partial class KitSelectionUI : UnturnedUI,
 
     private void UpdateConstantText(bool isDefaultLang, ITransportConnection c, KitSelectionUIData data, WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!data.HasDefaultText)
             isDefaultLang = false;
 
@@ -2324,18 +2382,6 @@ public sealed partial class KitSelectionUI : UnturnedUI,
             Player = player;
             FactionId = player.Team.Faction.PrimaryKey;
         }
-    }
-
-    void IEventListener<PlayerLeft>.HandleEvent(PlayerLeft e, IServiceProvider serviceProvider)
-    {
-        if (GetData<KitSelectionUIData>(e.Player.Steam64) is not { } data)
-            return;
-
-        data.HasUI = false;
-        data.DisposeHandles();
-        data.ResetState();
-        // not really necessary but eh whatever
-        e.Player.Locale.LocaleUpdated -= OnLocaleUpdated;
     }
 }
 

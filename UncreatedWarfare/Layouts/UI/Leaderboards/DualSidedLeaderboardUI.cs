@@ -1,6 +1,5 @@
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
-using System;
 using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Patterns;
@@ -15,6 +14,8 @@ using Uncreated.Warfare.Interaction.UI;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Maps;
+using Uncreated.Warfare.Models.Seasons;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Extensions;
@@ -37,6 +38,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
     [Ignore] private List<ValuablePlayerMatch>? _valuablePlayers;
     [Ignore] private double[]? _globalStatSums;
     [Ignore] private TopSquadInfo[]? _topSquads;
+    [Ignore] private readonly MapSwitchService? _mapSwitchService;
 
     [Ignore] private DateTime _startTimestamp;
 
@@ -57,6 +59,8 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
     [Ignore] internal bool DefaultSortMode;
 
     [Ignore] private bool _doVote;
+    [Ignore] private MapData? _titleMap;
+    [Ignore] private bool _titleIsShuttingDown;
 
     public readonly UnturnedUIElement TopSquadsParent = new UnturnedUIElement("GameInfo/Squads");
     public readonly TopSquad[] TopSquads = ElementPatterns.CreateArray<TopSquad>("GameInfo/Squads/Squad_T{0}", 1, to: 2);
@@ -95,7 +99,8 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         PointsService pointsService,
         ITranslationService translationService,
         IConfiguration config,
-        WarfareLifetimeComponent appLifetime)
+        WarfareLifetimeComponent appLifetime,
+        MapSwitchService? mapSwitchService = null)
         : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:DualSidedLeaderboardUI"), staticKey: true, debugLogging: false)
     {
         _createData = CreateData;
@@ -107,6 +112,8 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         _translationService = translationService;
         _appLifetime = appLifetime;
         _layoutFactory = layoutFactory;
+
+        _mapSwitchService = mapSwitchService;
 
         _doVote = !config.GetValue<bool>("tests:disable_vote");
 
@@ -141,6 +148,8 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 
     public void Open(LeaderboardSet[] sets, LeaderboardPhase phase)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (IsActive)
@@ -207,6 +216,8 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         }
 
         SendToAllPlayers();
+        _titleMap = _mapSwitchService?.SwitchingToMap;
+        _titleIsShuttingDown = _appLifetime.QueuedShutdownType == ShutdownMode.OnLayoutEnd;
         foreach (LanguageSet set in _translationService.SetOf.AllPlayers())
         {
             SendToPlayers(set);
@@ -225,6 +236,8 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 
     public void OpenLate(WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         SendToPlayer(player.Connection);
         SendToPlayers(new LanguageSet(player));
         if (!IsVotingPeriodOpen)
@@ -237,6 +250,8 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 
     public void Close()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (!IsActive)
@@ -255,19 +270,32 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         }
     }
 
+    private string GetLayoutName()
+    {
+        string layoutName = _layout.LayoutInfo.DisplayName;
+        if (_appLifetime.QueuedShutdownType == ShutdownMode.OnLayoutEnd)
+        {
+            layoutName = $"{layoutName} - Shutting down:";
+        }
+        else if (_mapSwitchService?.SwitchingToMap is { } map)
+        {
+            layoutName = $"{layoutName} - Loading {map.DisplayName}:";
+        }
+
+        return layoutName;
+    }
+
     private void SendToPlayers(LanguageSet set)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Team? winningTeam = null;
         if (_layout.Data.TryGetValue(KnownLayoutDataKeys.WinnerTeam, out object? teamBox))
         {
             winningTeam = teamBox as Team;
         }
 
-        string layoutName = _layout.LayoutInfo.DisplayName;
-        if (_appLifetime.QueuedShutdownType == ShutdownMode.OnLayoutEnd)
-        {
-            layoutName += " - Shutting down:";
-        }
+        string layoutName = GetLayoutName();
 
         while (set.MoveNext())
         {
@@ -314,6 +342,8 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 
     private double[] ComputeGlobalStats()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int globalStatCount = 0;
         foreach (LeaderboardPhaseStatInfo info in _phase!.PlayerStats)
         {
@@ -344,6 +374,8 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 
     private List<ValuablePlayerMatch> ComputeValuablePlayers()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         List<ValuablePlayerMatch> valuablePlayers = new List<ValuablePlayerMatch>(_phase!.ValuablePlayers.Length);
 
         ILogger logger = GetLogger();
@@ -362,6 +394,8 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 
     private TopSquadInfo[] ComputeTopSquads()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         TopSquadInfo[] squads = new TopSquadInfo[_sets!.Length];
 
         // no squads or at least one team has no squads
@@ -377,8 +411,8 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
             int xpStatIndex = leaderboardSet.GetStatisticIndex(KnownStatNames.XP);
             Squad topSquad = _squadManager.Squads.Where(x => x.Team == leaderboardSet.Team).Aggregate((s1, s2) =>
             {
-                double s1AverageScore = s1.Members.Sum(m => leaderboardSet.GetStatisticValue(xpStatIndex, m.Steam64)) / s1.Members.Count;
-                double s2AverageScore = s2.Members.Sum(m => leaderboardSet.GetStatisticValue(xpStatIndex, m.Steam64)) / s2.Members.Count;
+                double s1AverageScore = s1.Members.Sum(m => leaderboardSet.GetStatisticValue(xpStatIndex, m.Steam64)) / s1.Members.Length;
+                double s2AverageScore = s2.Members.Sum(m => leaderboardSet.GetStatisticValue(xpStatIndex, m.Steam64)) / s2.Members.Length;
                 return s1AverageScore > s2AverageScore ? s1 : s2;
             });
 
@@ -402,6 +436,8 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 
     private void SendTopSquads(LanguageSet set)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (Array.Exists(_topSquads!, x => x.Squad == null))
         {
             while (set.MoveNext())
@@ -427,7 +463,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
                 squadElement.Name.SetText(set.Next.Connection, topSquad.Name);
                 squadElement.Flag.SetText(set.Next.Connection, topSquad.Team.Faction.Sprite);
 
-                for (int m = 0; m < topSquad.Members.Count; m++)
+                for (int m = 0; m < topSquad.Members.Length; m++)
                 {
                     if (m >= squadElement.Members.Length)
                         break;
@@ -452,6 +488,8 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 
     private void SendValuablePlayers(LanguageSet set)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int uiIndex = 0;
         foreach (ValuablePlayerMatch stat in _valuablePlayers!)
         {
@@ -495,6 +533,8 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 
     private void SendGlobalStats(LanguageSet set)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int globalStatIndex = 0;
         foreach (LeaderboardPhaseStatInfo info in _phase!.PlayerStats)
         {
@@ -527,6 +567,8 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 
     private void SendPointsSection(WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Team team = player.Team;
         LeaderboardSet? set = _sets!.FirstOrDefault(x => x.Team == team);
         WarfareRank rank = _pointsService.GetRankFromExperience(player.CachedPoints.XP);
@@ -570,6 +612,8 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 
     public void UpdateSort(WarfarePlayer player, int setIndex, int column)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         DualSidedLeaderboardPlayerData data = GetOrAddData(player.Steam64, _createData);
         ref LeaderboardSortColumn sort = ref data.SortColumns[setIndex];
 
@@ -597,6 +641,8 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 
     private void SendLeaderboard(int setIndex, LanguageSet langSet, bool team)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         LeaderboardSet set = _sets![setIndex];
 
         LeaderboardList uiList = Leaderboards[setIndex];
@@ -703,6 +749,8 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 
     private void CompOnVoiceChatStateUpdated(WarfarePlayer player, bool isUsingVoiceChat)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (_sets == null)
             return;
 
@@ -725,7 +773,36 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 
     public void UpdateCountdown(TimeSpan timeLeft)
     {
-        string countdown = FormattingUtility.ToCountdownString(timeLeft, false);
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
+        bool needsLayoutNameUpdate = false;
+
+        bool isShuttingDown = _appLifetime.QueuedShutdownType == ShutdownMode.OnLayoutEnd;
+        if (isShuttingDown != _titleIsShuttingDown)
+        {
+            needsLayoutNameUpdate = true;
+            _titleIsShuttingDown = isShuttingDown;
+        }
+        else
+        {
+            MapData? map = _mapSwitchService?.SwitchingToMap;
+            if (_titleMap != map)
+            {
+                needsLayoutNameUpdate = true;
+                _titleMap = map;
+            }
+        }
+
+        if (needsLayoutNameUpdate)
+        {
+            string layoutName = GetLayoutName();
+            foreach (WarfarePlayer player in _playerService.OnlinePlayers)
+            {
+                LayoutName.SetText(player.Connection, layoutName);
+            }
+        }
+
+        string countdown = timeLeft == Timeout.InfiniteTimeSpan ? "..." : FormattingUtility.ToCountdownString(timeLeft, false);
         foreach (WarfarePlayer player in _playerService.OnlinePlayers)
         {
             Countdown.SetText(player.Connection, countdown);

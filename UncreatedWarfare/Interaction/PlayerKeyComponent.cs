@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using System;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
@@ -119,6 +118,8 @@ public class PlayerKeyComponent : IPlayerComponent
             return;
         }
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int keyCount = PlayerKeys.KeyCount;
 
         bool[] keys = Player.UnturnedPlayer.input.keys;
@@ -158,6 +159,8 @@ public class PlayerKeyComponent : IPlayerComponent
 
     private void OnKeyDown(PlayerKey key)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         KeyDown? callback = KeyDownListeners[(int)key];
         if (callback == null)
             return;
@@ -174,6 +177,8 @@ public class PlayerKeyComponent : IPlayerComponent
 
     private void OnKeyUp(PlayerKey key, float timeSpan)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         KeyUp? callback = KeyUpListeners[(int)key];
         if (callback == null)
             return;

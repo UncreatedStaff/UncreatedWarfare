@@ -2083,9 +2083,8 @@ public class CommandContext : ControlException
         }
         else
         {
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
                 Player.UnturnedPlayer.sendBrowserRequest(message, url);
             });
         }

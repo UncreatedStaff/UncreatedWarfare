@@ -50,6 +50,8 @@ public class TranslationValueFormatter : ITranslationValueFormatter, IDisposable
 
     public string Format<T>(T? value, in ValueFormatParameters parameters)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         string formattedValue = FormatIntl(value, in parameters);
 
         IArgumentAddon[]? addons = parameters.Format.FormatAddons;
@@ -67,6 +69,8 @@ public class TranslationValueFormatter : ITranslationValueFormatter, IDisposable
 
     public string Format(object? value, in ValueFormatParameters parameters, Type? formatType = null)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         string formattedValue = FormatIntl(value, in parameters, formatType);
 
         IArgumentAddon[]? addons = parameters.Format.FormatAddons;
@@ -85,16 +89,22 @@ public class TranslationValueFormatter : ITranslationValueFormatter, IDisposable
 
     public string FormatEnum<TEnum>(TEnum value, LanguageInfo? language) where TEnum : unmanaged, Enum
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         return ((IEnumFormatter<TEnum>)GetValueFormatter<TEnum>()).GetValue(value, language ?? LanguageService.GetDefaultLanguage());
     }
 
     public string FormatEnum(object value, Type enumType, LanguageInfo? language)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         return ((IEnumFormatter)GetValueFormatter(enumType)).GetValue(value, language ?? LanguageService.GetDefaultLanguage());
     }
 
     private string FormatIntl<T>(T? value, in ValueFormatParameters parameters)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!typeof(T).IsValueType)
         {
             object? valBox = value;
@@ -119,6 +129,8 @@ public class TranslationValueFormatter : ITranslationValueFormatter, IDisposable
     
     private string FormatIntl(object? value, in ValueFormatParameters parameters, Type? formatType)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (Equals(value, null) || value == DBNull.Value)
         {
             return FormatNull(in parameters);
@@ -142,6 +154,8 @@ public class TranslationValueFormatter : ITranslationValueFormatter, IDisposable
 
     public IValueFormatter GetValueFormatter(Type type)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         return (IValueFormatter)_valueFormatters.GetOrAdd(type, static (type, vf) =>
         {
             if (type.IsEnum)

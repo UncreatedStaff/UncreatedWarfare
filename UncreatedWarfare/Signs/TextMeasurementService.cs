@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using TMPro;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
@@ -10,7 +8,8 @@ public class TextMeasurementService : IDisposable, ILayoutHostedService
 {
     private readonly TextMeshPro _textMeshPro;
     private readonly Dictionary<Guid, SignMetrics> _metrics = new Dictionary<Guid, SignMetrics>(8);
-    private readonly Dictionary<CacheKey, TMP_LineInfo[]> _cache = new Dictionary<CacheKey, TMP_LineInfo[]>(64);
+    // null means one line
+    private readonly Dictionary<CacheKey, TMP_LineInfo[]?> _cache = new Dictionary<CacheKey, TMP_LineInfo[]?>(64);
 
     public TextMeasurementService()
     {
@@ -91,14 +90,15 @@ public class TextMeasurementService : IDisposable, ILayoutHostedService
 
     public TMP_LineInfo[]? MeasureText(string text, float preferredFontSize, SignMetrics metrics)
     {
-        GameThread.AssertCurrent();
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
+        GameThread.AssertCurrent();
 
         if (metrics.SignSettings == null)
             return null;
 
         CacheKey key = new CacheKey(metrics.Sign, text);
-        if (_cache.TryGetValue(key, out TMP_LineInfo[] lines))
+        if (_cache.TryGetValue(key, out TMP_LineInfo[]? lines))
         {
             return lines;
         }
@@ -109,6 +109,12 @@ public class TextMeasurementService : IDisposable, ILayoutHostedService
 
         TMP_TextInfo info = _textMeshPro.GetTextInfo(text);
 
+        if (info.lineCount == 1)
+        {
+            _cache.Add(key, null);
+            return null;
+        }
+
         lines = new TMP_LineInfo[info.lineCount];
         Array.Copy(info.lineInfo, lines, info.lineCount);
 
@@ -118,6 +124,8 @@ public class TextMeasurementService : IDisposable, ILayoutHostedService
 
     public int SplitLines(string text, float preferredFontSize, SignMetrics metrics, Span<Range> outRanges)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         TMP_LineInfo[]? info = MeasureText(text, preferredFontSize, metrics);
         if (info == null)
         {

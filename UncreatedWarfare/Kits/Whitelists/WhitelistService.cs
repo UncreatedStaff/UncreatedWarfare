@@ -45,15 +45,13 @@ public class WhitelistService :
     private readonly SemaphoreSlim _semaphore;
     private readonly WhitelistTranslations _translations;
     private readonly IKitItemResolver _kitItemResolver;
-    private readonly ILogger<WhitelistService> _logger;
 
     public WhitelistService(IWhitelistDbContext dbContext,
         ZoneStore zoneStore,
         ChatService chatService,
         WarfareModule module,
         TranslationInjection<WhitelistTranslations> translations,
-        IKitItemResolver kitItemResolver,
-        ILogger<WhitelistService> logger)
+        IKitItemResolver kitItemResolver)
     {
         _dbContext = dbContext;
         _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
@@ -63,7 +61,6 @@ public class WhitelistService :
         _module = module;
         _kitItemResolver = kitItemResolver;
         _translations = translations.Value;
-        _logger = logger;
 
         _semaphore = new SemaphoreSlim(1, 1);
     }
@@ -395,6 +392,8 @@ public class WhitelistService :
             return;
         }
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // FobManager? fobManager = serviceProvider.GetService<FobManager>();
         // if (fobManager != null
         //     && fobManager.Configuration.Shovelables
@@ -501,6 +500,8 @@ public class WhitelistService :
             _chatService.Send(e.Player, _translations.WhitelistNoKit);
             return;
         }
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         // counts attachments on guns as well
         bool includeAttachments = e.Asset is ItemCaliberAsset;

@@ -31,6 +31,8 @@ public class ZoneVisualizerComponent : IPlayerComponent
 
     public int SpawnPoints(Zone zone)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         ReadOnlySpan<byte> centerId = [ 0xfc, 0xd4, 0x15, 0x18, 0xe8, 0x66, 0x82, 0x4e, 0xa7, 0x0a, 0x59, 0x85, 0x34, 0xd8, 0xc3, 0x19 ];
@@ -84,6 +86,8 @@ public class ZoneVisualizerComponent : IPlayerComponent
     {
         yield return new WaitForSeconds(61f);
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ITransportConnection connection = Player.Connection;
         HashSet<Guid> removed = new HashSet<Guid>(4);
         bool needsRespawn = false;
@@ -134,6 +138,8 @@ public class ZoneVisualizerComponent : IPlayerComponent
 
     private void Spawn(SpawnRoundInfo info)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         bool hasCommonZonesWorkshopInstalled = info.AirdropEffect == null;
         ITransportConnection channel = Player.Connection;
 
@@ -174,6 +180,8 @@ public class ZoneVisualizerComponent : IPlayerComponent
 
     public void GetParticleSpawnPoints(Zone zone, out Vector2[] sidePoints, out Vector2[] corners, out Vector2 center)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Vector3 center3d = zone.Center;
         center = new Vector2(center3d.x, center3d.z);
         switch (zone.Shape)

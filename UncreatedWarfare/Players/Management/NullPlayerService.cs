@@ -1,4 +1,3 @@
-using System;
 using Uncreated.Warfare.Util.List;
 
 namespace Uncreated.Warfare.Players.Management;
@@ -12,6 +11,9 @@ public class NullPlayerService : IPlayerService
 
     /// <inheritdoc />
     public bool IsEmpty => true;
+
+    /// <inheritdoc />
+    public int Count => 0;
 
     /// <inheritdoc />
     public ReadOnlyTrackingList<WarfarePlayer> OnlinePlayers { get; } = new ReadOnlyTrackingList<WarfarePlayer>(new TrackingList<WarfarePlayer>(0));

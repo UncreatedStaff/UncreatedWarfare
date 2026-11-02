@@ -74,6 +74,8 @@ public class PlayerGameStatsComponent : IPlayerComponent, IDisposable, ILeaderbo
         if (!shouldallow || hit.type != ERaycastInfoType.PLAYER || !Player.Equals(gun.player) || _laserDesignator.MatchAsset(gun.equippedGunAsset))
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         InteractableVehicle? vehicle = gun.player.movement.getVehicle();
         if (vehicle != null)
         {

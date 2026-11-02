@@ -1,5 +1,3 @@
-using System;
-
 namespace Uncreated.Warfare.Interaction.Commands;
 
 public class CommandParser(CommandDispatcher dispatcher)
@@ -9,6 +7,8 @@ public class CommandParser(CommandDispatcher dispatcher)
 
     public ParsedCommandInfo ParseCommandInput(ReadOnlySpan<char> originalMessage, bool requirePrefix)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // remove slash that gets put at the end a lot since its right next to enter.
         originalMessage = originalMessage.TrimEnd('\\').TrimStart();
 

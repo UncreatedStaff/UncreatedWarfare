@@ -83,13 +83,18 @@ public sealed class PlayerFeatureCounter<TPlayerComponent>
     {
         GameThread.AssertCurrent();
 
+        if (_globalHandleCount > 0)
+            return true;
+
         TPlayerComponent? c = player.ComponentOrNull<TPlayerComponent>();
-        return c != null && HasFeature(c);
+        return c != null && _addToHandle(c, 0) > 0;
     }
 
     /// <inheritdoc cref="HasFeature(WarfarePlayer)"/>
     public bool HasFeature(TPlayerComponent player)
     {
+        GameThread.AssertCurrent();
+
         return _globalHandleCount > 0 || _addToHandle(player, 0) > 0;
     }
 

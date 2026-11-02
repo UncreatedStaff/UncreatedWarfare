@@ -1,6 +1,6 @@
 namespace Uncreated.Warfare.Kits;
 
-public class KitDefaults
+public static class KitDefaults
 {
     public static int? GetDefaultMinRequiredSquadMembers(Class @class) => @class switch
     {

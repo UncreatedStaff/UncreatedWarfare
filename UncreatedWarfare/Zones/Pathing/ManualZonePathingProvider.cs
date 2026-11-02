@@ -18,6 +18,8 @@ public class ManualZonePathingProvider : IZonePathingProvider
 
     public UniTask<IList<Zone>> CreateZonePathAsync(CancellationToken token = default)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         List<string>? zoneNames = Zones;
         if (zoneNames == null || zoneNames.Count == 0)
         {

@@ -9,6 +9,9 @@ namespace Uncreated.Warfare.Models.Kits;
 
 #nullable disable
 
+/// <summary>
+/// Designates access to an exclusive or paid kit.
+/// </summary>
 [Table("kits_access")]
 public class KitAccess
 {

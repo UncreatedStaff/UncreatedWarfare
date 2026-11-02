@@ -1,10 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
-using System;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
 
@@ -25,6 +25,7 @@ public sealed class HudManager : IEventListener<PlayerLeft>, IDisposable
     private readonly PlayerFeatureCounter<HudPlayerComponent> _hideHudCounter;
     private readonly PlayerFeatureCounter<HudPlayerComponent> _blockChatCounter;
     private readonly PlayerFeatureCounter<HudPlayerComponent> _hideCompassCounter;
+    private readonly PlayerFeatureCounter<HudPlayerComponent> _hideQuestCounter;
 
     /// <summary>
     /// Invoked when a player's plugin voting status changes.
@@ -66,6 +67,13 @@ public sealed class HudManager : IEventListener<PlayerLeft>, IDisposable
             DoDisableCompass,
             DoRestoreCompass
         );
+
+        _hideQuestCounter = new PlayerFeatureCounter<HudPlayerComponent>(
+            _playerService,
+            (c, i) => c.HideQuestHandleCount += i,
+            DoDisableQuests,
+            DoRestoreQuests
+        );
     }
 
     /// <summary>
@@ -79,7 +87,7 @@ public sealed class HudManager : IEventListener<PlayerLeft>, IDisposable
     /// </summary>
     /// <exception cref="GameThreadException"/>
     public bool IsHiddenForAnyPlayers => _hideHudCounter.AppliedToAnyPlayers;
-    
+
     /// <summary>
     /// Whether or not HUD elements are hidden for the given player.
     /// </summary>
@@ -87,6 +95,15 @@ public sealed class HudManager : IEventListener<PlayerLeft>, IDisposable
     public bool IsHidden(WarfarePlayer player)
     {
         return !player.IsOnline || _hideHudCounter.HasFeature(player);
+    }
+    
+    /// <summary>
+    /// Whether or not the tracked quest is hidden for the given player.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
+    public bool IsTrackedQuestHidden(WarfarePlayer player)
+    {
+        return !player.IsOnline || _hideQuestCounter.HasFeature(player);
     }
 
     /// <summary>
@@ -173,6 +190,26 @@ public sealed class HudManager : IEventListener<PlayerLeft>, IDisposable
     public IDisposable HideCompass(WarfarePlayer player)
     {
         return new DisableCompassHandle(this, player);
+    }
+
+    /// <summary>
+    /// Hides the tracked quest for all players until the returned <see cref="IDisposable"/> is disposed.
+    /// <see cref="HideHud()"/> also hides the tracked quest, so no need to call both.
+    /// </summary>
+    /// <remarks>Thread-safe</remarks>
+    public IDisposable HideTrackedQuest()
+    {
+        return new DisableQuestHandle(this, null);
+    }
+
+    /// <summary>
+    /// Hides the tracked quest for <paramref name="player"/> until the returned <see cref="IDisposable"/> is disposed.
+    /// <see cref="HideHud(WarfarePlayer)"/> also hides the tracked quest, so no need to call both.
+    /// </summary>
+    /// <remarks>Thread-safe</remarks>
+    public IDisposable HideTrackedQuest(WarfarePlayer player)
+    {
+        return new DisableQuestHandle(this, player);
     }
 
     /// <summary>
@@ -467,6 +504,55 @@ public sealed class HudManager : IEventListener<PlayerLeft>, IDisposable
             Interlocked.Exchange(ref player.PlayerDisableCompassHandle, null)?.Dispose();
         }
     }
+    private void DoRestoreQuests(HudPlayerComponent? obj)
+    {
+        if (!_module.IsLayoutActive())
+        {
+            _logger.LogConditional($"Skipping quest restore for {obj?.Player}. No active layout.");
+            return;
+        }
+
+        QuestService? quests = _module.ScopedProvider.ResolveOptional<QuestService>();
+        if (quests == null)
+        {
+            _logger.LogConditional($"Skipping quest restore for {obj?.Player}. Not implemented.");
+            return;
+        }
+
+        if (obj == null)
+        {
+            quests.ApplyTrackedQuestOptionToAll();
+        }
+        else
+        {
+            quests.ApplyTrackedQuestOption(obj.Player);
+        }
+    }
+
+    private void DoDisableQuests(HudPlayerComponent? obj)
+    {
+        if (!_module.IsLayoutActive())
+        {
+            _logger.LogConditional($"Skipping quest disable for {obj?.Player}. No active layout.");
+            return;
+        }
+
+        QuestService? quests = _module.ScopedProvider.ResolveOptional<QuestService>();
+        if (quests == null)
+        {
+            _logger.LogConditional($"Skipping quest restore for {obj?.Player}. Not implemented.");
+            return;
+        }
+
+        if (obj == null)
+        {
+            quests.ApplyTrackedQuestOptionToAll();
+        }
+        else
+        {
+            quests.ApplyTrackedQuestOption(obj.Player);
+        }
+    }
 
     public void Dispose()
     {
@@ -488,6 +574,7 @@ public sealed class HudManager : IEventListener<PlayerLeft>, IDisposable
 
         public int ChatBlockHandleCount;
         public int DisableCompassHandleCount;
+        public int HideQuestHandleCount;
         public IDisposable? PlayerDisableCompassHandle;
 
         public RingBuffer<BlockedChatMessage>? BlockedChatMessages;
@@ -525,6 +612,7 @@ public sealed class HudManager : IEventListener<PlayerLeft>, IDisposable
             _playerComponent = player?.Component<HudPlayerComponent>();
             _manager._hideHudCounter.Increment(_playerComponent);
             _manager._hideCompassCounter.Increment(_playerComponent);
+            _manager._hideQuestCounter.Increment(_playerComponent);
         }
 
         public void Dispose()
@@ -535,6 +623,7 @@ public sealed class HudManager : IEventListener<PlayerLeft>, IDisposable
 
             manager._hideHudCounter.Decrement(_playerComponent);
             manager._hideCompassCounter.Decrement(_playerComponent);
+            manager._hideQuestCounter.Decrement(_playerComponent);
         }
     }
 
@@ -581,6 +670,24 @@ public sealed class HudManager : IEventListener<PlayerLeft>, IDisposable
         public void Dispose()
         {
             Interlocked.Exchange(ref _manager, null)?._hideCompassCounter.Decrement(_playerComponent);
+        }
+    }
+
+    private class DisableQuestHandle : IDisposable
+    {
+        private HudManager? _manager;
+        private readonly HudPlayerComponent? _playerComponent;
+
+        public DisableQuestHandle(HudManager manager, WarfarePlayer? player)
+        {
+            _manager = manager;
+            _playerComponent = player?.Component<HudPlayerComponent>();
+            _manager._hideQuestCounter.Increment(_playerComponent);
+        }
+
+        public void Dispose()
+        {
+            Interlocked.Exchange(ref _manager, null)?._hideQuestCounter.Decrement(_playerComponent);
         }
     }
 }

@@ -1,6 +1,3 @@
-using System;
-using System.Diagnostics.CodeAnalysis;
-
 namespace Uncreated.Warfare.Util;
 
 /// <summary>
@@ -14,6 +11,8 @@ public static class VehicleUtility
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
     public static bool TryGetVehicleFromTrunkStorage([NotNullWhen(true)] Items? trunk, [NotNullWhen(true)] out InteractableVehicle? vehicle)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (trunk is null)

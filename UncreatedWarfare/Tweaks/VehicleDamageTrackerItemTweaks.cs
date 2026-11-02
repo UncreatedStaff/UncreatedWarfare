@@ -22,6 +22,8 @@ internal sealed class VehicleDamageTrackerItemTweaks : IEventListener<VehiclePre
     [EventListener(MustRunInstantly = true, Priority = int.MaxValue)]
     void IEventListener<VehiclePreDamaged>.HandleEvent(VehiclePreDamaged e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         WarfareVehicle vehicle = e.Vehicle;
         VehicleDamageTracker tracker = vehicle.DamageTracker;
 

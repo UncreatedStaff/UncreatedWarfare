@@ -27,6 +27,8 @@ public class DisallowPickUpSupplyCrate : IEventListener<ItemMoveRequested>
     [EventListener(RequiresMainThread = false)]
     public void HandleEvent(ItemMoveRequested e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (e.OldPage != Page.Storage || e.Player.IsOnDuty)
         {
             return;

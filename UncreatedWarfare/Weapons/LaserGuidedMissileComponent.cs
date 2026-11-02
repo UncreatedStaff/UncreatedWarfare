@@ -42,6 +42,8 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
 
     public void Initialize(GameObject projectile, WarfarePlayer firer, IServiceProvider serviceProvider, float projectileSpeed, float responsiveness, float aquisitionRange, float armingDistance, float fullGuidanceDelay)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _projectile = projectile;
         _firer = firer;
         _team = firer.Team;
@@ -110,6 +112,8 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
 
     private bool TryAcquireTarget()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (_laserTarget != null)
         {
             if (_laserTarget.IsLaserTarget(_team))
@@ -161,6 +165,8 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
             _isActive = false;
             return;
         }
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         _guiderDistance += Time.fixedDeltaTime * _projectileSpeed;
 

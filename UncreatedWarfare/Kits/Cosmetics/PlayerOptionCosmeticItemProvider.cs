@@ -24,6 +24,8 @@ internal class PlayerOptionCosmeticItemProvider : ICosmeticItemProvider
             return null;
         }
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ClothingType type = slot.Type;
         RedirectType redirect = (RedirectType)slot.Type;
 

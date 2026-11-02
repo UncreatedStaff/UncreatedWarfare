@@ -48,6 +48,8 @@ public class AutoResupplyLoop : ILayoutHostedService, ILayoutStartingListener
     }
     private void OnLoopTick(ILoopTicker ticker, TimeSpan timesincestart, TimeSpan deltatime)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         foreach (WarfareVehicle vehicle in _vehicleService.Vehicles)
         {
             if (vehicle.Vehicle.lockedOwner == CSteamID.Nil)

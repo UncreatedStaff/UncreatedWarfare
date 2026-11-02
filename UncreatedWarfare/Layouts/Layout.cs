@@ -5,10 +5,12 @@ using Microsoft.Extensions.Primitives;
 using Stripe;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Layouts.Teams;
@@ -112,7 +114,7 @@ public class Layout : IDisposable
     /// <summary>
     /// The current phase rotation.
     /// </summary>
-    public IReadOnlyList<ILayoutPhase> Phases { get; }
+    public ImmutableArray<ILayoutPhase> Phases { get; private set; }
 
     /// <summary>
     /// The currently active phase, or <see langword="null"/> if there are no active phases.
@@ -122,12 +124,12 @@ public class Layout : IDisposable
     /// <summary>
     /// The phase after the current phase, or <see langword="null"/> if we are on the last phase.
     /// </summary>
-    public ILayoutPhase? NextPhase => _activePhase < -1 || _activePhase + 1 >= Phases.Count ? null : Phases[_activePhase + 1];
+    public ILayoutPhase? NextPhase => _activePhase < -1 || _activePhase + 1 >= Phases.Length ? null : Phases[_activePhase + 1];
     
     /// <summary>
     /// The phase before the current phase, or <see langword="null"/> if we are on the first phase.
     /// </summary>
-    public ILayoutPhase? PreviousPhase => _activePhase < 1 || _activePhase > Phases.Count ? null : Phases[_activePhase - 1];
+    public ILayoutPhase? PreviousPhase => _activePhase < 1 || _activePhase > Phases.Length ? null : Phases[_activePhase - 1];
 
     /// <summary>
     /// Create a new <see cref="Layout"/>.
@@ -142,7 +144,7 @@ public class Layout : IDisposable
         
         _disposableVariationConfigurationRoots = disposableConfigs;
         PhaseList = new List<ILayoutPhase>();
-        Phases = new ReadOnlyCollection<ILayoutPhase>(PhaseList);
+        Phases = ImmutableArray<ILayoutPhase>.Empty;
 
         // this NEEDS to come before services are injected so they can inject this gamemode.
         serviceProvider.Resolve<WarfareModule>().SetActiveLayout(this);
@@ -454,7 +456,7 @@ public class Layout : IDisposable
                 return;
             }
 
-            bool isEnd = _activePhase >= Phases.Count - 1;
+            bool isEnd = _activePhase >= Phases.Length - 1;
 
             ILayoutPhase? oldPhase = ActivePhase;
             int oldPhaseIndex = _activePhase;
@@ -566,6 +568,7 @@ public class Layout : IDisposable
 
         Logger.LogWarning("No phases available in layout {0}. Adding a null phase that will end the game instantly.", LayoutInfo.DisplayName);
         PhaseList.Add(new NullPhase(ConfigurationHelper.EmptySection));
+        Phases = [ PhaseList[0] ];
     }
 
     /// <summary>
@@ -755,6 +758,7 @@ public class Layout : IDisposable
             }
         }
 
+        Phases = [ .. PhaseList ];
         _phaseDisposedMask = new BitArray(PhaseList.Count);
     }
 

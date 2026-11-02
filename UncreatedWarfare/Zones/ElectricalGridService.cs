@@ -41,6 +41,8 @@ public class ElectricalGridService : ILevelHostedService, ILayoutHostedService
     /// <exception cref="GameThreadException"/>
     public bool IsPowered(LevelObject @object)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (_handler is { IsEnabled: true })
@@ -57,6 +59,8 @@ public class ElectricalGridService : ILevelHostedService, ILayoutHostedService
     /// <exception cref="GameThreadException"/>
     public bool IsPowered(InteractablePower otherInteractable)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (_handler is { IsEnabled: true })
@@ -89,8 +93,16 @@ public class ElectricalGridService : ILevelHostedService, ILayoutHostedService
         return UniTask.CompletedTask;
     }
 
+    UniTask ILevelHostedService.UnloadLevelAsync(CancellationToken token)
+    {
+        Enabled = false;
+        return UniTask.CompletedTask;
+    }
+
     public void CheckPowerForAllBarricades()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (RefreshIsConnectedToPower == null)
             return;
 
@@ -103,6 +115,8 @@ public class ElectricalGridService : ILevelHostedService, ILayoutHostedService
 
     public void SetPowerForZoneObjects(Zone zone, bool state, bool addHandles)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
 #if DEBUG
         _logger.LogConditional("Setting all objects in {0} to state {1}.", zone.Name, state);
         using IDisposable? scope = _logger.BeginScope(zone.Name);

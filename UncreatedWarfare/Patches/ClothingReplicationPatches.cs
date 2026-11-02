@@ -225,6 +225,8 @@ internal sealed class ClothingReplicationPatches : IHarmonyPatch
 
     private static ItemClothingAsset? OnSendingAsset(PlayerClothing clothing, ClothingType type)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
 #if DEBUG
         if (clothing == null)
             throw new ArgumentNullException(nameof(clothing), $"Clothing is null for OnSendingAsset({type}).");
@@ -256,6 +258,8 @@ internal sealed class ClothingReplicationPatches : IHarmonyPatch
 
     private static byte OnSendingQuality(PlayerClothing clothing, ClothingType type)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
 #if DEBUG
         if (clothing == null)
             throw new ArgumentNullException(nameof(clothing), $"Clothing is null for OnSendingQuality({type}).");
@@ -277,6 +281,8 @@ internal sealed class ClothingReplicationPatches : IHarmonyPatch
 
     private static byte[] OnSendingState(PlayerClothing clothing, ClothingType type)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
 #if DEBUG
         if (clothing == null)
             throw new ArgumentNullException(nameof(clothing), $"Clothing is null for OnSendingState({type}).");
@@ -293,6 +299,8 @@ internal sealed class ClothingReplicationPatches : IHarmonyPatch
 
     private static bool MaybeCalculateWrittenType(PlayerClothing clothing, ClothingType type, int bit)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (_currentPlayer == clothing && _currentType == type)
         {
             _opMask |= bit;
@@ -342,6 +350,8 @@ internal sealed class ClothingReplicationPatches : IHarmonyPatch
 
     private static IEnumerable<CodeInstruction> CreateAskWearTranspiler(IEnumerable<CodeInstruction> instructions, ILGenerator generator, MethodBase method)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int index = Array.IndexOf(AskWearMethods, (MethodInfo)method);
         if (index < 0)
             throw new InvalidOperationException("Failed to find askWear function in AskWearMethods");
@@ -459,6 +469,8 @@ internal sealed class ClothingReplicationPatches : IHarmonyPatch
         bool playEffect
     )
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         PlayerClothing? clothing = NetIdRegistry.Get<PlayerClothing>(netId);
 
         if (clothing == null)

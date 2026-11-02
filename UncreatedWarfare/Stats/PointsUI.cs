@@ -97,6 +97,8 @@ public class PointsUI : UnturnedUI,
 
     public void ChooseNewCycledStat()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!_module.IsLayoutActive())
         {
             _currentStatIndex = -1;
@@ -225,6 +227,8 @@ public class PointsUI : UnturnedUI,
 
     private static int GetPositionLogicIndex(WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         bool gunBoxVisible = player.UnturnedPlayer.equipment.useable is UseableGun;
 
         InteractableVehicle? vehicle = player.UnturnedPlayer.movement.getVehicle();
@@ -260,6 +264,8 @@ public class PointsUI : UnturnedUI,
     /// <remarks>The UI will be cleared if the player is not on a team.</remarks>
     public void UpdatePointsUI(WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         // circular reference

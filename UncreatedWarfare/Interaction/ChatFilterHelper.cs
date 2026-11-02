@@ -1,7 +1,7 @@
-using System;
 using System.Text.RegularExpressions;
 
 namespace Uncreated.Warfare.Interaction;
+
 public static class ChatFilterHelper
 {
     public static readonly Regex ChatFilter = new Regex(@"(?:[nńǹňñṅņṇṋṉn̈ɲƞᵰᶇɳȵɴｎŋǌvṼṽṿʋᶌᶌⱱⱴᴠʌｖ\|\\\/]\W{0,}[il1ÍíìĭîǐïḯĩįīỉȉȋịḭɨᵻᶖiıɪɩｉﬁIĳ\|\!]\W{0,}[gqb96ǴǵğĝǧġģḡǥɠᶃɢȝｇŋɢɢɋƣʠｑȹḂḃḅḇƀɓƃᵬᶀʙｂȸ](?!h|(?:an)|(?:[e|a|o]t)|(?:un)|(?:rab)|(?:rain)|(?:low)|(?:ue)|(?:uy))(?!n\shadi)\W{0,}[gqb96ǴǵğĝǧġģḡǥɠᶃɢȝｇŋɢɢɋƣʠｑȹḂḃḅḇƀɓƃᵬᶀʙｂȸ]{0,}\W{0,}[gqb96ǴǵğĝǧġģḡǥɠᶃɢȝｇŋɢɢɋƣʠｑȹḂḃḅḇƀɓƃᵬᶀʙｂȸ]{0,}\W{0,}[ae]{0,1}\W{0,}[r]{0,}(?:ia){0,})|(?:c\W{0,}h\W{0,}i{1,}\W{0,}n{1,}\W{0,}k{1,})|(?:[fḟƒᵮᶂꜰｆﬀﬃﬄﬁﬂ]\W{0,}[aáàâǎăãảȧạäåḁāąᶏⱥȁấầẫẩậắằẵẳặǻǡǟȃɑᴀɐɒａæᴁᴭᵆǽǣᴂ]\W{0,}[gqb96ǴǵğĝǧġģḡǥɠᶃɢȝｇŋɢɢɋƣʠｑȹḂḃḅḇƀɓƃᵬᶀʙｂȸ]{1,}\W{0,}o{0,}\W{0,}t{0,1}(?!ain))|(?:[kq]+\W{0,}(?:[y]\W{0,})+(?:[our]\W{0,})*[s]{1,}\W{0,}o{0,}\W{0,}t{0,1})|(?:[kq]+\W{0,}(?:[i1l]\W{0,}){1,}(?:y\W{0,})+(?:[o0@\*]\W{0,})*(?:[uU\*]\W{0,})*(?:[rR\*]\W{0,})*(?:[sc]\W{0,})+(?:[e]*\W{0,})+(?:[i1l]*\W{0,})*(?:[ft]*\W{0,})+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -12,6 +12,8 @@ public static class ChatFilterHelper
     /// </summary>
     public static string? GetChatFilterViolation(string input)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Match match = ChatFilter.Match(input);
         if (!match.Success || match.Length <= 0)
             return null;
@@ -33,7 +35,7 @@ public static class ChatFilterHelper
             }
         }
         // .. can i be .. or .. can i go ..
-        if (matchIndex - 2 >= 0 && input.AsSpan(matchIndex - 2, 2) is { } sub &&
+        if (matchIndex - 2 >= 0 && input.AsSpan(matchIndex - 2, 2) is var sub &&
             (sub.Equals("ca", StringComparison.InvariantCultureIgnoreCase) || sub.Equals("ma", StringComparison.InvariantCultureIgnoreCase)))
         {
             if ((matchIndex + matchValue.Length >= input.Length || char.IsWhiteSpace(input[matchIndex + matchValue.Length]) || IsPunctuation(input[matchIndex + matchValue.Length]))

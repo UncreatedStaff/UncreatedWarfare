@@ -34,6 +34,8 @@ public static class AssetUtility
 
     public static TAsset? FindAsset<TAsset>(string name, out int numberOfSimilarNames, bool additionalCheckWithoutNonAlphanumericCharacters = true) where TAsset : Asset
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         name = name.ToLower();
         string[] words = name.Split(Splits);
 
@@ -162,6 +164,8 @@ public static class AssetUtility
     }
     public static bool TryGetAsset<TAsset>(string assetName, [NotNullWhen(true)] out TAsset? asset, out bool multipleResultsFound, bool allowMultipleResults = false, Predicate<TAsset>? selector = null) where TAsset : Asset
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (Guid.TryParse(assetName, out Guid guid))
         {
             asset = Assets.find<TAsset>(guid);
@@ -282,6 +286,8 @@ public static class AssetUtility
     }
     public static List<TAsset> TryGetAssets<TAsset>(string assetName, Predicate<TAsset>? selector = null, bool pool = false) where TAsset : Asset
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         TAsset asset;
         List<TAsset> assets = pool ? ListPool<TAsset>.claim() : new List<TAsset>(4);
         if (Guid.TryParse(assetName, out Guid guid))
@@ -361,108 +367,12 @@ public static class AssetUtility
 
         return assets;
     }
-#if FALSE
-    public static class NetCalls
-    {
-        /// <summary>Server-side</summary>
-        public static async Task<AssetInfo[]?> SearchAssets<TAsset>(IConnection connection, string name) where TAsset : Asset
-        {
-            RequestResponse response = await RequestFindAssetByText.Request(SendFindAssets, connection, name, typeof(TAsset));
-            response.TryGetParameter(0, out AssetInfo[]? info);
-            return info;
-        }
-        /// <summary>Server-side</summary>
-        public static async Task<AssetInfo[]?> SearchAssets<TAsset>(IConnection connection, ushort id) where TAsset : Asset
-        {
-            RequestResponse response = await RequestFindAssetById.Request(SendFindAssets, connection, id, typeof(TAsset));
-            response.TryGetParameter(0, out AssetInfo[]? info);
-            return info;
-        }
-        /// <summary>Server-side</summary>
-        public static async Task<AssetInfo?> SearchAssets(IConnection connection, Guid id)
-        {
-            RequestResponse response = await RequestFindAssetByGuid.Request(SendFindAssets, connection, id);
-            response.TryGetParameter(0, out AssetInfo[]? info);
-            return info is { Length: > 0 } ? info[0] : null;
-        }
 
-        public static readonly NetCall<ushort, Type> RequestFindAssetById = new NetCall<ushort, Type>(ReceiveRequestAssetById);
-        public static readonly NetCall<string, Type> RequestFindAssetByText = new NetCall<string, Type>(ReceiveRequestAssetByText);
-        public static readonly NetCall<Guid> RequestFindAssetByGuid = new NetCall<Guid>(ReceiveRequestAssetByGuid);
-
-        public static readonly NetCallRaw<AssetInfo[]> SendFindAssets = new NetCallRaw<AssetInfo[]>(KnownNetMessage.SendFindAssets, AssetInfo.ReadMany, AssetInfo.WriteMany);
-
-        private static MethodInfo? _idMethod;
-        private static MethodInfo? _textMethod;
-        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.RequestFindAssetById)]
-        private static void ReceiveRequestAssetById(MessageContext context, ushort id, Type assetType)
-        {
-            if (!Level.isLoaded)
-                return;
-
-            _idMethod ??= typeof(NetCalls).GetMethod(nameof(ReceiveRequestAssetByIdGeneric), BindingFlags.NonPublic | BindingFlags.Static)!;
-            _idMethod.MakeGenericMethod(assetType).Invoke(null, new object[] { context, id });
-        }
-        private static void ReceiveRequestAssetByIdGeneric<TAsset>(MessageContext ctx, ushort id) where TAsset : Asset
-        {
-            EAssetType type = AssetTypeHelper<TAsset>.Type;
-            if (type == EAssetType.NONE)
-            {
-                List<AssetInfo> assets = ListPool<AssetInfo>.claim();
-                for (int i = 0; i <= 10; ++i)
-                {
-                    if (Assets.find((EAssetType)i, id) is { } asset)
-                        assets.Add(new AssetInfo(asset));
-                }
-
-                ctx.Reply(SendFindAssets, assets.ToArray());
-            }
-            else
-            {
-                Asset? asset = Assets.find(type, id);
-                AssetInfo[] info = asset == null ? Array.Empty<AssetInfo>() : new AssetInfo[] { new AssetInfo(asset) };
-
-                ctx.Reply(SendFindAssets, info);
-            }
-        }
-        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.RequestFindAssetByText)]
-        private static void ReceiveRequestAssetByText(MessageContext context, string name, Type assetType)
-        {
-            if (!Level.isLoaded)
-                return;
-
-            _textMethod ??= typeof(NetCalls).GetMethod(nameof(ReceiveRequestAssetByTextGeneric), BindingFlags.NonPublic | BindingFlags.Static)!;
-            _textMethod.MakeGenericMethod(assetType).Invoke(null, new object[] { context, name });
-        }
-        private static void ReceiveRequestAssetByTextGeneric<TAsset>(MessageContext ctx, string name) where TAsset : Asset
-        {
-            List<TAsset> assets = TryGetAssets<TAsset>(name, pool: true);
-            AssetInfo[] info = new AssetInfo[assets.Count];
-            try
-            {
-                for (int i = 0; i < assets.Count; ++i)
-                    info[i] = new AssetInfo(assets[i]);
-            }
-            finally
-            {
-                ListPool<TAsset>.release(assets);
-            }
-
-            ctx.Reply(SendFindAssets, info);
-        }
-        [NetCall(NetCallOrigin.ServerOnly, KnownNetMessage.RequestFindAssetByGuid)]
-        private static void ReceiveRequestAssetByGuid(MessageContext context, Guid guid)
-        {
-            if (!Level.isLoaded)
-                return;
-            
-            context.Reply(SendFindAssets, Assets.find(guid) is { } asset ? new AssetInfo[] { new AssetInfo(asset) } : Array.Empty<AssetInfo>());
-        }
-    }
-#endif
     public static void SyncAssetsFromOrigin(AssetOrigin origin)
     {
-        //Assets.AddAssetsFromOriginToCurrentMapping(origin);
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
+        Assets.AddAssetsFromOriginToCurrentMapping(origin);
     }
 
     /// <summary>
@@ -471,18 +381,22 @@ public static class AssetUtility
     /// <returns>A list of all errors.</returns>=
     public static string[]? LoadAsset(string filePath, AssetOrigin origin)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         string[]? errorRtn = null;
         List<string> errors = ListPool<string>.claim();
         try
         {
-            //AssetsWorker.AssetDefinition def;
-            //def.path = filePath;
-            //def.origin = origin;
-            //def.assetErrors = errors;
-            //GetData(filePath, out def.assetData, errors, out def.hash, out def.translationData, out def.fallbackTranslationData);
-            //Assets.LoadFile(def);
-            //if (errors.Count > 0)
-            //    errorRtn = errors.ToArray();
+            AssetsWorker.AssetDefinition def = new AssetsWorker.AssetDefinition
+            {
+                path = filePath,
+                origin = origin,
+                assetErrors = errors
+            };
+            GetData(filePath, out def.assetData, errors, out def.hash, out def.translationData, out def.fallbackTranslationData);
+            Assets.LoadFile(def);
+            if (errors.Count > 0)
+                errorRtn = errors.ToArray();
         }
         finally
         {
@@ -496,6 +410,8 @@ public static class AssetUtility
 
     private static void GetData(string filePath, out IDatDictionary assetData, List<string>? assetErrors, out byte[] hash, out IDatDictionary? translationData, out IDatDictionary? fallbackTranslationData)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         string directoryName = Path.GetDirectoryName(filePath)!;

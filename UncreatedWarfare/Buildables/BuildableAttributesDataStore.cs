@@ -2,12 +2,12 @@ using DanielWillett.ReflectionTools;
 using DanielWillett.SpeedBytes;
 using DanielWillett.SpeedBytes.Unity;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Buildables;
+using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
@@ -23,22 +23,29 @@ public class BuildableAttributesDataStore : IHostedService, ILevelHostedService,
     private static int _hasSaveSub;
 
     private readonly ILogger<BuildableAttributesDataStore> _logger;
+    private readonly MapScheduler _mapScheduler;
     private readonly Dictionary<uint, BuildableAttributes> _barricadeAttributes = new Dictionary<uint, BuildableAttributes>();
     private readonly Dictionary<uint, BuildableAttributes> _structureAttributes = new Dictionary<uint, BuildableAttributes>();
 
-    public BuildableAttributesDataStore(ILogger<BuildableAttributesDataStore> logger)
+    public BuildableAttributesDataStore(ILogger<BuildableAttributesDataStore> logger, MapScheduler mapScheduler)
     {
         _logger = logger;
+        _mapScheduler = mapScheduler;
     }
 
-    private static string GetFolderPath()
+    private string GetFolderPath()
     {
+        if (!_mapScheduler.HasSelectedMap)
+        {
+            throw new InvalidOperationException("Map not selected.");
+        }
+
         return Path.Combine(
             UnturnedPaths.RootDirectory.FullName,
             ServerSavedata.directoryName,
             Provider.serverID,
             "Level",
-            Provider.map,
+            _mapScheduler.Current.DisplayName,
             "Buildable Attributes.dat"
         );
     }
@@ -161,6 +168,14 @@ public class BuildableAttributesDataStore : IHostedService, ILevelHostedService,
         if (toRemove.Count > 0)
             WriteToSave();
 
+        return UniTask.CompletedTask;
+    }
+
+    UniTask ILevelHostedService.UnloadLevelAsync(CancellationToken token)
+    {
+        // saved by SaveManager.onPreSave already
+        _barricadeAttributes.Clear();
+        _structureAttributes.Clear();
         return UniTask.CompletedTask;
     }
 

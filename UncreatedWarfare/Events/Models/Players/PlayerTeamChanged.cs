@@ -1,4 +1,3 @@
-using System;
 using Uncreated.Warfare.Events.Logging;
 using Uncreated.Warfare.Events.Models.Flags;
 using Uncreated.Warfare.Events.Models.Fobs;
@@ -25,7 +24,7 @@ public class PlayerTeamChanged : PlayerEvent, IActionLoggableEvent, IPlayerNeeds
         );
     }
 
-    LanguageSetEnumerator IFlagsNeedUIUpdateEvent.EnumerateApplicableSets(ITranslationService translationService, ref bool ticketsOnly)
+    LanguageSetEnumerator IFlagsNeedUIUpdateEvent.EnumerateApplicableSets(ITranslationService translationService, TranslationOptions options, ref bool ticketsOnly)
     {
         return new LanguageSetEnumerator(Player);
     }

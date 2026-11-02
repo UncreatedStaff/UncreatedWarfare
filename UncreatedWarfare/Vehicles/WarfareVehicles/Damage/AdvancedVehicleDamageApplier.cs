@@ -27,6 +27,8 @@ public class AdvancedVehicleDamageApplier
 
     public AdvancedDamagePending? ApplyLatestPendingDirectHit()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         while (_damageQueue.Count > 0)
         {
             AdvancedDamagePending pendingDamage = _damageQueue.Dequeue();
@@ -50,11 +52,12 @@ public class AdvancedVehicleDamageApplier
     
     public static float GetComponentDamageMultiplier(Transform colliderTransform)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!colliderTransform.name.StartsWith("damage_"))
             return 1;
 
-        if (!float.TryParse(colliderTransform.gameObject.name.AsSpan(7), NumberStyles.Any,
-                CultureInfo.InvariantCulture, out float multiplier))
+        if (!float.TryParse(colliderTransform.gameObject.name.AsSpan(7), NumberStyles.Any, CultureInfo.InvariantCulture, out float multiplier))
             return 1;
 
         return multiplier;

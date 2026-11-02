@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Uncreated.Warfare.Layouts;
+﻿namespace Uncreated.Warfare.Layouts;
 
 /// <summary>
 /// Configures a method to invoke when configuring services.

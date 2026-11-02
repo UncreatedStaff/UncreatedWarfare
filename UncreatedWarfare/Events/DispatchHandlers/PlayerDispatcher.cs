@@ -22,6 +22,8 @@ partial class EventDispatcher
         if (!shouldallow || parameters.times == 0f)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         WarfarePlayer player = _playerService.GetOnlinePlayer(parameters.player);
 
         DamagePlayerRequested args = new DamagePlayerRequested(in parameters, _playerService)
@@ -49,6 +51,8 @@ partial class EventDispatcher
     {
         if (_isEquipping)
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         if (!ItemUtility.TryFindJarPage(equipment.player.inventory, jar, out Page page) || asset == null)
         {
@@ -94,6 +98,8 @@ partial class EventDispatcher
         if (_isEquipping)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         WarfarePlayer player = _playerService.GetOnlinePlayer(equipment);
 
         ItemJar? equipped = player.GetHeldItem(out Page page);
@@ -134,6 +140,9 @@ partial class EventDispatcher
     private void PlayerLifeOnOnPreDeath(PlayerLife playerLife)
     {
         WarfarePlayer player = _playerService.GetOnlinePlayer(playerLife.player);
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!player.Data.TryRemove("LastDamagePlayerRequested", out object? v) || v is not DamagePlayerRequested reqArgs)
             return;
 
@@ -165,6 +174,8 @@ partial class EventDispatcher
         if (unturnedPlayer.life.isDead)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         WarfarePlayer player = _playerService.GetOnlinePlayer(unturnedPlayer);
         if (!player.Data.TryRemove("LastDamagePlayerRequested", out object? v) || v is not DamagePlayerRequested reqArgs)
             return;
@@ -185,6 +196,8 @@ partial class EventDispatcher
     /// </summary>
     private void UseableConsumeableOnPlayerPerformingAid(Player instigator, Player target, ItemConsumeableAsset asset, ref bool shouldAllow)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         WarfarePlayer medic = _playerService.GetOnlinePlayer(instigator);
         WarfarePlayer player = _playerService.GetOnlinePlayer(target);
 
@@ -224,12 +237,13 @@ partial class EventDispatcher
     /// </summary>
     private void UseableConsumeableOnPlayerPerformedAid(Player instigator, Player target)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         WarfarePlayer medic = _playerService.GetOnlinePlayer(instigator);
         WarfarePlayer player = _playerService.GetOnlinePlayer(target);
 
         if (!player.Data.TryRemove("LastAidRequested", out object? v) || v is not AidPlayerRequested reqArgs)
             return;
-
 
         PlayerLife targetLife = player.UnturnedPlayer.life;
         PlayerAided args = new PlayerAided
@@ -258,6 +272,8 @@ partial class EventDispatcher
     /// </summary>
     private void PlayerQuestsOnGroupChanged(PlayerQuests sender, CSteamID oldGroupId, EPlayerGroupRank oldGroupRank, CSteamID newGroupId, EPlayerGroupRank newGroupRank)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         WarfarePlayer? player = _playerService.GetOnlinePlayerOrNull(sender);
         if (player == null)
         {
@@ -301,6 +317,8 @@ partial class EventDispatcher
     /// </summary>
     private void PlayerEquipmentUseableChanged(PlayerEquipment equipment)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         WarfarePlayer player = _playerService.GetOnlinePlayer(equipment);
 
         Page dequippedPage = default;

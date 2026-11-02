@@ -15,6 +15,8 @@ public static class TransportConnectionPoolHelper
     /// </summary>
     public static PooledTransportConnectionList Claim(int capacity = -1)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!GameThread.IsCurrent)
         {
             return FallbackCreateConnectionList(capacity <= 0 ? 32 : capacity);

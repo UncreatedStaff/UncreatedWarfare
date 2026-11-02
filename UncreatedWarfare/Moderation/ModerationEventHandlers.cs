@@ -524,7 +524,7 @@ internal sealed class ModerationEventHandlers : IHostedService, IAsyncEventListe
         if (!isNew)
             return;
 
-        LanguageSetEnumerator set = _translations.TranslationService.SetOf.AllPlayersExcept(entry.Player);
+        LanguageSetEnumerator set = _translations.TranslationService.SetOf.AllPlayersExcept(entry.Player, LanguageSets.DefaultTranslationOptions | TranslationOptions.ConsiderIMGUI);
 
         switch (entry)
         {

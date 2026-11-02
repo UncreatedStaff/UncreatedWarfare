@@ -1,7 +1,6 @@
 using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
-using System;
 using System.Reflection;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Util;
@@ -51,6 +50,8 @@ internal sealed class VehicleExplodeAddInstigatorPatch : IHarmonyPatch
     /// </summary>
     private static bool Prefix(InteractableVehicle __instance)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         WarfareVehicle vehicle = WarfareModule.Singleton.ServiceProvider.Resolve<VehicleService>().GetVehicle(__instance);
 
         EDamageOrigin lastDamageType = vehicle.DamageTracker.LatestDamageCause.GetValueOrDefault(EDamageOrigin.Unknown);

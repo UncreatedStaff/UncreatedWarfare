@@ -51,6 +51,8 @@ public class AmmoCrate : ITemporaryAmmoStorage
 
     private void HandleSupplyCountUpdated()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         AmmoCountUpdatedIntl?.Invoke(AmmoCount);
     }
 
@@ -62,6 +64,8 @@ public class AmmoCrate : ITemporaryAmmoStorage
     public void SubtractAmmo(float ammoCount)
     {
         GameThread.AssertCurrent();
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         AmmoCount = Mathf.Max(AmmoCount - ammoCount, 0);
         if (AmmoCount == 0)

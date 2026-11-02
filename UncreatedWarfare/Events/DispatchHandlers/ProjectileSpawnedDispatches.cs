@@ -15,6 +15,8 @@ partial class EventDispatcher
     /// </summary>
     private void OnProjectileSpawned(UseableGun sender, GameObject projectile)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ItemGunAsset? gun = sender.equippedGunAsset;
         if (gun == null)
         {

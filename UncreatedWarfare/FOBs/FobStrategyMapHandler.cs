@@ -41,6 +41,8 @@ internal class FobStrategyMapHandler :
         if (fob is not IFobStrategyMapTackHandler handler)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         foreach (StrategyMap map in _strategyMapManager.StrategyMaps)
         {
             if (replace)

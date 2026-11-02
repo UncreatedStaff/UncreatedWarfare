@@ -180,11 +180,7 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
         else
         {
             ToastMessage msg2 = message;
-            UniTask.Create(async () =>
-            {
-                await UniTask.SwitchToMainThread(Player.DisconnectToken);
-                QueueIntl(in msg2);
-            });
+            GameThread.Queue(() => QueueIntl(in msg2));
         }
     }
 
@@ -200,11 +196,7 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
         {
             ToastMessageInfo info2 = info;
             ToastMessageStyle style2 = style;
-            UniTask.Create(async () =>
-            {
-                await UniTask.SwitchToMainThread(Player.DisconnectToken);
-                SkipExpirationIntl(info2.Channel, style2);
-            });
+            GameThread.Queue(() => SkipExpirationIntl(info2.Channel, style2));
         }
     }
 
@@ -214,23 +206,21 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
         if (GameThread.IsCurrent)
             SkipExpirationIntl(channel, (ToastMessageStyle)(-1));
         else
-        {
-            UniTask.Create(async () =>
-            {
-                await UniTask.SwitchToMainThread(Player.DisconnectToken);
-                SkipExpirationIntl(channel, (ToastMessageStyle)(-1));
-            });
-        }
+            GameThread.Queue(() => SkipExpirationIntl(channel, (ToastMessageStyle)(-1)));
     }
 
     public void BlockChannelFor(int channel, float time)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         CheckOutOfBoundsChannel(channel);
         Channels[channel].BlockFor(time);
     }
     
     public bool TryFindCurrentToastInfo(ToastMessageStyle style, out ToastMessage message)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         CheckOutOfBoundsToastMessageStyle(style);
 
         ToastMessageInfo info = ToastMessages[(int)style];
@@ -256,6 +246,9 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
     {
         if (!HasToasts || Hold || _hudManager.IsHidden(Player))
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         float time = Time.realtimeSinceStartup;
         bool updateAny = false;
         for (int i = 0; i < Channels.Length; ++i)
@@ -288,6 +281,11 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
 
     private void SkipExpirationIntl(int channel, ToastMessageStyle style)
     {
+        if (!Player.IsOnline)
+            return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ToastMessageChannel chnl = Channels[channel];
         if (!chnl.HasToasts || style != (ToastMessageStyle)(-1) && chnl.CurrentMessage.Style != style)
             return;
@@ -297,6 +295,11 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
     
     private void QueueIntl(in ToastMessage message)
     {
+        if (!Player.IsOnline)
+            return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         ToastMessageInfo info = ToastMessages[(int)message.Style];
         ToastMessageChannel channel = Channels[info.Channel];
 
@@ -310,6 +313,8 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
 
     private void Send(in ToastMessage message, ToastMessageInfo info, ToastMessageChannel channel)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         HasToasts = true;
         channel.UpdateInfo(in message, info);
         if (info.UI != null)

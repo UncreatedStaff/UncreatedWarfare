@@ -92,10 +92,14 @@ public class SquadSignEvents :
 
     private void UpdateSignsForRelevantTeam(Team team)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _signInstancer.UpdateSigns<SquadSignInstanceProvider>((_, provider) => provider.Team == team);
     }
     private void UpdateSignsForRelevantSquad(Squad squad)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _signInstancer.UpdateSigns<SquadSignInstanceProvider>((_, provider) => provider.Team == squad.Team && provider.SquadNumber == squad.TeamIdentificationNumber);
     }
 }

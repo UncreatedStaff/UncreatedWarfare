@@ -32,6 +32,8 @@ public class MainBaseBuildables : ILayoutHostedService
 
     public void ClearOtherBuildables()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // if zones are missing this could be bad.
         if (_zoneStore.SearchZone(ZoneType.MainBase) == null)
             throw new InvalidOperationException("Main base not found.");

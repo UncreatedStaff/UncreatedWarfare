@@ -1,8 +1,8 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Teams;
 
@@ -16,15 +16,17 @@ public class BarricadeStateStore : ILayoutHostedService, IDisposable
 {
     private readonly YamlDataStore<List<BarricadeStateSave>> _dataStore;
     private readonly WarfareModule _warfareModule;
+    private readonly MapScheduler _mapScheduler;
 
     /// <summary>
     /// List of all buildable save.
     /// </summary>
     /// <remarks>Use <see cref="SaveAsync(CancellationToken)"/> or <see cref="SaveAsync(ItemBarricadeAsset,byte[],FactionInfo?,CancellationToken)"/> when making changes.</remarks>
     public IReadOnlyList<BarricadeStateSave> Spawns => _dataStore.Data;
-    public BarricadeStateStore(WarfareModule warfareModule, ILogger<BarricadeStateStore> logger)
+    public BarricadeStateStore(WarfareModule warfareModule, ILogger<BarricadeStateStore> logger, MapScheduler mapScheduler)
     {
         _warfareModule = warfareModule;
+        _mapScheduler = mapScheduler;
         _dataStore = new YamlDataStore<List<BarricadeStateSave>>(GetFolderPath(), logger, reloadOnFileChanged: true, () => []);
         ReloadSaves();
     }
@@ -45,10 +47,15 @@ public class BarricadeStateStore : ILayoutHostedService, IDisposable
     }
     private string GetFolderPath()
     {
+        if (!_mapScheduler.HasSelectedMap)
+        {
+            throw new InvalidOperationException("Map not yet selected.");
+        }
+
         return Path.Combine(
             _warfareModule.HomeDirectory,
             "Maps",
-            Provider.map,
+            _mapScheduler.Current.DisplayName,
             "BarricadeStateSaves.yml"
         );
     }
@@ -59,6 +66,8 @@ public class BarricadeStateStore : ILayoutHostedService, IDisposable
     public async UniTask SaveAsync(ItemBarricadeAsset asset, byte[] state, FactionInfo? faction = null, CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread(token);
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         int existingRecordIndex = _dataStore.Data.FindIndex(s => s.BarricadeAsset.MatchAsset(asset) && (faction == null || string.Equals(s.FactionId, faction.FactionId)));
 
@@ -90,6 +99,8 @@ public class BarricadeStateStore : ILayoutHostedService, IDisposable
     {
         await UniTask.SwitchToMainThread(token);
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int removed = _dataStore.Data.RemoveAll(s => s.BarricadeAsset.Guid == save.BarricadeAsset.Guid);
 
         _dataStore.Save();
@@ -108,6 +119,8 @@ public class BarricadeStateStore : ILayoutHostedService, IDisposable
     /// <returns></returns>
     public BarricadeStateSave? FindBarricadeSave(ItemPlaceableAsset matchingAsset, FactionInfo? matchingfactionInfo = null)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (matchingfactionInfo is { IsDefaultFaction: false })
         {
             BarricadeStateSave? save = _dataStore.Data.FirstOrDefault(s => s.BarricadeAsset.MatchAsset(matchingAsset)
@@ -125,6 +138,8 @@ public class BarricadeStateStore : ILayoutHostedService, IDisposable
     public async UniTask SaveAsync(CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread(token);
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         _dataStore.Save();
     }

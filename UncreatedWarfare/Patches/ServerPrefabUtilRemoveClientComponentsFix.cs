@@ -2,7 +2,6 @@ using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Emit;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
-using System;
 using System.Reflection;
 using System.Reflection.Emit;
 using TMPro;
@@ -45,12 +44,6 @@ internal sealed class ServerPrefabUtilRemoveClientComponentsFix : IHarmonyPatch
         _target = null;
     }
 
-    // major tech debt: This prefix patch is doing too much
-    
-    // SDG.Unturned.InteractableVehicle
-    /// <summary>
-    /// Overriding prefix of <see cref="InteractableVehicle.explode"/> to set an instigator.
-    /// </summary>
     private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions, MethodBase method, ILGenerator generator)
     {
         TranspileContext ctx = new TranspileContext(method, generator, instructions);

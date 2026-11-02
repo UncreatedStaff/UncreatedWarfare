@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
 using System.Text.Json;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Interaction.Commands;
@@ -8,7 +7,6 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Kits.Loadouts;
 using Uncreated.Warfare.Kits.Requests;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players.Skillsets;
@@ -98,7 +96,6 @@ internal sealed class KitCopyFromCommand : IExecutableCommand
         kit.Type = source.Type;
         kit.MinRequiredSquadMembers = source.MinRequiredSquadMembers;
         kit.RequiresSquad = source.RequiresSquad;
-        kit.CreditCost = source.CreditCost;
         kit.PremiumCost = source.PremiumCost;
         kit.SquadLevel = source.SquadLevel;
         kit.FactionId = source.Faction.PrimaryKey;

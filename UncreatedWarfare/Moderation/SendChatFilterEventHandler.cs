@@ -1,8 +1,6 @@
-using System;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Interaction;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Moderation;
@@ -25,6 +23,8 @@ internal class SendChatFilterEventHandler : IEventListener<PlayerChatRequested>
     {
         if (e.HasAdminChatPermissions)
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         string? match = ChatFilterHelper.GetChatFilterViolation(e.Text);
         if (match == null)

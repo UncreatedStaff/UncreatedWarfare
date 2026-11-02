@@ -167,6 +167,8 @@ internal class PlayerEnemyTerritoryWarningComponent : IPlayerComponent,
 
     private void CheckIsMainCamping()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (CalculateIsMainCamping())
         {
             if (!_isMainCamping)

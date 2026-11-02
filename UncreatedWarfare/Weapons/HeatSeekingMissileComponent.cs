@@ -34,6 +34,8 @@ public class HeatSeekingMissileComponent : MonoBehaviour
 
     public void Initialize(GameObject projectile, Player firer, IServiceProvider serviceProvider, float projectileSpeed, float responsiveness, float guidanceRampTime)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         AssetConfiguration assetConfig = serviceProvider.GetRequiredService<AssetConfiguration>();
         _fxSilent = assetConfig.GetAssetLink<EffectAsset>("Effects:Projectiles:HeatSeekingSilent");
         _fxSound = assetConfig.GetAssetLink<EffectAsset>("Effects:Projectiles:HeatSeekingSound");
@@ -98,6 +100,9 @@ public class HeatSeekingMissileComponent : MonoBehaviour
             Destroy(this);
             return;
         }
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (_controller.LockOnTarget != null)
         {
             if (_previousTarget == null)

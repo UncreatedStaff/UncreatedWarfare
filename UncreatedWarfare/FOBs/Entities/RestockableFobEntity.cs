@@ -94,6 +94,8 @@ public class RestockableBuildableFobEntity<TInfo> : BuildableFobEntity<TInfo> wh
         if (_refillState == null)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         BarricadeDrop drop = Buildable.GetDrop<BarricadeDrop>();

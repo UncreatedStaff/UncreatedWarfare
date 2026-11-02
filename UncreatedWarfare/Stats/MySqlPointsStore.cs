@@ -1,4 +1,3 @@
-using System;
 using Uncreated.Warfare.Database.Manual;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Extensions;
@@ -676,9 +675,8 @@ public class MySqlPointsStore : IPointsStore
         }
         else
         {
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
                 UpdatePointsCacheChange(pl, factionId, xp, creds);
             });
         }

@@ -253,6 +253,8 @@ public class WorldIconInfo : ITransformObject, IDisposable
 
     internal void UpdateRelevantPlayers(IPlayerService playerService, ref PooledTransportConnectionList? list, ref ITransportConnection? single, in Vector3 spawnPosition, HashSet<ITransportConnection> workingHashSetCache)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         bool distanceLimited = IsDistanceLimited;
         Vector3 pos = default;
         if (TargetPlayer != null)
@@ -340,6 +342,8 @@ public class WorldIconInfo : ITransformObject, IDisposable
 
     private bool CheckPositionRelevant(in Vector3 sendPos, in Vector3 spawnPos)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         float dist = RelevanceDistance;
         int area = RelevanceRegions;
         if (dist > 32768f && area == byte.MaxValue)
@@ -379,6 +383,8 @@ public class WorldIconInfo : ITransformObject, IDisposable
     /// <remarks>Includes <see cref="Offset"/>.</remarks>
     internal bool TryGetSpawnPosition(out Vector3 position)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Vector3 v3;
         if (TransformableObject != null)
         {
@@ -438,6 +444,8 @@ public class WorldIconInfo : ITransformObject, IDisposable
     internal void SpawnEffect(IPlayerService playerService, float rt, bool updatePosition, WarfarePlayer? forPlayer = null)
     {
         GameThread.AssertCurrent();
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         if (!Effect.TryGetAsset(out EffectAsset? effect))
         {

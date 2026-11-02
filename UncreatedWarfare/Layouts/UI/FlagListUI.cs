@@ -43,6 +43,8 @@ public class FlagListUI : UnturnedUI
 
     public void ClearFromPlayer(WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (GetData<FlagListUIData>(player.Steam64) is not { HasUI: true } data)
             return;
         
@@ -72,6 +74,8 @@ public class FlagListUI : UnturnedUI
     [SkipLocalsInit]
     public void UpdateFlagList(IFlagListUIProvider flagProvider, ITicketTracker ticketTracker, string layoutName, LanguageSet set, bool ticketsOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // hide UI for invalid teams
         if (!set.Team.IsValid)
         {

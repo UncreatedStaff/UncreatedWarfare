@@ -1,4 +1,3 @@
-using System;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Stats;

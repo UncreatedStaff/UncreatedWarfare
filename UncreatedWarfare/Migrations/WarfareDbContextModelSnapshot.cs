@@ -449,9 +449,9 @@ namespace Uncreated.Warfare.Migrations
 
                     b.Property<DateTime>("DateFavorited")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime(6)")
+                        .HasColumnType("TIMESTAMP")
                         .HasColumnName("DateFavoritedUTC")
-                        .HasDefaultValueSql("'2026-07-27 00:00:00'");
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.HasKey("KitId", "Steam64");
 
@@ -624,6 +624,33 @@ namespace Uncreated.Warfare.Migrations
                     b.ToTable("kits_layouts");
                 });
 
+            modelBuilder.Entity("Uncreated.Warfare.Models.Kits.KitLevelAccess", b =>
+                {
+                    b.Property<int>("SeasonId")
+                        .HasColumnType("int")
+                        .HasColumnName("Season");
+
+                    b.Property<ulong>("Steam64")
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("Steam64");
+
+                    b.Property<string>("Class")
+                        .HasColumnType("enum('Squadleader','Rifleman','Medic','Breacher','AutomaticRifleman','Grenadier','MachineGunner','LAT','HAT','Marksman','Sniper','APRifleman','CombatEngineer','Crewman','Pilot','SpecOps')");
+
+                    b.Property<byte>("Level")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("datetime")
+                        .HasColumnName("GivenAt");
+
+                    b.HasKey("SeasonId", "Steam64", "Class", "Level");
+
+                    b.HasIndex("Steam64");
+
+                    b.ToTable("kits_level_access");
+                });
+
             modelBuilder.Entity("Uncreated.Warfare.Models.Kits.KitModel", b =>
                 {
                     b.Property<uint>("PrimaryKey")
@@ -644,9 +671,6 @@ namespace Uncreated.Warfare.Migrations
 
                     b.Property<ulong>("Creator")
                         .HasColumnType("bigint unsigned");
-
-                    b.Property<int>("CreditCost")
-                        .HasColumnType("int");
 
                     b.Property<bool>("Disabled")
                         .HasColumnType("tinyint(1)");
@@ -952,9 +976,16 @@ namespace Uncreated.Warfare.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)");
 
+                    b.Property<string>("MapEmoji")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
                     b.Property<int>("ReleasedSeasonId")
                         .HasColumnType("int")
                         .HasColumnName("SeasonReleased");
+
+                    b.Property<bool>("RotationEnabled")
+                        .HasColumnType("tinyint(1)");
 
                     b.Property<uint>("Team1FactionId")
                         .HasColumnType("int unsigned")
@@ -1476,7 +1507,7 @@ namespace Uncreated.Warfare.Migrations
 
                     b.Property<string>("Type")
                         .IsRequired()
-                        .HasColumnType("enum('Fob','AmmoCrate','RepairStation','Fortification','Emplacement')");
+                        .HasColumnType("enum('Fob','FobAmmoVendor','RepairStation','Fortification','Emplacement','AmmoCrate')");
 
                     b.Property<double>("UseTimeSeconds")
                         .HasColumnType("double");
@@ -2191,6 +2222,27 @@ namespace Uncreated.Warfare.Migrations
                         .IsRequired();
 
                     b.Navigation("PlayerData");
+                });
+
+            modelBuilder.Entity("Uncreated.Warfare.Models.Kits.KitLevelAccess", b =>
+                {
+                    b.HasOne("Uncreated.Warfare.Models.Seasons.SeasonData", "Season")
+                        .WithMany()
+                        .HasForeignKey("SeasonId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Uncreated.Warfare.Models.Users.WarfareUserData", "PlayerData")
+                        .WithMany()
+                        .HasForeignKey("Steam64")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Kit");
+
+                    b.Navigation("PlayerData");
+
+                    b.Navigation("Season");
                 });
 
             modelBuilder.Entity("Uncreated.Warfare.Models.Kits.KitModel", b =>

@@ -87,7 +87,7 @@ public class DatabaseStatsBuffer : IDisposable, IHostedService, ILayoutHostedSer
     {
         try
         {
-            _logger.LogConditional("Flushing stats data...");
+            _logger.LogDebug($"Flushing stats data: {_statEntries.Count} ct");
             while (_statEntries.TryDequeue(out object value))
             {
                 switch (value)

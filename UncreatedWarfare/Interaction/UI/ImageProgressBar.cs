@@ -1,6 +1,4 @@
 using DanielWillett.ReflectionTools;
-using SDG.NetTransport;
-using System;
 using System.Globalization;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Presets;
@@ -70,9 +68,8 @@ public class ImageProgressBar : ILabel
         {
             string url2 = url;
             ITransportConnection c2 = connection;
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
                 Foreground.SetImage(c2, url2);
                 Background.SetImage(c2, url2);
             });
@@ -94,9 +91,8 @@ public class ImageProgressBar : ILabel
         {
             float p2 = progress;
             ITransportConnection c2 = connection;
-            UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread();
                 SetProgressIntl(c2, p2);
             });
         }

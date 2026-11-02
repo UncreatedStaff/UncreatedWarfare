@@ -35,6 +35,8 @@ public class FallingCrateEffect<TFobType> : FallingBuildableEffect<FallingCrateA
     /// <inheritdoc />
     protected internal override void Initialize(ref FallingCrateArgs<TFobType> args, in FallingEffectInstantiationArgs config, Action? onSettle)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         base.Initialize(ref args, in config, onSettle);
 
         _onDroppedNearFob = args.OnDroppedNearFob;
@@ -73,6 +75,8 @@ public class FallingCrateEffect<TFobType> : FallingBuildableEffect<FallingCrateA
 
     protected override void OnConverted(IBuildable buildable)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         base.OnConverted(buildable);
 
         SupplyCrate supplyCrate = new SupplyCrate(
@@ -104,6 +108,8 @@ public class FallingCrateEffect<TFobType> : FallingBuildableEffect<FallingCrateA
             LogMessage($"Trigger hit {other.name}, but already has a stack.");
             return;
         }
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         GameObject @object = other.gameObject;
         if (@object.layer != LayerMasks.LOGIC)
@@ -148,7 +154,9 @@ public class FallingCrateEffect<TFobType> : FallingBuildableEffect<FallingCrateA
         // if it moves after this it'll recheck next time its still
         if (_hasCheckedNearbyFobs || timeStill < 0.3f)
             return;
-        
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _hasCheckedNearbyFobs = true;
         Func<TFobType, bool>? selector = null;
 

@@ -8,7 +8,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Primitives;
 using System;
-using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -32,22 +31,35 @@ public interface IKitAccessService
     bool ArePrimaryKitsGloballyAccessible { get; }
 
     /// <summary>
-    /// Check if a player has access to a kit.
+    /// Check if a player has access to a specific kit.
     /// </summary>
+    /// <remarks>This doesn't check for level-based access.</remarks>
     /// <param name="steam64">The player's Steam64 ID.</param>
     /// <param name="primaryKey">The primary key of the kit.</param>
     /// <returns><see langword="true"/> if they have access to the kit, otherwise <see langword="false"/>.</returns>
     Task<bool> HasAccessAsync(CSteamID steam64, uint primaryKey, CancellationToken token = default);
 
     /// <summary>
+    /// Check if a player has access to a primary kit at the given <paramref name="class"/> and <paramref name="level"/>.
+    /// </summary>
+    /// <param name="steam64">The player's Steam64 ID.</param>
+    /// <param name="class">The class of the kit.</param>
+    /// <param name="level">The level of the kit. For example, "USA Rifleman 1" has a level of <c>1</c>.</param>
+    /// <param name="season">The ID of the season to check for, defaulting to <see cref="WarfareModule.Season"/> if excluded.</param>
+    /// <returns><see langword="true"/> if they have access to the kit, otherwise <see langword="false"/>.</returns>
+    Task<bool> HasAccessAsync(CSteamID steam64, Class @class, int level, int season, CancellationToken token = default);
+
+    /// <summary>
     /// Get a list of the primary keys of all kits a player owns.
     /// </summary>
+    /// <remarks>This doesn't check for level-based access.</remarks>
     /// <param name="steam64">The player's Steam64 ID.</param>
     Task<IList<uint>> GetOwnedKitKeysAsync(CSteamID steam64, CancellationToken token = default);
 
     /// <summary>
-    /// Get the access type a player has for a kit.
+    /// Get the access type a player has for a specific kit.
     /// </summary>
+    /// <remarks>This doesn't check for level-based access.</remarks>
     /// <param name="steam64">The player's Steam64 ID.</param>
     /// <param name="primaryKey">The primary key of the kit.</param>
     /// <returns>The type of access if they have access, otherwise <see langword="null"/>.</returns>
@@ -56,6 +68,7 @@ public interface IKitAccessService
     /// <summary>
     /// Set the access type a player has for a kit.
     /// </summary>
+    /// <remarks>This doesn't check for level-based access.</remarks>
     /// <param name="steam64">The player's Steam64 ID.</param>
     /// <param name="primaryKey">The primary key of the kit.</param>
     /// <param name="access">The access to give the player. If this is <see langword="null"/>, the player's access will be removed</param>
@@ -65,20 +78,35 @@ public interface IKitAccessService
     /// <summary>
     /// Set the access type a player has for multiple kits at once.
     /// </summary>
+    /// <remarks>This doesn't check for level-based access.</remarks>
     /// <param name="steam64">The player's Steam64 ID.</param>
     /// <param name="primaryKeys">List of primary keys to apply changes to.</param>
     /// <param name="access">The access to give the player. If this is <see langword="null"/>, the player's access will be removed</param>
     /// <returns><see langword="true"/> if the player's access was updated for at least one kit, otherwise <see langword="false"/> if no changes were made.</returns>
     Task<bool[]> UpdateAccessBulkAsync(CSteamID steam64, uint[] primaryKeys, KitAccessType? access, CSteamID instigator, CancellationToken token = default);
+
+    /// <summary>
+    /// Check if a player has access to a primary kit at the given <paramref name="class"/> and <paramref name="level"/>.
+    /// </summary>
+    /// <param name="steam64">The player's Steam64 ID.</param>
+    /// <param name="class">The class of the kit.</param>
+    /// <param name="level">The level of the kit. For example, "USA Rifleman 1" has a level of <c>1</c>.</param>
+    /// <param name="season">The ID of the season to check for, defaulting to <see cref="WarfareModule.Season"/> if excluded.</param>
+    /// <param name="hasAccess">Whether or not the player should have access to the kit.</param>
+    /// <returns><see langword="true"/> if the player's access was updated, otherwise <see langword="false"/> if no changes were made.</returns>
+    Task<bool> UpdateAccessAsync(CSteamID steam64, Class @class, int level, int season, bool hasAccess, CSteamID instigator, CancellationToken token = default);
 }
 
 public delegate void KitAccessUpdatedHandler(CSteamID steam64, uint kitPrimaryKey, KitAccessType? access);
+public delegate void KitLevelAccessUpdatedHandler(CSteamID steam64, PublicKitLevel levelAccess, bool hasAccess);
 
 [GenerateRpcSource]
 public partial class MySqlKitAccessService : IKitAccessService, IDisposable
 {
     private string? _updateQuery;
     private string? _deleteQuery;
+    private string? _updateLevelQuery;
+    private string? _deleteLevelQuery;
     private string? _bulkDeleteQueryStart;
     private string? _bulkDeleteQueryEnd;
     private string? _bulkUpdateQueryStart;
@@ -101,6 +129,12 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
     /// Invoked when a player's kit access is updated remotely or locally.
     /// </summary>
     public event KitAccessUpdatedHandler? PlayerAccessUpdated;
+
+    /// <summary>
+    /// Invoked when a player's kit level access is updated remotely or locally.
+    /// </summary>
+    /// <remarks>Only invoked for access updates for the current season.</remarks>
+    public event KitLevelAccessUpdatedHandler? PlayerLevelAccessUpdated;
 
     /// <inheritdoc />
     public bool ArePrimaryKitsGloballyAccessible { get; private set; }
@@ -232,7 +266,7 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
             if (access.HasValue)
             {
                 if (_updateQuery == null)
-                    GenerateRawQueries();
+                    GenerateKitAccessRawQueries();
 
                 int updated;
                 try
@@ -264,26 +298,11 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
             else
             {
                 if (_deleteQuery == null)
-                    GenerateRawQueries();
+                    GenerateKitAccessRawQueries();
 
                 int updated = await _dbContext.Database
                     .ExecuteSqlRawAsync(_deleteQuery, [ s64, primaryKey ], token)
                     .ConfigureAwait(false);
-
-                // update UI and cache
-                if (WarfareModule.IsActive && _playerService?.GetOnlinePlayerOrNullThreadSafe(steam64) is { } player)
-                {
-                    KitPlayerComponent component = player.Component<KitPlayerComponent>();
-                    component.RemoveAccessibleKit(primaryKey);
-                
-                    if (_kitSignService != null && _kitDataStore != null && _kitDataStore.CachedKitsByKey.TryGetValue(primaryKey, out Kit? kit))
-                    {
-                        if (_loadoutService != null && kit.Type == KitType.Loadout)
-                            component.RemoveLoadout(kit.Key);
-
-                        _kitSignService.UpdateSigns(kit, player);
-                    }
-                }
 
                 // invoke local/remote events
                 await ReceiveAccessUpdated(s64, primaryKey, instigator.m_SteamID, null);
@@ -294,6 +313,97 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
                 catch (RpcException ex)
                 {
                     _logger.LogError(ex, "Error sending access removed.");
+                }
+
+                return updated != 0;
+            }
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> UpdateAccessAsync(CSteamID steam64, Class @class, int level, int season, bool hasAccess, CSteamID instigator, CancellationToken token = default)
+    {
+        if (@class <= Class.Unarmed || @class > ClassConverter.MaxClass)
+            throw new ArgumentOutOfRangeException(nameof(@class));
+        if (season < 0)
+            throw new ArgumentOutOfRangeException(nameof(season));
+        if (level < 0)
+            throw new ArgumentOutOfRangeException(nameof(level));
+
+        if (!WarfareModule.IsActive && _rpcConnectionService?.TryGetWarfareConnection(out IModularRpcRemoteConnection? connection) is true)
+        {
+            try
+            {
+                return await SendUpdateLevelAccess(connection, steam64.m_SteamID, @class, level, season, hasAccess, instigator.m_SteamID, token);
+            }
+            catch (RpcNoConnectionsException) { }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Unable to set level access remotely (higher chance of concurrency issues).");
+            }
+        }
+
+        DateTime now = DateTime.UtcNow;
+
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            ulong s64 = steam64.m_SteamID;
+
+            if (hasAccess)
+            {
+                if (_updateLevelQuery == null)
+                    GenerateKitLevelAccessRawQueries();
+
+                int updated;
+                try
+                {
+                    updated = await _dbContext.Database
+                        .ExecuteSqlRawAsync(_updateLevelQuery, [ s64, season, EnumUtility.GetName(@class), level, now ], token)
+                        .ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    // probably kit not found (foreign key constraint violation)
+                    _logger.LogWarning(ex, "Error updating kit level access.");
+                    updated = 0;
+                }
+
+                // invoke local/remote events
+                await ReceiveLevelAccessUpdated(s64, @class, level, season, instigator.m_SteamID, true);
+                try
+                {
+                    await SendLevelAccessUpdated(s64, @class, level, season, instigator.m_SteamID, true).IgnoreNoConnections();
+                }
+                catch (RpcException ex)
+                {
+                    _logger.LogError(ex, "Error sending level access updated.");
+                }
+
+                return updated != 0;
+            }
+            else
+            {
+                if (_deleteLevelQuery == null)
+                    GenerateKitLevelAccessRawQueries();
+
+                int updated = await _dbContext.Database
+                    .ExecuteSqlRawAsync(_deleteLevelQuery, [ s64, season, @class, level ], token)
+                    .ConfigureAwait(false);
+
+                // invoke local/remote events
+                await ReceiveLevelAccessUpdated(s64, @class, level, season, instigator.m_SteamID, false);
+                try
+                {
+                    await SendLevelAccessUpdated(s64, @class, level, season, instigator.m_SteamID, false).IgnoreNoConnections();
+                }
+                catch (RpcException ex)
+                {
+                    _logger.LogError(ex, "Error sending level access removed.");
                 }
 
                 return updated != 0;
@@ -336,7 +446,7 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
             if (access.HasValue)
             {
                 if (_bulkUpdateQueryStart == null || _bulkUpdateQueryEnd == null)
-                    GenerateRawQueries();
+                    GenerateKitAccessRawQueries();
 
                 // build bulk update query (INSERT ON DUPLICATE KEY UPDATE)
                 StringBuilder query = new StringBuilder(_bulkUpdateQueryStart, _bulkUpdateQueryStart.Length + _bulkUpdateQueryEnd.Length + 19 * primaryKeys.Length);
@@ -422,7 +532,7 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
             else
             {
                 if (_bulkDeleteQueryStart == null || _bulkDeleteQueryEnd == null)
-                    GenerateRawQueries();
+                    GenerateKitAccessRawQueries();
 
                 bool[] mask = new bool[primaryKeys.Length];
                 Array.Fill(mask, true);
@@ -541,13 +651,49 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
         }
     }
 
+    /// <inheritdoc />
+    public async Task<bool> HasAccessAsync(CSteamID steam64, Class @class, int level, int season, CancellationToken token = default)
+    {
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            ulong s64 = steam64.m_SteamID;
+            bool access = await _dbContext.KitLevelAccess
+                .AsNoTracking()
+                .Where(x => x.SeasonId == season && x.Steam64 == s64 && x.Class == @class && x.Level == level)
+                .AnyAsync(token)
+                .ConfigureAwait(false);
+
+            if (WarfareModule.IsActive && _playerService?.GetOnlinePlayerOrNullThreadSafe(steam64) is { } player)
+            {
+                PublicKitLevel lvl = new PublicKitLevel(@class, level);
+
+                KitPlayerComponent? comp = player.ComponentOrNull<KitPlayerComponent>();
+                if (access)
+                {
+                    comp?.AddAccessibleKit(lvl);
+                }
+                else
+                {
+                    comp?.RemoveAccessibleKit(lvl);
+                }
+            }
+
+            return access;
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
     [MemberNotNull(nameof(_updateQuery))]
     [MemberNotNull(nameof(_bulkUpdateQueryStart))]
     [MemberNotNull(nameof(_bulkUpdateQueryEnd))]
     [MemberNotNull(nameof(_deleteQuery))]
     [MemberNotNull(nameof(_bulkDeleteQueryStart))]
     [MemberNotNull(nameof(_bulkDeleteQueryEnd))]
-    private void GenerateRawQueries()
+    private void GenerateKitAccessRawQueries()
     {
         IEntityType type = _dbContext.Model.FindEntityType(typeof(KitAccess));
 
@@ -556,10 +702,11 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
         IProperty accessTypeProp = type.FindProperty(typeof(KitAccess).GetProperty(nameof(KitAccess.AccessType), BindingFlags.Public | BindingFlags.Instance)!);
         IProperty timestampProp = type.FindProperty(typeof(KitAccess).GetProperty(nameof(KitAccess.Timestamp), BindingFlags.Public | BindingFlags.Instance)!);
 
-        string kitIdColumn = kitIdProp.GetColumnName(StoreObjectIdentifier.SqlQuery(type));
-        string steam64Column = steam64Prop.GetColumnName(StoreObjectIdentifier.SqlQuery(type));
-        string accessTypeColumn = accessTypeProp.GetColumnName(StoreObjectIdentifier.SqlQuery(type));
-        string timestampColumn = timestampProp.GetColumnName(StoreObjectIdentifier.SqlQuery(type));
+        StoreObjectIdentifier id = StoreObjectIdentifier.SqlQuery(type);
+        string kitIdColumn = kitIdProp.GetColumnName(id);
+        string steam64Column = steam64Prop.GetColumnName(id);
+        string accessTypeColumn = accessTypeProp.GetColumnName(id);
+        string timestampColumn = timestampProp.GetColumnName(id);
 
         string tableName = type.GetTableName();
 
@@ -574,6 +721,35 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
         _deleteQuery = $"DELETE FROM `{tableName}` WHERE `{steam64Column}` = {{0}} AND `{kitIdColumn}` = {{1}};";
         _bulkDeleteQueryStart = $"DELETE FROM `{tableName}` WHERE `{steam64Column}` = {{0}} AND `{kitIdColumn}` IN (";
         _bulkDeleteQueryEnd = ");";
+    }
+
+    [MemberNotNull(nameof(_updateLevelQuery))]
+    [MemberNotNull(nameof(_deleteLevelQuery))]
+    private void GenerateKitLevelAccessRawQueries()
+    {
+        IEntityType type = _dbContext.Model.FindEntityType(typeof(KitLevelAccess));
+
+        IProperty classProp = type.FindProperty(typeof(KitLevelAccess).GetProperty(nameof(KitLevelAccess.Class), BindingFlags.Public | BindingFlags.Instance)!);
+        IProperty levelProp = type.FindProperty(typeof(KitLevelAccess).GetProperty(nameof(KitLevelAccess.Level), BindingFlags.Public | BindingFlags.Instance)!);
+        IProperty seasonProp = type.FindProperty(typeof(KitLevelAccess).GetProperty(nameof(KitLevelAccess.SeasonId), BindingFlags.Public | BindingFlags.Instance)!);
+        IProperty steam64Prop = type.FindProperty(typeof(KitLevelAccess).GetProperty(nameof(KitLevelAccess.Steam64), BindingFlags.Public | BindingFlags.Instance)!);
+        IProperty timestampProp = type.FindProperty(typeof(KitLevelAccess).GetProperty(nameof(KitLevelAccess.Timestamp), BindingFlags.Public | BindingFlags.Instance)!);
+
+        StoreObjectIdentifier id = StoreObjectIdentifier.SqlQuery(type);
+        string classColumn = classProp.GetColumnName(id);
+        string levelColumn = levelProp.GetColumnName(id);
+        string seasonColumn = seasonProp.GetColumnName(id);
+        string steam64Column = steam64Prop.GetColumnName(id);
+        string timestampColumn = timestampProp.GetColumnName(id);
+
+        string tableName = type.GetTableName();
+
+        // upsert access and update type if necessary.
+        string queryStart = $"INSERT INTO `{tableName}` ({MySqlSnippets.ColumnList(steam64Column, seasonColumn, classColumn, levelColumn, timestampColumn)}) VALUES ";
+        string queryEnd = $" AS `new` ON DUPLICATE KEY UPDATE `{tableName}`.`{timestampColumn}` = `new`.`{timestampColumn}`;";
+
+        _updateLevelQuery = queryStart + "({0}, {1}, {2}, {3}, {4})" + queryEnd;
+        _deleteLevelQuery = $"DELETE FROM `{tableName}` WHERE `{steam64Column}` = {{0}} AND `{seasonColumn}` = {{1}} `{classColumn}` = {{2}} AND `{levelColumn}` = {{3}};";
     }
 
     void IDisposable.Dispose()
@@ -600,6 +776,24 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
         if (_eventDispatcher == null || _kitDataStore == null)
             return;
 
+        // update caches
+        if (_playerService?.GetOnlinePlayerOrNullThreadSafe(player) is { } pl)
+        {
+            KitPlayerComponent component = pl.Component<KitPlayerComponent>();
+            if (newAccess.HasValue)
+                component.AddAccessibleKit(primaryKey);
+            else
+                component.RemoveAccessibleKit(primaryKey);
+
+            if (!newAccess.HasValue && _kitSignService != null && _kitDataStore.CachedKitsByKey.TryGetValue(primaryKey, out Kit? cachedKit))
+            {
+                if (_loadoutService != null && cachedKit.Type == KitType.Loadout)
+                    component.RemoveLoadout(cachedKit.Key);
+
+                _kitSignService.UpdateSigns(cachedKit, pl);
+            }
+        }
+
         Kit? kit = await _kitDataStore.QueryKitAsync(primaryKey, KitInclude.Default);
         if (kit == null)
             return;
@@ -609,7 +803,54 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
             Kit = kit,
             HasAccess = newAccess.HasValue,
             AccessType = newAccess.GetValueOrDefault(),
-            PlayerId = steamId
+            PlayerId = steamId,
+            Instigator = new CSteamID(instigator)
+        });
+        
+        //if (newAccess.HasValue)
+        //    // todo: ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(CultureInfo.InvariantCulture) + " GIVEN ACCESS TO " + kitId + ", REASON: " + newAccess.Value, instigator);
+        //else
+        //    // todo: ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(CultureInfo.InvariantCulture) + " DENIED ACCESS TO " + kitId, instigator);
+    }
+
+    [RpcReceive]
+    public async Task ReceiveLevelAccessUpdated(ulong player, Class @class, int level, int season, ulong instigator, bool newAccess)
+    {
+        _logger.LogDebug($"Kit level access updated for {player} on {@class} {level} (s{season}): \"{(newAccess ? "has access" : "no access")}\".");
+
+        if (season != WarfareModule.Season)
+            return;
+
+        PublicKitLevel levelInfo = new PublicKitLevel(@class, level);
+        CSteamID steamId = new CSteamID(player);
+        try
+        {
+            PlayerLevelAccessUpdated?.Invoke(steamId, levelInfo, newAccess);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error thrown while invoking PlayerLevelAccessUpdated.");
+        }
+
+        if (_eventDispatcher == null)
+            return;
+
+        // update cache
+        if (_playerService?.GetOnlinePlayerOrNullThreadSafe(player) is { } pl)
+        {
+            KitPlayerComponent component = pl.Component<KitPlayerComponent>();
+            if (newAccess)
+                component.AddAccessibleKit(levelInfo);
+            else
+                component.RemoveAccessibleKit(levelInfo);
+        }
+
+        await _eventDispatcher.Value.DispatchEventAsync(new KitLevelAccessUpdated
+        {
+            KitLevel = levelInfo,
+            HasAccess = newAccess,
+            PlayerId = steamId,
+            Instigator = new CSteamID(instigator)
         });
         
         //if (newAccess.HasValue)
@@ -656,6 +897,16 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
             if (_eventDispatcher == null)
                 continue;
 
+            // update cache
+            if (_playerService?.GetOnlinePlayerOrNullThreadSafe(player) is { } pl)
+            {
+                KitPlayerComponent component = pl.Component<KitPlayerComponent>();
+                if (newAccess.HasValue)
+                    component.AddAccessibleKit(pk);
+                else
+                    component.RemoveAccessibleKit(pk);
+            }
+
             Kit kit = kits.Find(x => x.Key == pk);
             if (kit == null)
                 return;
@@ -665,7 +916,8 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
                 PlayerId = steamId,
                 HasAccess = newAccess.HasValue,
                 AccessType = newAccess.GetValueOrDefault(),
-                Kit = kit
+                Kit = kit,
+                Instigator = new CSteamID(instigator)
             });
 
             //if (newAccess.HasValue)
@@ -687,6 +939,12 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
     }
 
     [RpcReceive]
+    private Task<bool> ReceiveUpdateLevelAccess(ulong player, Class @class, int level, int season, bool newAccess, ulong instigator, CancellationToken token = default)
+    {
+        return UpdateAccessAsync(new CSteamID(player), @class, level, season, newAccess, new CSteamID(instigator), token);
+    }
+
+    [RpcReceive]
     private Task<bool[]> ReceiveUpdateAccessBulk(ulong player, uint[] primaryKeys, KitAccessType? newAccess, ulong instigator, CancellationToken token = default)
     {
         return UpdateAccessBulkAsync(new CSteamID(player), primaryKeys, newAccess, new CSteamID(instigator), token);
@@ -695,12 +953,67 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
     [RpcSend(nameof(ReceiveUpdateAccess))]
     protected partial RpcTask<bool> SendUpdateAccess(IModularRpcRemoteConnection connection, ulong player, uint primaryKey, KitAccessType? newAccess, ulong instigator, CancellationToken token = default);
 
+    [RpcSend(nameof(ReceiveUpdateLevelAccess))]
+    protected partial RpcTask<bool> SendUpdateLevelAccess(IModularRpcRemoteConnection connection, ulong player, Class @class, int level, int season, bool newAccess, ulong instigator, CancellationToken token = default);
+
     [RpcSend(nameof(ReceiveUpdateAccessBulk)), RpcTimeout(1 * Timeouts.Minutes)]
     protected partial RpcTask<bool[]> SendUpdateAccessBulk(IModularRpcRemoteConnection connection, ulong player, uint[] primaryKeys, KitAccessType? newAccess, ulong instigator, CancellationToken token = default);
 
     [RpcSend(nameof(ReceiveAccessUpdated)), RpcTimeout(3 * Timeouts.Seconds), RpcFireAndForget]
     protected partial RpcTask SendAccessUpdated(ulong player, uint primaryKey, ulong instigator, KitAccessType? newAccess);
 
+    [RpcSend(nameof(ReceiveLevelAccessUpdated)), RpcTimeout(3 * Timeouts.Seconds), RpcFireAndForget]
+    protected partial RpcTask SendLevelAccessUpdated(ulong player, Class @class, int level, int season, ulong instigator, bool newAccess);
+
     [RpcSend(nameof(ReceiveAccessUpdatedBulk)), RpcTimeout(5 * Timeouts.Seconds), RpcFireAndForget]
     protected partial RpcTask SendAccessUpdatedBulk(ulong player, uint[] primaryKeys, ulong instigator, KitAccessType? newAccess);
+}
+
+/// <summary>
+/// Extensions for implementations of <see cref="IKitAccessService"/>.
+/// </summary>
+public static class KitAccessServiceExtensions
+{
+    extension (IKitAccessService service)
+    {
+        /// <inheritdoc cref="IKitAccessService.HasAccessAsync(CSteamID,Class,int,int,CancellationToken)"/>
+        public Task<bool> HasAccessAsync(CSteamID steam64, Class @class, int level, CancellationToken token = default)
+        {
+            return service.HasAccessAsync(steam64, @class, level, WarfareModule.Season, token);
+        }
+
+        /// <inheritdoc cref="IKitAccessService.UpdateAccessAsync(CSteamID,Class,int,int,bool,CSteamID,CancellationToken)"/>
+        public Task<bool> UpdateAccessAsync(CSteamID steam64, Class @class, int level, bool hasAccess, CSteamID instigator, CancellationToken token = default)
+        {
+            return service.UpdateAccessAsync(steam64, @class, level, WarfareModule.Season, hasAccess, instigator, token);
+        }
+
+        /// <param name="levelInfo">Class and level of the kit to update.</param>
+        /// <inheritdoc cref="IKitAccessService.HasAccessAsync(CSteamID,Class,int,int,CancellationToken)"/>
+        public Task<bool> HasAccessAsync(CSteamID steam64, PublicKitLevel levelInfo, CancellationToken token = default)
+        {
+            return service.HasAccessAsync(steam64, levelInfo.Class, levelInfo.Level, WarfareModule.Season, token);
+        }
+
+        /// <param name="levelInfo">Class and level of the kit to update.</param>
+        /// <inheritdoc cref="IKitAccessService.UpdateAccessAsync(CSteamID,Class,int,int,bool,CSteamID,CancellationToken)"/>
+        public Task<bool> UpdateAccessAsync(CSteamID steam64, PublicKitLevel levelInfo, bool hasAccess, CSteamID instigator, CancellationToken token = default)
+        {
+            return service.UpdateAccessAsync(steam64, levelInfo.Class, levelInfo.Level, WarfareModule.Season, hasAccess, instigator, token);
+        }
+
+        /// <param name="levelInfo">Class and level of the kit to update.</param>
+        /// <inheritdoc cref="IKitAccessService.HasAccessAsync(CSteamID,Class,int,int,CancellationToken)"/>
+        public Task<bool> HasAccessAsync(CSteamID steam64, PublicKitLevel levelInfo, int season, CancellationToken token = default)
+        {
+            return service.HasAccessAsync(steam64, levelInfo.Class, levelInfo.Level, season, token);
+        }
+
+        /// <param name="levelInfo">Class and level of the kit to update.</param>
+        /// <inheritdoc cref="IKitAccessService.UpdateAccessAsync(CSteamID,Class,int,int,bool,CSteamID,CancellationToken)"/>
+        public Task<bool> UpdateAccessAsync(CSteamID steam64, PublicKitLevel levelInfo, int season, bool hasAccess, CSteamID instigator, CancellationToken token = default)
+        {
+            return service.UpdateAccessAsync(steam64, levelInfo.Class, levelInfo.Level, season, hasAccess, instigator, token);
+        }
+    }
 }

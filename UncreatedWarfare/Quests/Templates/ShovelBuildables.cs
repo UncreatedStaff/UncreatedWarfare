@@ -4,6 +4,9 @@ using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Events.Models.Fobs.Shovelables;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests.Parameters;
@@ -86,7 +89,7 @@ public class ShovelBuildables : QuestTemplate<ShovelBuildables, ShovelBuildables
             return Text;
         }
     }
-    public class Tracker : QuestTracker //, todo INotifyBuildableBuilt //IEventListener<BuildableBuilt>
+    public class Tracker : QuestTracker, IEventListener<ShovelableBuilt>
     {
         private readonly int _targetAmount;
         private readonly QuestParameterValue<Guid> _base;
@@ -104,20 +107,22 @@ public class ShovelBuildables : QuestTemplate<ShovelBuildables, ShovelBuildables
             _buildable = state.Buildable ?? EnumParameterTemplate<ShovelableType>.WildcardInclusive;
         }
 
-        // todo [EventListener(RequiresMainThread = false)] // todo use actual event listener
-        // todo void INotifyBuildableBuilt.OnBuildableBuilt(UCPlayer player, BuildableData buildable)
-        // todo {
-        // todo     if (player.Steam64 != Player.Steam64
-        // todo         || !_type.IsMatch(buildable.Type)
-        // todo         || !buildable.Foundation.TryGetAsset(out ItemAsset? asset)
-        // todo         || !_base.IsMatch<ItemPlaceableAsset>(asset))
-        // todo     {
-        // todo         return;
-        // todo     }
-        // todo 
-        // todo     Interlocked.Increment(ref _amount);
-        // todo     InvokeUpdate();
-        // todo }
+        [EventListener(RequiresMainThread = false)]
+        void IEventListener<ShovelableBuilt>.HandleEvent(ShovelableBuilt e, IServiceProvider serviceProvider)
+        {
+            if (!_buildable.IsMatch(e.Shovelable.Info.ConstuctionType))
+                return;
+
+            if (!e.Shovelable.Info.Foundation.TryGetAsset(out ItemAsset? asset) || !_base.IsMatch<ItemPlaceableAsset>(asset))
+                return;
+
+            float contribution = e.Shovelable.Builders.GetContributionPercentage(Player.Steam64, true);
+            if (contribution < 0.15f)
+                return;
+
+            Interlocked.Increment(ref _amount);
+            InvokeUpdate();
+        }
 
         public override void WriteProgress(Utf8JsonWriter writer)
         {

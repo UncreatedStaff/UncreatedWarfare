@@ -70,6 +70,8 @@ public class BunkerFob : ResourceFob, IFobStrategyMapTackHandler, IDamageableFob
 
     public void MarkBuilt(IBuildable newBuildable)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         IsBuilt = true;
         HasBeenRebuilt = true;
         Buildable = newBuildable;
@@ -89,6 +91,8 @@ public class BunkerFob : ResourceFob, IFobStrategyMapTackHandler, IDamageableFob
 
     public void MarkUnbuilt(IBuildable newBuildable)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         IsBuilt = false;
         Buildable = newBuildable;
         UpdateIcon();

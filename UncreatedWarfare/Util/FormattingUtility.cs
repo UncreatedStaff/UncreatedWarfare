@@ -29,6 +29,8 @@ public static class FormattingUtility
     /// <remarks><c>[HH:]MM:SS</c></remarks>
     public static string ToCountdownString(int seconds, bool withHours)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // tested 09/13/2024
         int minutes = seconds / 60;
         seconds %= 60;
@@ -96,6 +98,8 @@ public static class FormattingUtility
     /// <returns>Total amount of time. <see cref="Timeout.InfiniteTimeSpan"/> is returned if <paramref name="input"/> is permanent.</returns>
     public static TimeSpan ParseTimespan(string input)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (input.StartsWith("perm", StringComparison.OrdinalIgnoreCase))
             return Timeout.InfiniteTimeSpan;
 
@@ -137,6 +141,8 @@ public static class FormattingUtility
     /// </summary>
     public static string ToTimeString(TimeSpan timeSpan, int figures = -1, bool space = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (timeSpan.Ticks < 0L)
             return "permanent";
         
@@ -254,6 +260,8 @@ public static class FormattingUtility
     /// </summary>
     public static bool TryParseAny(string input, IFormatProvider provider, Type type, out object? value)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         value = null!;
 
         if (input is null || type is null)
@@ -614,6 +622,8 @@ public static class FormattingUtility
     [Pure]
     public static unsafe string RemoveRichText(string str, int index = 0, int length = -1, RemoveRichTextOptions options = RemoveRichTextOptions.All)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         CheckTags();
         if (index >= str.Length || index < 0)
             throw new ArgumentOutOfRangeException(nameof(index));

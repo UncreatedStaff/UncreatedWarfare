@@ -1,4 +1,3 @@
-using System;
 using System.Globalization;
 using System.Text;
 using Uncreated.Warfare.Interaction.Requests;
@@ -15,7 +14,7 @@ using Uncreated.Warfare.Vehicles.WarfareVehicles;
 namespace Uncreated.Warfare.Signs;
 
 [SignPrefix("vbs_")]
-public class VehicleBaySignInstanceProvider : ISignInstanceProvider, IRequestable<VehicleSpawner>
+public class VehicleBaySignInstanceProvider : BaseSignInstanceProvider, IRequestable<VehicleSpawner>
 {
     private static readonly StringBuilder LoadoutSignBuffer = new StringBuilder(230);
 
@@ -34,22 +33,35 @@ public class VehicleBaySignInstanceProvider : ISignInstanceProvider, IRequestabl
     public WarfareVehicleInfo? Vehicle { get; private set; }
 
     /// <inheritdoc />
-    bool ISignInstanceProvider.CanBatchTranslate => Vehicle == null || Spawn == null || Vehicle.Class == Class.None;
+    public override TranslationOptions GroupOptions
+    {
+        get
+        {
+            if (Vehicle == null || Spawn == null || Vehicle.Class == Class.None || Vehicle.UnlockRequirements.Count == 0)
+            {
+                return LanguageSets.DefaultTranslationOptions | TranslationOptions.PerPlayerTranslation;
+            }
+
+            return LanguageSets.DefaultTranslationOptions;
+        }
+    }
 
     /// <inheritdoc />
-    string ISignInstanceProvider.FallbackText => _fallbackAsset != null ? _fallbackAsset.vehicleName : _fallbackGuid.ToString("N", CultureInfo.InvariantCulture);
+    public override string FallbackText => _fallbackAsset != null ? _fallbackAsset.vehicleName : _fallbackGuid.ToString("N", CultureInfo.InvariantCulture);
 
     public VehicleBaySignInstanceProvider(
+        BarricadeDrop barricade,
         VehicleSpawnerService spawnerService,
         ITranslationValueFormatter valueFormatter,
         TranslationInjection<VehicleBaySignTranslations> translations)
+    : base(barricade)
     {
         _spawnerService = spawnerService;
         _valueFormatter = valueFormatter;
         _translations = translations.Value;
     }
 
-    public void Initialize(BarricadeDrop barricade, string extraInfo, IServiceProvider serviceProvider)
+    public override void Initialize(BarricadeDrop barricade, string extraInfo, IServiceProvider serviceProvider)
     {
         if (Guid.TryParseExact(extraInfo, "N", out _fallbackGuid))
             _fallbackAsset = Assets.find<VehicleAsset>(_fallbackGuid);
@@ -57,8 +69,10 @@ public class VehicleBaySignInstanceProvider : ISignInstanceProvider, IRequestabl
         _barricade = barricade;
     }
 
-    public string Translate(ITranslationValueFormatter formatter, IServiceProvider serviceProvider, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
+    public override string Translate(ITranslationValueFormatter formatter, IServiceProvider serviceProvider, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Spawn ??= _spawnerService.GetSpawner(_barricade.instanceID);
         Vehicle ??= Spawn?.VehicleInfo;
 
@@ -80,6 +94,8 @@ public class VehicleBaySignInstanceProvider : ISignInstanceProvider, IRequestabl
 
     private void TranslateVehicleBaySign(StringBuilder bldr, WarfareVehicleInfo info, VehicleSpawner spawner, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         string name = info.ShortName ?? info.VehicleAsset.GetAsset()?.FriendlyName ?? info.VehicleAsset.ToString();
         bldr.AppendColorized(name, VbsNameColor)
             .Append('\n')

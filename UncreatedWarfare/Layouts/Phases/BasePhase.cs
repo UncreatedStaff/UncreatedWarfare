@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using System;
 using System.Globalization;
 using System.Linq;
 using Uncreated.Warfare.Events;
@@ -161,6 +160,8 @@ public abstract class BasePhase<TTeamSettings> : ILayoutPhase,
         if (!_anyInvincible)
             return;
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (ShouldBeInvincible(player))
         {
             // Re-initialization of GodPlayerComponent will reset this if this is the last phase
@@ -179,6 +180,8 @@ public abstract class BasePhase<TTeamSettings> : ILayoutPhase,
     [EventListener(MustRunInstantly = true)]
     void IEventListener<PlayerExitedZone>.HandleEvent(PlayerExitedZone e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // code for PhaseTeamSettings.Grounded
         if (!IsActive || e.Player.IsDisconnecting || !e.Player.IsOnline || e.Zone.Type != ZoneType.MainBase)
             return;

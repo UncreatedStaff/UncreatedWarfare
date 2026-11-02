@@ -113,6 +113,8 @@ public static class LevelObjectUtility
     /// </summary>
     public static Vector3 GetPosition(LevelObject @object)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (@object.transform is not null)
         {
             return @object.transform.position;
@@ -153,6 +155,8 @@ public static class LevelObjectUtility
     [Pure]
     public static ObjectInfo FindObject(Transform transform)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (transform == null)
@@ -221,6 +225,8 @@ public static class LevelObjectUtility
     [Pure]
     public static ObjectInfo FindObject(uint instanceId, byte expectedRegionX, byte expectedRegionY)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         SurroundingRegionsIterator iterator = RegionUtility.EnumerateRegions(expectedRegionX, expectedRegionY);
@@ -328,6 +334,8 @@ public static class LevelObjectUtility
     [Pure]
     public static ObjectInfo GetClosestObjectInRange(Vector3 position, float radius, IAssetLink<ObjectAsset> asset, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
@@ -367,6 +375,8 @@ public static class LevelObjectUtility
     [Pure]
     public static ObjectInfo GetClosestObject(Vector3 position, IAssetLink<ObjectAsset> asset, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
@@ -409,6 +419,8 @@ public static class LevelObjectUtility
     [Pure]
     public static ObjectInfo GetClosestObjectInRange(Vector3 position, float radius, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
@@ -444,6 +456,8 @@ public static class LevelObjectUtility
     [Pure]
     public static ObjectInfo GetClosestObject(Vector3 position, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
@@ -484,6 +498,8 @@ public static class LevelObjectUtility
     [Pure]
     public static ObjectInfo GetClosestObjectWhere(Vector3 position, float radius, Predicate<LevelObject> objectSelector, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (objectSelector == null)
             throw new ArgumentNullException(nameof(objectSelector));
 
@@ -523,6 +539,8 @@ public static class LevelObjectUtility
     [Pure]
     public static ObjectInfo GetClosestObjectWhere(Vector3 position, Predicate<LevelObject> objectSelector, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (objectSelector == null)
             throw new ArgumentNullException(nameof(objectSelector));
 
@@ -566,6 +584,8 @@ public static class LevelObjectUtility
     [Pure]
     public static int CountObjectsWhere(Vector3 position, float radius, Predicate<LevelObject> objectSelector, int max = -1, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (objectSelector == null)
             throw new ArgumentNullException(nameof(objectSelector));
 
@@ -607,6 +627,8 @@ public static class LevelObjectUtility
     [Pure]
     public static int CountObjectsWhere(Predicate<LevelObject> objectSelector, int max = -1)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (objectSelector == null)
             throw new ArgumentNullException(nameof(objectSelector));
 
@@ -643,6 +665,8 @@ public static class LevelObjectUtility
     [Pure]
     public static int CountObjectsInRange(Vector3 position, float radius, IAssetLink<ObjectAsset> asset, int max = -1, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
@@ -684,6 +708,8 @@ public static class LevelObjectUtility
     [Pure]
     public static int CountObjects(IAssetLink<ObjectAsset> asset, int max = -1)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
@@ -719,6 +745,8 @@ public static class LevelObjectUtility
     [Pure]
     public static int CountObjectsInRange(Vector3 position, float radius, int max = -1, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         float sqrRadius = radius * radius;

@@ -86,12 +86,16 @@ internal sealed class ReplicateConfigPatches : IHarmonyPatch
     // apply and undo global config changes
     private static void OnStartAcceptingPlayer()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         PlayerReplicatedConfigManager? manager = WarfareModule.Singleton.ServiceProvider.ResolveOptional<PlayerReplicatedConfigManager>();
         manager?.Apply(null);
     }
 
     private static Exception OnDoneAcceptingPlayer(Exception __exception)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         PlayerReplicatedConfigManager? manager = WarfareModule.Singleton.ServiceProvider.ResolveOptional<PlayerReplicatedConfigManager>();
         manager?.Undo(null);
         return __exception;

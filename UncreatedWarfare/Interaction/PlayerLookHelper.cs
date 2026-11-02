@@ -17,8 +17,6 @@ namespace Uncreated.Warfare.Interaction;
 #endif
 public class PlayerLookComponent : MonoBehaviour, IPlayerComponent
 {
-    private IPlayerService _playerService;
-
     private const float PositionTolerance = 0.0001f;
     private const float RotationTolerance = 0.000001f;
 
@@ -39,8 +37,6 @@ public class PlayerLookComponent : MonoBehaviour, IPlayerComponent
 
     public void Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
-        _playerService = serviceProvider.GetRequiredService<IPlayerService>();
-
 #if SPAWN_LOOK_DEBUG_PARTICLE
         _debugParticleAsset = Assets.find<EffectAsset>(new Guid("6093290a7ce049b8a418be7fd79e89a0"));
 #endif
@@ -71,6 +67,8 @@ public class PlayerLookComponent : MonoBehaviour, IPlayerComponent
 
     private void Update()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         bool log = (++c % 50) == 0;
 
         const int obstructionCheckEveryTicks = 4;

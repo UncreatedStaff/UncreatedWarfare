@@ -397,7 +397,6 @@ public partial class LoadoutService
                 kit.Skillsets.Clear();
                 kit.Faction = null;
                 kit.FactionId = null;
-                kit.CreditCost = 0;
                 kit.PremiumCost = LoadoutCost;
                 kit.Type = KitType.Loadout;
                 kit.Disabled = true;
@@ -446,6 +445,8 @@ public partial class LoadoutService
     {
         if (_loadoutItemsConfiguration == null || kit.Class == Class.Unarmed)
             return;
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         IReadOnlyList<IItem> items = _loadoutItemsConfiguration.GetDefaultsForClass(kit.Class);
         

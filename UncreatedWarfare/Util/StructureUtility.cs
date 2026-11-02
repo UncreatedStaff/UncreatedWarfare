@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using Uncreated.Warfare.Configuration;
+﻿using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Util.Region;
 
 namespace Uncreated.Warfare.Util;
@@ -68,6 +66,8 @@ public static class StructureUtility
     /// </summary>
     public static void SetOwnerOrGroup(StructureDrop drop, CSteamID? owner = null, CSteamID? group = null)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
         if (!owner.HasValue && !group.HasValue)
             return;
@@ -106,6 +106,8 @@ public static class StructureUtility
     [Pure]
     public static StructureInfo FindStructure(uint instanceId, byte expectedRegionX, byte expectedRegionY)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         SurroundingRegionsIterator iterator = RegionUtility.EnumerateRegions(expectedRegionX, expectedRegionY);
@@ -131,6 +133,8 @@ public static class StructureUtility
     [Pure]
     public static StructureInfo FindStructure(uint instanceId, IAssetLink<ItemStructureAsset> expectedAsset, Vector3 expectedPosition)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         StructureInfo foundByPosition = default;
@@ -245,6 +249,8 @@ public static class StructureUtility
     [Pure]
     public static StructureInfo GetClosestStructureInRange(Vector3 position, float radius, IAssetLink<ItemStructureAsset> asset, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
@@ -283,6 +289,8 @@ public static class StructureUtility
     [Pure]
     public static StructureInfo GetClosestStructure(Vector3 position, IAssetLink<ItemStructureAsset> asset, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
@@ -325,6 +333,8 @@ public static class StructureUtility
     [Pure]
     public static StructureInfo GetClosestStructureInRange(Vector3 position, float radius, ulong group, IAssetLink<ItemStructureAsset> asset, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
@@ -367,6 +377,8 @@ public static class StructureUtility
     [Pure]
     public static StructureInfo GetClosestStructure(Vector3 position, ulong group, IAssetLink<ItemStructureAsset> asset, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
@@ -412,6 +424,8 @@ public static class StructureUtility
     [Pure]
     public static StructureInfo GetClosestStructureInRange(Vector3 position, float radius, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
      
         float closestSqrDist = 0f;
@@ -446,6 +460,8 @@ public static class StructureUtility
     [Pure]
     public static StructureInfo GetClosestStructure(Vector3 position, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
      
         float closestSqrDist = 0f;
@@ -484,6 +500,8 @@ public static class StructureUtility
     [Pure]
     public static StructureInfo GetClosestStructureInRange(Vector3 position, float radius, ulong group, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
      
         float closestSqrDist = 0f;
@@ -522,6 +540,8 @@ public static class StructureUtility
     [Pure]
     public static StructureInfo GetClosestStructure(Vector3 position, ulong group, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
      
         float closestSqrDist = 0f;
@@ -565,6 +585,8 @@ public static class StructureUtility
     [Pure]
     public static StructureInfo GetClosestStructureWhere(Vector3 position, float radius, Predicate<StructureDrop> structureSelector, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (structureSelector == null)
             throw new ArgumentNullException(nameof(structureSelector));
 
@@ -603,6 +625,8 @@ public static class StructureUtility
     [Pure]
     public static StructureInfo GetClosestStructureWhere(Vector3 position, Predicate<StructureDrop> structureSelector, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (structureSelector == null)
             throw new ArgumentNullException(nameof(structureSelector));
 
@@ -645,6 +669,8 @@ public static class StructureUtility
     [Pure]
     public static StructureInfo GetClosestStructureWhere(Vector3 position, float radius, ulong group, Predicate<StructureDrop> structureSelector, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (structureSelector == null)
             throw new ArgumentNullException(nameof(structureSelector));
 
@@ -687,6 +713,8 @@ public static class StructureUtility
     [Pure]
     public static StructureInfo GetClosestStructureWhere(Vector3 position, ulong group, Predicate<StructureDrop> structureSelector, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (structureSelector == null)
             throw new ArgumentNullException(nameof(structureSelector));
 
@@ -733,6 +761,8 @@ public static class StructureUtility
     [Pure]
     public static int CountStructuresWhere(Vector3 position, float radius, Predicate<StructureDrop> structureSelector, int max = -1, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (structureSelector == null)
             throw new ArgumentNullException(nameof(structureSelector));
 
@@ -773,6 +803,8 @@ public static class StructureUtility
     [Pure]
     public static int CountStructuresWhere(Predicate<StructureDrop> structureSelector, int max = -1)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (structureSelector == null)
             throw new ArgumentNullException(nameof(structureSelector));
 
@@ -809,6 +841,8 @@ public static class StructureUtility
     [Pure]
     public static int CountStructuresInRange(Vector3 position, float radius, IAssetLink<ItemStructureAsset> asset, int max = -1, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
@@ -849,6 +883,8 @@ public static class StructureUtility
     [Pure]
     public static int CountStructures(IAssetLink<ItemStructureAsset> asset, int max = -1)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
@@ -884,6 +920,8 @@ public static class StructureUtility
     [Pure]
     public static int CountStructuresInRange(Vector3 position, float radius, int max = -1, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         float sqrRadius = radius * radius;

@@ -97,6 +97,8 @@ public class LanguageService : IHostedService
     /// <remarks>Always returns a value.</remarks>
     public CultureInfo GetDefaultCulture(LanguageInfo? language)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (language == null)
             return GetDefaultCulture();
 
@@ -125,6 +127,8 @@ public class LanguageService : IHostedService
     /// </summary>
     public bool TryGetCultureInfo(string? code, [NotNullWhen(true)] out CultureInfo? cultureInfo)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (code == null)
         {
             cultureInfo = null;
@@ -161,6 +165,8 @@ public class LanguageService : IHostedService
     /// </summary>
     public void GetDefaultLocaleSettings(string steamLanguage, LanguagePreferences preferences, PlayerSummary? summary, out LanguageInfo language, out CultureInfo culture, out TimeZoneInfo timeZone)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (_languageDataStoreCache == null)
             throw new NotSupportedException();
 

@@ -44,7 +44,7 @@ internal sealed class RequestUpgradeCommand : IExecutableCommand
             throw Context.Reply(_requestTranslations.RequestNoTarget);
         }
 
-        ISignInstanceProvider? provider = _signInstancer.GetSignProvider(barricade);
+        BaseSignInstanceProvider? provider = _signInstancer.GetSignProvider(barricade);
         if (provider is not KitSignInstanceProvider { LoadoutNumber: > 0 } kitSign)
         {
             throw Context.Reply(_requestTranslations.RequestNoTarget);

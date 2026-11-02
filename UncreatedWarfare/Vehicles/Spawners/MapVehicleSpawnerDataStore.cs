@@ -30,6 +30,8 @@ public sealed class MapVehicleSpawnerDataStore : IVehicleSpawnerDataStore
 
     public IReadOnlyList<VehicleSpawnerInfo> ReadSpawners(string? levelPath = null)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         string mapFolder = Path.Combine(levelPath ?? Level.info.path, "Uncreated");
 
         string vehicleBaysPath = Path.Combine(mapFolder, "vehicle_bays.json");

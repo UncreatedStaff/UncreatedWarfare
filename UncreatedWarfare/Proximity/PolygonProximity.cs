@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Uncreated.Warfare.Util;
@@ -56,7 +54,9 @@ public class PolygonProximity : IPolygonProximity, IFormattable
     {
         if (points.Length < 3)
             throw new ArgumentException("Must have at least 3 points.", nameof(points));
-        
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _points = points;
         _minHeight = minHeight.HasValue && float.IsFinite(minHeight.Value) ? minHeight.Value : float.NaN;
         _maxHeight = maxHeight.HasValue && float.IsFinite(maxHeight.Value) ? maxHeight.Value : float.NaN;
@@ -147,6 +147,8 @@ public class PolygonProximity : IPolygonProximity, IFormattable
     /// <inheritdoc />
     public bool TestPoint(in Vector3 position)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Vector3 size = _bounds.size;
         Vector3 min = _bounds.min;
 
@@ -170,6 +172,8 @@ public class PolygonProximity : IPolygonProximity, IFormattable
     /// <inheritdoc />
     public bool TestPoint(in Vector2 position)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Vector3 size = _bounds.size;
         Vector3 min = _bounds.min;
 
@@ -185,6 +189,8 @@ public class PolygonProximity : IPolygonProximity, IFormattable
 
     private bool IsInsidePolygon(float x, float y)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int intersects = 0;
         for (int i = 0; i < Lines.Length; i++)
         {
@@ -213,6 +219,8 @@ public class PolygonProximity : IPolygonProximity, IFormattable
 
     internal static void CalculateAreaAndVolume(Transform transform, float? minHeight, float? maxHeight, IReadOnlyList<Vector2> points, out float area, out float surfaceArea, out float volume)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         float ttlArea = 0;

@@ -270,6 +270,8 @@ public static class BarricadeUtility
     [Pure]
     public static BarricadeInfo FindBarricade(uint instanceId, byte expectedRegionX, byte expectedRegionY)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
         if (BarricadeManager.regions != null)
         {
@@ -308,6 +310,8 @@ public static class BarricadeUtility
     /// <exception cref="InvalidBarricadeStateException"/>
     public static void SetState(BarricadeDrop barricade, byte[] state)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         VerifyState(state, barricade.asset);
@@ -364,6 +368,8 @@ public static class BarricadeUtility
     /// <exception cref="ArgumentException"><paramref name="barricade"/> is not a sign.</exception>
     public static void SetServersideSignText(BarricadeDrop barricade, ReadOnlySpan<char> text)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
         
         if (barricade.interactable is not InteractableSign sign)
@@ -408,6 +414,8 @@ public static class BarricadeUtility
     /// <exception cref="InvalidBarricadeStateException"/>
     public static void VerifyState(ReadOnlySpan<byte> state, ItemBarricadeAsset barricade)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         switch (barricade.build)
         {
             case EBuild.DOOR:
@@ -538,6 +546,8 @@ public static class BarricadeUtility
     /// <exception cref="InvalidBarricadeStateException"/>
     public static void WriteOwnerAndGroup(Span<byte> state, BarricadeDrop drop, ulong owner, ulong group)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         EBuild build = drop.asset.build;
 
         // write owner and group to interactables where needed
@@ -567,6 +577,8 @@ public static class BarricadeUtility
     /// </summary>
     public static int GetClientsideStorageStateLength(InteractableStorage storage)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!storage.isDisplay)
         {
             return 16;
@@ -592,6 +604,8 @@ public static class BarricadeUtility
     /// <exception cref="OverflowException">Displayed item's state or display metadata is longer than 255 elements.</exception>
     public static int WriteClientsideStorageState(Span<byte> output, InteractableStorage storage, CSteamID owner, CSteamID group)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (output.Length < (!storage.isDisplay ? 16 : 27))
             throw new ArgumentException("Output not long enough for state.", nameof(output));
 
@@ -676,6 +690,8 @@ public static class BarricadeUtility
     /// <returns><see langword="true"/> if the barricade state was replicated, otherwise <see langword="false"/> (due to reflection failure or out of bounds barricade).</returns>
     public static bool ReplicateBarricadeState(BarricadeDrop drop, IPlayerService playerService, SignInstancer? signs, byte[]? stateToReplicate = null)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (SendUpdateState == null || !BarricadeManager.tryGetRegion(drop.model, out byte x, out byte y, out ushort plant, out _))
             return false;
 
@@ -763,6 +779,8 @@ public static class BarricadeUtility
     /// <returns><see langword="true"/> if the barricade state was replicated, otherwise <see langword="false"/>.</returns>
     public static bool SetOwnerOrGroup(BarricadeDrop drop, IPlayerService playerService, SignInstancer? signs, CSteamID? owner = null, CSteamID? group = null)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
         if (!owner.HasValue && !group.HasValue)
             return false;
@@ -924,6 +942,8 @@ public static class BarricadeUtility
     [Pure]
     public static BarricadeInfo FindBarricade(uint instanceId, IAssetLink<ItemBarricadeAsset> expectedAsset, Vector3 expectedPosition)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         BarricadeInfo foundByPosition = default;
@@ -1060,6 +1080,8 @@ public static class BarricadeUtility
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
@@ -1098,6 +1120,8 @@ public static class BarricadeUtility
     {
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         GameThread.AssertCurrent();
 
@@ -1142,6 +1166,8 @@ public static class BarricadeUtility
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
@@ -1183,6 +1209,8 @@ public static class BarricadeUtility
     {
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         GameThread.AssertCurrent();
 
@@ -1226,6 +1254,8 @@ public static class BarricadeUtility
     [Pure]
     public static BarricadeInfo GetClosestBarricadeInRange(Vector3 position, float radius, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
      
         float closestSqrDist = 0f;
@@ -1261,6 +1291,8 @@ public static class BarricadeUtility
     [Pure]
     public static BarricadeInfo GetClosestBarricade(Vector3 position, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
@@ -1300,6 +1332,8 @@ public static class BarricadeUtility
     [Pure]
     public static BarricadeInfo GetClosestBarricadeInRange(Vector3 position, float radius, ulong group, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
      
         float closestSqrDist = 0f;
@@ -1339,6 +1373,8 @@ public static class BarricadeUtility
     [Pure]
     public static BarricadeInfo GetClosestBarricade(Vector3 position, ulong group, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
@@ -1386,6 +1422,8 @@ public static class BarricadeUtility
         if (barricadeSelector == null)
             throw new ArgumentNullException(nameof(barricadeSelector));
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
@@ -1424,6 +1462,8 @@ public static class BarricadeUtility
     {
         if (barricadeSelector == null)
             throw new ArgumentNullException(nameof(barricadeSelector));
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         GameThread.AssertCurrent();
 
@@ -1468,6 +1508,8 @@ public static class BarricadeUtility
         if (barricadeSelector == null)
             throw new ArgumentNullException(nameof(barricadeSelector));
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         float closestSqrDist = 0f;
@@ -1510,6 +1552,8 @@ public static class BarricadeUtility
     {
         if (barricadeSelector == null)
             throw new ArgumentNullException(nameof(barricadeSelector));
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         GameThread.AssertCurrent();
 
@@ -1558,6 +1602,8 @@ public static class BarricadeUtility
         if (barricadeSelector == null)
             throw new ArgumentNullException(nameof(barricadeSelector));
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         float sqrRadius = radius * radius;
@@ -1597,6 +1643,8 @@ public static class BarricadeUtility
     {
         if (barricadeSelector == null)
             throw new ArgumentNullException(nameof(barricadeSelector));
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         GameThread.AssertCurrent();
 
@@ -1654,6 +1702,8 @@ public static class BarricadeUtility
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
 
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         float sqrRadius = radius * radius;
@@ -1693,6 +1743,8 @@ public static class BarricadeUtility
     {
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         GameThread.AssertCurrent();
 
@@ -1745,6 +1797,8 @@ public static class BarricadeUtility
     [Pure]
     public static int CountBarricadesInRange(Vector3 position, float radius, int max = -1, bool horizontalDistanceOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         float sqrRadius = radius * radius;

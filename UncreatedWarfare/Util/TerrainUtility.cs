@@ -1,7 +1,5 @@
 using DanielWillett.ReflectionTools;
 using SDG.Framework.Landscapes;
-using System;
-using System.Collections.Generic;
 
 namespace Uncreated.Warfare.Util;
 
@@ -9,11 +7,18 @@ public static class TerrainUtility
 {
     private static float? _highestMapPoint;
 
+    internal static void Invalidate()
+    {
+        _highestMapPoint = null;
+    }
+
     /// <summary>
     /// Gets the highest point on the map.
     /// </summary>
     public static float GetMapHighestPeak()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (_highestMapPoint.HasValue)
@@ -54,6 +59,8 @@ public static class TerrainUtility
     /// <remarks>This could hit a building, etc.</remarks>
     public static float GetHighestPoint(in Vector2 point, float minHeight)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         float height;
         if (Physics.SphereCast(new Vector3(point.x, Level.HEIGHT, point.y), PlayerStance.RADIUS + 0.01f, Vector3.down, out RaycastHit hit, Level.HEIGHT, RayMasks.BLOCK_COLLISION & ~(RayMasks.CLIP | RayMasks.VEHICLE), QueryTriggerInteraction.Ignore))
         {
@@ -71,6 +78,8 @@ public static class TerrainUtility
     /// <remarks>This could hit a building, etc.</remarks>
     public static float GetHighestPoint(in Vector3 point, float minHeight)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         float height;
         if (Physics.SphereCast(new Vector3(point.x, Level.HEIGHT, point.z), PlayerStance.RADIUS + 0.01f, Vector3.down, out RaycastHit hit, Level.HEIGHT, RayMasks.BLOCK_COLLISION & ~(RayMasks.CLIP | RayMasks.VEHICLE), QueryTriggerInteraction.Ignore))
         {
@@ -88,6 +97,8 @@ public static class TerrainUtility
     /// <remarks>This could hit a building, etc.</remarks>
     public static float GetHighestPoint(in Vector3 point, float minHeight, out Vector3 normal)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         float height;
         if (Physics.SphereCast(new Vector3(point.x, Level.HEIGHT, point.z), PlayerStance.RADIUS + 0.01f, Vector3.down, out RaycastHit hit, Level.HEIGHT, RayMasks.BLOCK_COLLISION & ~(RayMasks.CLIP | RayMasks.VEHICLE), QueryTriggerInteraction.Ignore))
         {
@@ -107,6 +118,8 @@ public static class TerrainUtility
     /// <remarks>The raycast could hit a building, etc. If the raycast doesn't hit anything, <see cref="Level.HEIGHT"/> will be returned.</remarks>
     public static float GetDistanceToGround(in Vector3 point)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (Physics.Raycast(point, Vector3.down, out RaycastHit hit, Level.HEIGHT, RayMasks.BLOCK_COLLISION & ~(RayMasks.CLIP | RayMasks.VEHICLE), QueryTriggerInteraction.Ignore))
         {
             return hit.distance;
@@ -121,6 +134,8 @@ public static class TerrainUtility
     /// </summary>
     public static float GetNextOpenPoint(Vector3 point, float radius, int? rayMask = null)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int mask = rayMask ?? RayMasks.BLOCK_COLLISION & ~(RayMasks.CLIP | RayMasks.VEHICLE | RayMasks.AGENT | RayMasks.PLAYER | RayMasks.ENEMY);
 
         float minY = LevelGround.getHeight(point) + radius;

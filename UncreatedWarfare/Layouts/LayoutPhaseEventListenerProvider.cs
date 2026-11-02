@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Services;

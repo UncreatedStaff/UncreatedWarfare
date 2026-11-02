@@ -72,6 +72,8 @@ public class PlayerContributionTracker : IEnumerable<PlayerWork>
     /// </returns>
     public float GetContribution(CSteamID player, bool isFriendly, DateTime after, out float total)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         after = after.ToUniversalTime();
         float totalPoints = 0;
         float points = 0;
@@ -99,6 +101,8 @@ public class PlayerContributionTracker : IEnumerable<PlayerWork>
     /// </summary>
     public void RecordWork(CSteamID player, bool isFriendly, float workPoints, DateTime? timePerformed = null)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         DateTime time = timePerformed?.ToUniversalTime() ?? DateTime.UtcNow;
         lock (_work)
         {

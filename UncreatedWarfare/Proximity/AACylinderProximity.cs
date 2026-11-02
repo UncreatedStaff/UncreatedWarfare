@@ -129,6 +129,8 @@ public class AACylinderProximity : IAACylinderProximity, IFormattable
     /// <inheritdoc />
     public bool TestPoint(in Vector3 position)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Vector3 pos = _center;
         float x = pos.x - position.x,
               y = pos.y - position.y,
@@ -167,6 +169,8 @@ public class AACylinderProximity : IAACylinderProximity, IFormattable
     /// <inheritdoc />
     public bool TestPoint(in Vector2 position)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Vector3 pos = _center;
         switch (_axis)
         {

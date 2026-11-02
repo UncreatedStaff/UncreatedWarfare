@@ -46,6 +46,8 @@ public class StagingUI : UnturnedUI, IHudUIListener
     /// </summary>
     public void SendToPlayer(WarfarePlayer player, TranslationList name, TimeSpan timeLeft)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (_isHiddenGlobally)
             return;
 
@@ -67,6 +69,8 @@ public class StagingUI : UnturnedUI, IHudUIListener
     /// </summary>
     public void SendToPlayer(WarfarePlayer player, TranslationList name)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (_isHiddenGlobally)
             return;
 
@@ -84,6 +88,8 @@ public class StagingUI : UnturnedUI, IHudUIListener
     /// </summary>
     public void UpdateForPlayer(WarfarePlayer player, TranslationList name, TimeSpan timeLeft)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (_isHiddenGlobally)
             return;
 
@@ -111,6 +117,8 @@ public class StagingUI : UnturnedUI, IHudUIListener
     /// </summary>
     public void SendToAll(LanguageSetEnumerator playerSets, TranslationList name, TimeSpan timeLeft)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (_isHiddenGlobally)
             return;
 
@@ -138,6 +146,8 @@ public class StagingUI : UnturnedUI, IHudUIListener
     /// </summary>
     public void SendToAll(LanguageSetEnumerator playerSets, TranslationList name)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (_isHiddenGlobally)
             return;
 
@@ -161,6 +171,8 @@ public class StagingUI : UnturnedUI, IHudUIListener
     /// </summary>
     public void UpdateForAll(LanguageSetEnumerator playerSets, TranslationList name, TimeSpan timeLeft)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (timeLeft < TimeSpan.Zero)
             timeLeft = TimeSpan.Zero;
 

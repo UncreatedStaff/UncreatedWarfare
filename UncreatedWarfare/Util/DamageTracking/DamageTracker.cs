@@ -43,6 +43,8 @@ public class DamageTracker
     /// </summary>
     public virtual void ClearDamage()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         TimeLastDamaged = default;
         LatestDamageCause = null;
         LatestDamageInstigator = null;
@@ -52,6 +54,8 @@ public class DamageTracker
 
     public virtual void RecordDamage(WarfarePlayer onlineInstigator, ushort damage, EDamageOrigin cause, bool isFriendly)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         TimeLastDamaged = DateTime.Now;
         LatestDamageInstigator = onlineInstigator.Steam64;
         LastKnownDamageInstigator = onlineInstigator.Steam64;
@@ -63,6 +67,8 @@ public class DamageTracker
     }
     public virtual void RecordDamage(CSteamID playerId, ushort damage, EDamageOrigin cause, bool isFriendly)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         TimeLastDamaged = DateTime.Now;
         LatestDamageInstigator = playerId;
         LastKnownDamageInstigator = playerId;
@@ -74,6 +80,8 @@ public class DamageTracker
     }
     public virtual void RecordDamage(EDamageOrigin cause)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         TimeLastDamaged = DateTime.Now;
         LatestDamageInstigator = null;
         LatestDamageCause = cause;

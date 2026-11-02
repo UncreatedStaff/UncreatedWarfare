@@ -102,6 +102,8 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>, IH
 
     private void OnUpdated()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         foreach (IUnturnedUIData d in UnturnedUIDataSource.EnumerateData(this))
         {
             if (d is not Data data || data.AreaMapTacks.Count < 2)
@@ -117,6 +119,8 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>, IH
 
     internal void HandleTackDestroyed(MapTack tack)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         foreach (IUnturnedUIData d in UnturnedUIDataSource.EnumerateData(this))
         {
             if (d is not Data data)
@@ -154,6 +158,8 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>, IH
 
     internal void HandlePlayerEntered(MapTack tack, WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Data data = GetOrAddData(player.Steam64);
         if (data.AreaMapTacks.Contains(tack))
             return;
@@ -170,6 +176,8 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>, IH
 
     internal void HandlePlayerExited(MapTack tack, WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Data data = GetOrAddData(player.Steam64);
         if (!data.AreaMapTacks.Remove(tack) || !data.HasUI)
             return;
@@ -194,6 +202,8 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>, IH
 
     public void TryClose(WarfarePlayer player, bool fromLookingAtTack = false, bool instant = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         Data? data = GetData<Data>(player.Steam64);
@@ -252,6 +262,8 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>, IH
 
     private void Clear(Data data, WarfarePlayer player, bool clearUI = true)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         data.HasUI = false;
         data.IsClosing = false;
         data.HealthBarCount = 0;
@@ -263,6 +275,8 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>, IH
 
     private void OnLocaleUpdated(WarfarePlayerLocale locale)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         Data data = GetOrAddData(locale.Player.Steam64);
         if (!data.HasUI || data.CurrentMapTack?.UIHandler is not { } uiHandler)
             return;
@@ -287,6 +301,8 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>, IH
 
     public void Open(WarfarePlayer player, MapTack tack, bool isLooking)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         IMapTackUIHandler? uiHandler = tack.UIHandler;
@@ -468,6 +484,8 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>, IH
 
     private void UpdateClosestMapTack(WarfarePlayer player, Data data)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (data.AreaMapTacks.Count == 0)
         {
             TryClose(player);
@@ -483,6 +501,8 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>, IH
 
     private static MapTack GetClosestMapTack(WarfarePlayer player, Data data)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // assume count > 0
 
         if (data.AreaMapTacks.Count == 1)
@@ -509,6 +529,8 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>, IH
 
     private void UpdateSupply(WarfarePlayer player, SupplyType type, IMapTackUIHandler uiHandler, Data data, int? amount = null)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         UnturnedLabel label;
         ref bool has = ref data.HasBuildSupply;
         Translation<int> translation;
@@ -567,6 +589,8 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>, IH
 
     private void SetHealth(ITransportConnection c, double health, Data data)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         health = Math.Clamp(health, 0d, 1d);
 
         int amt = GetMaxHealthBarCount(data.VehicleMask);
@@ -585,12 +609,14 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>, IH
     /// <param name="vehicleMask">A bit mask where each bit corresponds to the position in the <see cref="MapTackVehicleType"/> enum.</param>
     public static int GetMaxHealthBarCount(int vehicleMask)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // these can't reach 200 anyways so no point in calculating them
         // int emplLength = (vehicleMask & (1 << (int)MapTackVehicleType.Infantry))
         //                  + (vehicleMask & (1 << (int)MapTackVehicleType.AA))
         //                  + (vehicleMask & (1 << (int)MapTackVehicleType.Mortar))
         //                  + (vehicleMask & (1 << (int)MapTackVehicleType.HMG));
-        
+
         // int airLength = (vehicleMask & (1 << (int)MapTackVehicleType.AttackHeli))
         //                 + (vehicleMask & (1 << (int)MapTackVehicleType.Jet))
         //                 + (vehicleMask & (1 << (int)MapTackVehicleType.TransportHeli));
@@ -623,6 +649,8 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>, IH
 
     public void HandleVehicleUpdated(MapTack tack, MapTackVehicleType type, int amount)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int mask = 1 << (int)type;
 
         using List<WarfarePlayer>.Enumerator enumerator = tack.EnumerateWatchers();
@@ -655,6 +683,8 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>, IH
 
     private void OnVehiclesResized(ITransportConnection c, Data data)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (data.HasHealthBar)
         {
             // health bar can resize when vehicles are added/removed
@@ -664,6 +694,8 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>, IH
 
     public void HandleSuppliesUpdated(MapTack tack, SupplyType type, int amount)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int? amt = amount;
 
         using List<WarfarePlayer>.Enumerator enumerator = tack.EnumerateWatchers();
@@ -676,6 +708,8 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>, IH
 
     public void HandleHealthUpdated(MapTack tack, double? health)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         using List<WarfarePlayer>.Enumerator enumerator = tack.EnumerateWatchers();
         while (enumerator.MoveNext())
         {
@@ -698,6 +732,8 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>, IH
 
     public void HandleAttributesUpdated(MapTack tack, MapTackAttributes attributes)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         using List<WarfarePlayer>.Enumerator enumerator = tack.EnumerateWatchers();
         while (enumerator.MoveNext())
         {

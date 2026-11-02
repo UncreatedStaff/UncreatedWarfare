@@ -7,5 +7,5 @@ namespace Uncreated.Warfare.Events.Models.Flags;
 /// </summary>
 public interface IFlagsNeedUIUpdateEvent
 {
-    LanguageSetEnumerator EnumerateApplicableSets(ITranslationService translationService, ref bool ticketsOnly);
+    LanguageSetEnumerator EnumerateApplicableSets(ITranslationService translationService, TranslationOptions options, ref bool ticketsOnly);
 }

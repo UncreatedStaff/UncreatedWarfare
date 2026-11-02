@@ -29,6 +29,8 @@ internal class GuidedMissileComponent : MonoBehaviour
 
     public void Initialize(GameObject projectile, Player firer, IServiceProvider serviceProvider, float projectileSpeed, float responsiveness, float cutoffDistance = 1000)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _projectile = projectile;
         //this._firer = firer;
         _maxTurnDegrees = responsiveness;
@@ -79,6 +81,8 @@ internal class GuidedMissileComponent : MonoBehaviour
     {
         if (_isActive)
         {
+            using IDisposable? profiler = ProfilerUtil.Profile();
+
             if (_aim == null)
             {
                 _isActive = false;
@@ -110,6 +114,8 @@ internal class GuidedMissileComponent : MonoBehaviour
 
         while (_isActive) // this loop runs every 0.05 seconds. every iteration it will send a small smoke trail effect to all clients here
         {
+            using IDisposable? profiler = ProfilerUtil.Profile();
+
             IAssetLink<EffectAsset> id = _fxSilent; // effect ids. this one has no sound effect
 
             if (count % 20 == 0 || !id.TryGetAsset(out _))

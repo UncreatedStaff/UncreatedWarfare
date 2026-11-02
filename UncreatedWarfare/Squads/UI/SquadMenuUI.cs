@@ -86,6 +86,8 @@ public class SquadMenuUI :
 
     private void SquadLockedToggleUpdated(UnturnedToggle toggle, Player player, bool isLocked)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         WarfarePlayer warfarePlayer = _playerService.GetOnlinePlayer(player);
 
         if (!warfarePlayer.IsSquadLeader())
@@ -110,6 +112,8 @@ public class SquadMenuUI :
 
     private void PromoteMemberClicked(UnturnedButton button, Player player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int index = Array.FindLastIndex(MySquad.Members, x => ReferenceEquals(x.PromoteButton, button));
         if (index <= 0)
             return;
@@ -119,7 +123,7 @@ public class SquadMenuUI :
             return;
 
         Squad squad = warfarePlayer.GetSquad()!;
-        if (index >= squad.Members.Count)
+        if (index >= squad.Members.Length)
             return;
 
         WarfarePlayer member = squad.Members[index];
@@ -129,6 +133,8 @@ public class SquadMenuUI :
 
     private void KickMemberClicked(UnturnedButton button, Player player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         int index = Array.FindLastIndex(MySquad.Members, x => ReferenceEquals(x.KickButton, button));
         if (index <= 0)
             return;
@@ -138,7 +144,7 @@ public class SquadMenuUI :
             return;
 
         Squad squad = warfarePlayer.GetSquad()!;
-        if (index >= squad.Members.Count)
+        if (index >= squad.Members.Length)
             return;
 
         WarfarePlayer member = squad.Members[index];
@@ -148,12 +154,14 @@ public class SquadMenuUI :
 
     private void JoinLeaveButtonClicked(UnturnedButton button, Player player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         WarfarePlayer warfarePlayer = _playerService.GetOnlinePlayer(player);
 
         if (ReferenceEquals(button, MySquad.LeaveButton.Button) && warfarePlayer.GetSquad() is { } mySquad && mySquad.Leader.Equals(player))
         {
             // promote other player to leader first
-            if (mySquad.Members.Count > 1)
+            if (mySquad.Members.Length > 1)
             {
                 WarfarePlayer newLeader = mySquad.Members.Skip(1).Aggregate((x, best) => x.CachedPoints.XP > best.CachedPoints.XP ? x : best);
                 mySquad.PromoteMember(newLeader);
@@ -335,6 +343,9 @@ public class SquadMenuUI :
 
     public void OpenUI(WarfarePlayer player, KitRequestState? forRequest = null)
     {
+        if (!player.IsOnline)
+            return;
+
         SquadMenuUIPlayerData data = GetOrAddData(player);
         KitRequestService? kitReqSvc = _kitRequestService?.Value;
         if (kitReqSvc == null)
@@ -426,7 +437,7 @@ public class SquadMenuUI :
 
     private void UpdateForViewingPlayers(Squad squad)
     {
-        if (squad.Members.Count == 0)
+        if (squad.Members.IsDefaultOrEmpty)
             return;
         
         foreach (WarfarePlayer player in ViewingPlayersOnTeam(squad.Team))
@@ -437,7 +448,7 @@ public class SquadMenuUI :
 
     private void UpdateForViewingPlayersExceptOwner(Squad squad)
     {
-        if (squad.Members.Count == 0)
+        if (squad.Members.IsDefaultOrEmpty)
             return;
 
         WarfarePlayer owner = squad.Leader;
@@ -465,6 +476,9 @@ public class SquadMenuUI :
 
     private void UpdateForPlayer(WarfarePlayer player)
     {
+        if (!player.IsOnline)
+            return;
+
         List<Squad> friendlySquads = GetVisibleSquadList(player).ToList();
 
         if (player.IsSquadLeader())
@@ -494,15 +508,18 @@ public class SquadMenuUI :
 
     private void SendMySquadDetail(WarfarePlayer player)
     {
+        if (!player.IsOnline)
+            return;
+
         Squad squad = player.GetSquad()!;
 
         MySquad.Name.SetText(player, squad.Name);
         MySquad.Number.SetText(player, squad.TeamIdentificationNumber.ToString(player.Locale.CultureInfo));
-        MySquad.MemberCount.SetText(player, $"{squad.Members.Count.ToString(player.Locale.CultureInfo)}/{Squad.MaxMembers.ToString(player.Locale.CultureInfo)}");
+        MySquad.MemberCount.SetText(player, $"{squad.Members.Length.ToString(player.Locale.CultureInfo)}/{Squad.MaxMembers.ToString(player.Locale.CultureInfo)}");
         MySquad.ToggleLockedButton.Set(player.UnturnedPlayer, squad.IsLocked);
 
         int i = 0;
-        int ct = Math.Min(MySquad.Members.Length, squad.Members.Count);
+        int ct = Math.Min(MySquad.Members.Length, squad.Members.Length);
         for (; i < ct; ++i)
         {
             MySquadMember ui = MySquad.Members[i];
@@ -524,9 +541,12 @@ public class SquadMenuUI :
 
     private void SendSquadDetail(SquadMenuElement element, Squad squad, WarfarePlayer player)
     {
+        if (!player.IsOnline)
+            return;
+
         element.SquadName.SetText(player, squad.Name);
         element.SquadNumber.SetText(player, squad.TeamIdentificationNumber.ToString());
-        element.MemberCount.SetText(player, $"{squad.Members.Count.ToString(player.Locale.CultureInfo)}/{Squad.MaxMembers.ToString(player.Locale.CultureInfo)}");
+        element.MemberCount.SetText(player, $"{squad.Members.Length.ToString(player.Locale.CultureInfo)}/{Squad.MaxMembers.ToString(player.Locale.CultureInfo)}");
         element.LockIcon.SetVisibility(player, squad.IsLocked);
 
         if (squad.ContainsPlayer(player))
@@ -543,7 +563,7 @@ public class SquadMenuUI :
         for (int j = 0; j < element.MemberNames.Length; j++)
         {
             var memberElement = element.MemberNames[j];
-            if (j < squad.Members.Count)
+            if (j < squad.Members.Length)
             {
                 WarfarePlayer member = squad.Members[j];
                 Class kitClass = member.Component<KitPlayerComponent>().GetActiveEffectiveKit()?.Class ?? Class.None;

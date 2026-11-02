@@ -1,4 +1,3 @@
-using System;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Vehicles;
@@ -23,6 +22,8 @@ internal class VehicleTrunkTweaks :
     }
     private void WipeTrunkItems(InteractableVehicle vehicle)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (vehicle.trunkItems == null)
             return;
 

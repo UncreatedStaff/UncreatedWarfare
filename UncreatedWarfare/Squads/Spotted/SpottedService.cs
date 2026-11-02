@@ -1,6 +1,5 @@
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
-using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
@@ -86,6 +85,8 @@ internal sealed class SpottedService : ILayoutHostedService, IEventListener<Vehi
         {
             return;
         }
+
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
         shouldAllow = false;
 
@@ -232,7 +233,12 @@ internal sealed class SpottedService : ILayoutHostedService, IEventListener<Vehi
 
         targetName = TranslationFormattingUtility.Colorize(targetName, targetTeam.Faction.Color);
 
-        _chatService.Broadcast(_formatter.TranslationService.SetOf.PlayersOnTeam(t), _translations.SpottedMessage, t1, targetName, player);
+        _chatService.Broadcast(
+            _formatter.TranslationService.SetOf.PlayersOnTeam(t, LanguageSets.DefaultTranslationOptions | TranslationOptions.ConsiderIMGUI),
+            _translations.SpottedMessage,
+            t1, targetName,
+            player
+        );
 
         _ = _eventDispatcher.DispatchEventAsync(new TargetSpotted
         {

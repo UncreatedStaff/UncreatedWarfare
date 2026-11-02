@@ -1,8 +1,8 @@
-using System;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Translations.Util;
+
 internal static class TranslationPluralizations
 {
     /// <summary>
@@ -14,6 +14,8 @@ internal static class TranslationPluralizations
     /// </remarks>
     internal static string Pluralize(ReadOnlySpan<char> word, LanguageInfo language)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (!language.Code.Equals(Languages.Languages.EnglishUS, StringComparison.OrdinalIgnoreCase))
         {
             return new string(word);
@@ -163,6 +165,8 @@ internal static class TranslationPluralizations
     public static bool IsOne(object? obj) => obj is IConvertible conv && IsOne(conv);
     public static bool IsOne(IConvertible conv)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         TypeCode tc = conv.GetTypeCode();
         return tc switch
         {
@@ -190,6 +194,8 @@ internal static class TranslationPluralizations
 
     public static ReadOnlySpan<char> ApplyPluralizers(scoped in TranslationArguments args, ArgumentSpan[] pluralizers, int argumentOffset, int argCt, Func<int, object?> accessor)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         LanguageInfo language = args.ValueSet.Language;
 
         Span<int> indices = stackalloc int[pluralizers.Length];

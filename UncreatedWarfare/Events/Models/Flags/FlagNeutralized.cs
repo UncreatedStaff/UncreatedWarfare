@@ -1,4 +1,3 @@
-using System;
 using Uncreated.Warfare.Events.Logging;
 using Uncreated.Warfare.Events.Models.Objectives;
 using Uncreated.Warfare.Layouts;
@@ -43,8 +42,8 @@ public class FlagNeutralized : IActionLoggableEvent, IObjectiveLost, IFlagsNeedU
 
     Team? IObjectiveLost.Team => TakenFrom;
     IObjective IObjectiveLost.Objective => Flag;
-    LanguageSetEnumerator IFlagsNeedUIUpdateEvent.EnumerateApplicableSets(ITranslationService translationService, ref bool ticketsOnly)
+    LanguageSetEnumerator IFlagsNeedUIUpdateEvent.EnumerateApplicableSets(ITranslationService translationService, TranslationOptions options, ref bool ticketsOnly)
     {
-        return translationService.SetOf.PlayersOnTeam();
+        return translationService.SetOf.PlayersOnTeam(options);
     }
 }

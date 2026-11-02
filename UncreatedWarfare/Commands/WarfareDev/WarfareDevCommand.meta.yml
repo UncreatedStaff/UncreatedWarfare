@@ -290,3 +290,30 @@ Parameters:
     Alias: qb
     Type: Verbatim
     Description: "Fully shovel the buildable the player is looking at."
+  # /warfaredev map
+  - Name: map
+    Type: Verbatim
+    Description: "Switch the map currently running on the server."
+    Parameters:
+      - Name: mapName
+        Type: string
+        Description: Name of the map to switch to.
+        Remainder: true
+    Flags:
+      - Name: i
+        Alias: instant
+        Description: "Instantly start the map instead of queuing it after the current layout."
+  # /wdev profile <enable|disable|flush>
+  - Name: profile
+    Type: Verbatim
+    Description: Manage the manual profiler system.
+    Parameters:
+      - Name: enable
+        Type: Verbatim
+        Description: Enable profiling.
+      - Name: disable
+        Type: Verbatim
+        Description: Disable profiling.
+      - Name: flush
+        Type: Verbatim
+        Description: Flush profiling data to the file initially.

@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.Models.Factions;
 
@@ -42,4 +43,13 @@ public class MapData
     public SeasonData SeasonReleased { get; set; }
 
     public ICollection<MapWorkshopDependency> Dependencies { get; set; }
+
+    [Required]
+    [DefaultValue(true)]
+    public bool RotationEnabled { get; set; }
+
+#nullable enable
+    [MaxLength(64)]
+    public string? MapEmoji { get; set; }
+#nullable disable
 }

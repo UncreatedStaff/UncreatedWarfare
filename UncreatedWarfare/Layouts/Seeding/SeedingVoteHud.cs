@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using System;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Players;
@@ -19,8 +18,7 @@ internal class SeedingVoteHud : VoteUIDisplay<VoteUIDisplayData>
     public UnturnedLabel Info { get; } = new UnturnedLabel("Info");
     public UnturnedLabel Yes { get; } = new UnturnedLabel("Yes");
     public UnturnedLabel No { get; } = new UnturnedLabel("No");
-
-    /// <inheritdoc />
+    
     public SeedingVoteHud(
         IServiceProvider serviceProvider,
         IPlayerVoteManager voteManager,
@@ -32,9 +30,12 @@ internal class SeedingVoteHud : VoteUIDisplay<VoteUIDisplayData>
         _translations = translations.Value;
     }
 
-    /// <inheritdoc />
+    protected override TranslationOptions GroupOptions => TranslationOptions.PerLanguageTranslation | TranslationOptions.PerCultureTranslation;
+
     protected override void SendToPlayers(LanguageSet set)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         string title = _translations.SeedingVoteTitle.Translate(in set);
 
         string? voteNoUnselected = null, voteNoSelected = null;
@@ -80,13 +81,11 @@ internal class SeedingVoteHud : VoteUIDisplay<VoteUIDisplayData>
         }
     }
 
-    /// <inheritdoc />
     protected override void OnCleared(WarfarePlayer player, VoteUIDisplayData? data)
     {
         _hudManager?.SetIsPluginVoting(player, false);
     }
 
-    /// <inheritdoc />
     protected override VoteUIDisplayData CreateData(CSteamID arg)
     {
         return new VoteUIDisplayData(arg, this);

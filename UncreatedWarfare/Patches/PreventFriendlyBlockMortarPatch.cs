@@ -46,6 +46,8 @@ internal sealed class PreventFriendlyBlockMortarPatch : IHarmonyPatch
     /// </summary>
     private static bool Prefix(Collider other, Rocket __instance, bool ___isExploded)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (___isExploded || other.isTrigger || (__instance.ignoreTransform != null && (__instance.ignoreTransform == other.transform || other.transform.IsChildOf(__instance.ignoreTransform))))
             return false;
 

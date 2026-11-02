@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using System;
 using System.Linq;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Models.Localization;
@@ -51,6 +50,8 @@ public class MySqlLanguageDataStore : ICachableLanguageDataStore
     public void WriteRelease() => _semaphore.Release();
     public LanguageInfo? GetInfoCached(string name, bool exactOnly = true)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         lock (this)
         {
             if (_codes != null && _codes.TryGetValue(name, out LanguageInfo info))
@@ -102,6 +103,8 @@ public class MySqlLanguageDataStore : ICachableLanguageDataStore
     }
     public LanguageInfo? GetInfoCached(uint key)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         _semaphore.Wait();
         try
         {

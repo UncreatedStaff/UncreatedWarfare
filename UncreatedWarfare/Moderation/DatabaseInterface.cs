@@ -2,8 +2,6 @@ using DanielWillett.ModularRpcs.Annotations;
 using DanielWillett.ModularRpcs.Async;
 using DanielWillett.ModularRpcs.Exceptions;
 using MySqlConnector;
-using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net;
@@ -1257,7 +1255,7 @@ public partial class DatabaseInterface : IHostedService
 
         return result;
     }
-    private int AppendReadColumns(StringBuilder sb, Type type, bool baseOnly)
+    private static int AppendReadColumns(StringBuilder sb, Type type, bool baseOnly)
     {
         sb.Append(MySqlSnippets.AliasedColumnList("main", Columns));
         int flag = 0;
@@ -1608,10 +1606,8 @@ public partial class DatabaseInterface : IHostedService
 
         if (WarfareModule.IsActive)
         {
-            _ = UniTask.Create(async () =>
+            GameThread.Queue(() =>
             {
-                await UniTask.SwitchToMainThread(CancellationToken.None);
-
                 if (isNew)
                     OnNewModerationEntryAdded?.Invoke(mod);
                 else

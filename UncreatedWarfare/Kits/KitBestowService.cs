@@ -33,6 +33,8 @@ public class KitBestowService
     /// </summary>
     public void BestowEmptyKit(WarfarePlayer player)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (!player.IsOnline)
@@ -52,6 +54,8 @@ public class KitBestowService
     /// </summary>
     public void BestowKit(WarfarePlayer player, KitBestowData data)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (!player.IsOnline)
@@ -107,6 +111,8 @@ public class KitBestowService
     /// </summary>
     public void RestockKit(WarfarePlayer player, bool resupplyAmmoBags)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         GameThread.AssertCurrent();
 
         if (!player.IsOnline)
@@ -224,6 +230,8 @@ public class KitBestowService
 
         public bool ShouldGrantItem(IPageItem item, ref KitItemResolutionResult resolvedItem, ref byte x, ref byte y, ref Page page, ref byte rotation)
         {
+            using IDisposable? profiler = ProfilerUtil.Profile();
+
             if (!ResupplyAmmoBags && item is IRedirectedItem {Item: RedirectType.AmmoBag})
                 return false;
             
@@ -295,6 +303,8 @@ public class KitBestowService
 
         private readonly void UpdateItemCountsTable(in KitItemResolutionResult resolvedItem)
         {
+            using IDisposable? profiler = ProfilerUtil.Profile();
+
             if (resolvedItem.Asset == null)
                 return;
 

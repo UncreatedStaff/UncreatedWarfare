@@ -1,4 +1,9 @@
+#if DEBUG
+// #define REFILL_TURRETS_DEBUG
+#endif
 using System;
+using System.Linq;
+using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.UI;
@@ -29,10 +34,14 @@ public class ThrownVehicleCrate : ThrownSupplyCrate
 
     private void OnThrowableDestroyed()
     {
-        // descending distance comparer
-        IComparer<Component> comparer = new LookAtComparer<Component>(Throwable.transform.forward, x => x.transform.position - Throwable.transform.position, reverse: false);
+        using IDisposable? profiler = ProfilerUtil.Profile();
 
-        int results = Physics.OverlapSphereNonAlloc(Throwable.transform.position, 5f, TempHitColliders, 1 << LayerMasks.VEHICLE);
+        Vector3 position = Throwable.transform.position;
+
+        // descending distance comparer
+        IComparer<Component> comparer = new LookAtComparer<Component>(Throwable.transform.forward, x => x.transform.position - position, reverse: false);
+
+        int results = Physics.OverlapSphereNonAlloc(position, 5f, TempHitColliders, 1 << LayerMasks.VEHICLE);
         Array.Sort<Collider>(TempHitColliders, 0, results, comparer);
         WarfareVehicle? warfareVehicle = null;
         for (int i = 0; i < results; i++)
@@ -52,29 +61,50 @@ public class ThrownVehicleCrate : ThrownSupplyCrate
             Thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastAmmoNotNearVehicle.Translate(Thrower)));
             return;
         }
-        
-        if (_fobManager != null && !(_zoneStore != null && _zoneStore.IsInMainBase(Throwable.transform.position)))
+
+        position = warfareVehicle.Position;
+
+        if (_fobManager != null && !(_zoneStore != null && _zoneStore.IsInMainBase(position)))
         {
-            ResourceFob? nearestFob = _fobManager.FindNearestResourceFob(Thrower.Team, Throwable.transform.position);
-            if (nearestFob == null)
+            float requiredAmmoCount = warfareVehicle.Info.Rearm.AmmoConsumed;
+
+            bool anyFobs = false;
+            float maxAmmoAvailable = 0;
+            bool consumedAmmo = false;
+
+            // check all FOBs in the area instead of just the nearest one, since caches and FOBs can overlap.
+            // use the one with the most ammo
+            foreach (ResourceFob fob in _fobManager.Fobs
+                         .OfType<ResourceFob>()
+                         .Where(f => f.Team.IsFriendly(Thrower.Team) && MathUtility.WithinRange(position, f.Position, f.EffectiveRadius))
+                         .OrderByDescending(x => x.AmmoCount)
+                    )
             {
-                RespawnThrowableItem();
-                Thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastAmmoNotNearFob.Translate(Thrower)));
-                return;
-            }
-            
-            int requiredAmmoCount = warfareVehicle.Info.Rearm.AmmoConsumed;
-            if (nearestFob.AmmoCount < warfareVehicle.Info.Rearm.AmmoConsumed)
-            {
-                RespawnThrowableItem();
-                Thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastInsufficientAmmo.Translate(nearestFob.AmmoCount, requiredAmmoCount, Thrower)));
-                return;
+                if (fob.AmmoCount >= requiredAmmoCount)
+                {
+                    fob.ChangeAmmo(-requiredAmmoCount, SupplyChangeReason.ConsumeRearmVehicle);
+                    Thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastLoseAmmo.Translate(requiredAmmoCount, Thrower)));
+                    consumedAmmo = true;
+                    break;
+                }
+
+                maxAmmoAvailable = Math.Max(fob.AmmoCount, maxAmmoAvailable);
+                anyFobs = fob is BunkerFob || fob.AmmoCount > 0;
             }
 
-            // note: this used to directly subtract from the FOB but led to mismatches between FOB ammo and crate ammo.
-            // todo: is this comment^ still relevant?
-            nearestFob.ChangeAmmo(-requiredAmmoCount, SupplyChangeReason.ConsumeRearmVehicle);
-            Thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastLoseAmmo.Translate(requiredAmmoCount, Thrower)));
+            if (!consumedAmmo)
+            {
+                if (!anyFobs)
+                {
+                    RespawnThrowableItem();
+                    Thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastAmmoNotNearFob.Translate(Thrower)));
+                    return;
+                }
+
+                RespawnThrowableItem();
+                Thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastInsufficientAmmo.Translate(maxAmmoAvailable, requiredAmmoCount, Thrower)));
+                return;
+            }
         }
         
         DropSupplies(warfareVehicle);
@@ -82,15 +112,123 @@ public class ThrownVehicleCrate : ThrownSupplyCrate
             warfareVehicle.FlareEmitter.ReloadFlares();
     }
 
+    private struct TurretRefillState
+    {
+        public ItemMagazineAsset? Magazine;
+        public ItemGunAsset? Gun;
+
+        /// <summary>
+        /// Amount needed to add to fill up the magazine.
+        /// </summary>
+        public byte AmmoLeft;
+
+        public bool PendingSendToPlayer;
+    }
+
     private void DropSupplies(WarfareVehicle warfareVehicle)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
+        // collect some info about the current ammo in the turrets before refilling
+        Passenger[] turrets = warfareVehicle.Vehicle.turrets;
+        TurretRefillState[] turretInfo = new TurretRefillState[turrets.Length];
+        for (int i = 0; i < turrets.Length; ++i)
+        {
+            Passenger turret = turrets[i];
+            ref TurretRefillState state = ref turretInfo[i];
+
+            state.Gun = Assets.find(EAssetType.ITEM, turret.turret.itemID) as ItemGunAsset;
+            if (state.Gun == null || turret.state.Length < 18)
+                continue;
+
+            byte ammoCt = turret.state[GunStateIndices.AMMO];
+            ushort magId = BitConverter.ToUInt16(turret.state, (int)AttachmentType.Magazine);
+            state.Magazine = Assets.find(EAssetType.ITEM, magId) as ItemMagazineAsset;
+
+            if (state.Magazine == null)
+            {
+                // no magazine loaded, choose default one
+                state.Magazine = state.Gun.SelectDefaultMagazine();
+                state.AmmoLeft = state.Magazine?.MaxAmountAsByte ?? state.Gun.countMax;
+                continue;
+            }
+
+            byte maxAmount = state.Magazine.MaxAmountAsByte;
+            if (ammoCt >= maxAmount)
+            {
+                // mag is already full
+                continue;
+            }
+
+            state.AmmoLeft = (byte)(maxAmount - ammoCt);
+        }
+
+#if REFILL_TURRETS_DEBUG
+        // debugging dump
+        ILogger logger = WarfareModule.Singleton.ServiceProvider.Resolve<ILogger<ThrownVehicleCrate>>();
+        if (logger.IsEnabled(LogLevel.Trace))
+        {
+            logger.LogTrace($"Vehicle: {warfareVehicle.Asset.name}");
+            logger.LogTrace($"Turrets: {turrets.Length}");
+            for (int i = 0; i < turrets.Length; ++i)
+            {
+                Passenger turret = turrets[i];
+                ref TurretRefillState state = ref turretInfo[i];
+
+                logger.LogTrace($"-Turret {i}-: {turret.turret.itemID} (seat {turret.turret.seatIndex})");
+                logger.LogTrace($"Gun       : {state.Gun?.name ?? "null"}");
+                logger.LogTrace($"Magazine  : {state.Magazine?.name ?? "null"}");
+                logger.LogTrace($"Ammo Left : {state.AmmoLeft}");
+            }
+        }
+#endif
+
         foreach (IAssetLink<ItemAsset> itemAsset in warfareVehicle.Info.Rearm.Items)
         {
             ItemAsset? asset = itemAsset.GetAsset();
             if (asset == null)
                 continue;
+
+            byte amount = asset.MaxAmountAsByte;
+            for (int i = 0; i < turrets.Length; ++i)
+            {
+                ref TurretRefillState state = ref turretInfo[i];
+                if (state.AmmoLeft == 0)
+                {
+                    // already filled the turret
+                    continue;
+                }
+
+                if (state.Magazine == null || state.Magazine.GUID != asset.GUID)
+                    continue;
+
+                // rearm magazine instead of dropping the magazine
+                byte amountAvailable = Math.Min(state.AmmoLeft, amount);
+                amount -= amountAvailable;
+                state.AmmoLeft -= amountAvailable;
+                state.PendingSendToPlayer |= UpdateTurretMagazineState(warfareVehicle, i, state.Magazine, state.AmmoLeft);
+#if REFILL_TURRETS_DEBUG
+                logger.LogTrace($"Used {amountAvailable} ammo to refill turret {i} from missing {state.AmmoLeft + amountAvailable} ammo to missing {state.AmmoLeft} ammo. Left to drop: {amount}.");
+#endif
+            }
+
+            if (amount <= 0)
+                continue;
             
-            ItemManager.dropItem(new Item(asset, EItemOrigin.CRAFT), Throwable.transform.position, false, true, true);
+#if REFILL_TURRETS_DEBUG
+            logger.LogTrace($"Dropping item {asset.name} with amount: {amount}.");
+#endif
+            // if we didn't use the entire mag drop the item
+            ItemManager.dropItem(new Item(asset, EItemOrigin.CRAFT) { amount = amount }, Throwable.transform.position, false, true, true);
+        }
+
+        // state could be updated multiple times for one turret, so just send them all at the end
+        for (int i = 0; i < turrets.Length; ++i)
+        {
+            if (turretInfo[i].PendingSendToPlayer)
+            {
+                turrets[i].player.player.equipment.sendUpdateState();
+            }
         }
         
         // spawn a nice effect
@@ -100,5 +238,24 @@ public class ThrownVehicleCrate : ThrownSupplyCrate
             relevantDistance = 70,
             reliable = true
         });
+    }
+
+    /// <returns>Needs sent to player?</returns>
+    private static bool UpdateTurretMagazineState(WarfareVehicle warfareVehicle, int turretIndex, ItemMagazineAsset magazine, byte amountFromFull)
+    {
+        byte full = magazine.MaxAmountAsByte;
+        byte amount = (byte)(full - Math.Min(full, amountFromFull));
+
+        InteractableVehicle vehicle = warfareVehicle.Vehicle;
+        Passenger turret = vehicle.turrets[turretIndex];
+
+        BitConverter.TryWriteBytes(
+            turret.state.AsSpan((int)AttachmentType.Magazine),
+            magazine.id
+        );
+        turret.state[GunStateIndices.MAGAZINE_QUALITY] = 100;
+        turret.state[GunStateIndices.AMMO] = amount;
+
+        return turret.player != null;
     }
 }

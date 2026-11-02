@@ -33,6 +33,8 @@ public class AssetRedirectService
 
     public bool TryFindRedirectType(ItemAsset item, out RedirectType type, out FactionInfo? faction, out string? variant, bool clothingOnly = false)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
 #pragma warning disable CS0612, CS0618 // Type or member is obsolete
         Guid itemGuid = item.GUID;
 
@@ -164,6 +166,8 @@ public class AssetRedirectService
 
     public ItemAsset? ResolveRedirect(RedirectType type, string variant, FactionInfo? kitFaction, Team requesterTeam, out byte[] state, out byte amount)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         // expectation is that 'state' returns a copy of a new array (unless it's empty).
 
         state = Array.Empty<byte>();

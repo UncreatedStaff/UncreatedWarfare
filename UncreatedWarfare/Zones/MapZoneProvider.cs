@@ -20,6 +20,8 @@ public class MapZoneProvider : IZoneProvider
 
     private static IEnumerable<Zone> GetZonesIntl()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         string mapPath = Path.GetFullPath(Level.info.path + "/Uncreated/zones.json");
         if (!File.Exists(mapPath))
         {

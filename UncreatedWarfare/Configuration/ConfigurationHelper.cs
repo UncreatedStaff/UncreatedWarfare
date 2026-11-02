@@ -1,9 +1,9 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Primitives;
-using System;
 using System.Globalization;
 using System.IO;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Configuration;
 public static class ConfigurationHelper
@@ -58,14 +58,7 @@ public static class ConfigurationHelper
         
         return ChangeToken.OnChange(
             () => fileProvider.Watch(filePath),
-            () =>
-            {
-                UniTask.Create(async () =>
-                {
-                    await UniTask.SwitchToMainThread();
-                    onUpdated();
-                });
-            }
+            () => GameThread.Queue(onUpdated)
         );
     }
 

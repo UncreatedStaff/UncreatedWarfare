@@ -1,7 +1,6 @@
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
 using SDG.Framework.Utilities;
-using System;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Buildables;
@@ -25,6 +24,7 @@ namespace Uncreated.Warfare.StrategyMaps;
 
 [Priority(-4) /* after FlagService and VehicleSpawnerService */]
 public class StrategyMapManager :
+    IDisposable,
     ILayoutHostedService,
     IEventListenerProvider,
     IEventListener<BarricadePlaced>,
@@ -104,6 +104,8 @@ public class StrategyMapManager :
 
     private void RegisterExistingStrategyMaps()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         foreach (BarricadeInfo barricade in BarricadeUtility.EnumerateNonPlantedBarricades())
         {
             MapTableInfo? info = _configuration.MapTables.FirstOrDefault(m => m.BuildableAsset.MatchAsset(barricade.Drop.asset));
@@ -111,12 +113,21 @@ public class StrategyMapManager :
             if (info == null)
                 continue;
 
-            RegisterStrategyMap(new BuildableBarricade(barricade.Drop), info);
+            IBuildable buildable = new BuildableBarricade(barricade.Drop);
+            RegisterStrategyMap(buildable, info);
+
+            StrategyMap? map = _strategyMaps.FirstOrDefault(x => x.MapTable.Equals(buildable));
+            if (map == null)
+                continue;
+
+            map.DestroyOldMapTacks();
         }
     }
 
     public void RegisterStrategyMap(IBuildable buildable, MapTableInfo tableInfo)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         tableInfo.BuildableAsset.AssertValid();
 
         if (_strategyMaps.Any(m => m.MapTable.Equals(buildable)))
@@ -160,6 +171,8 @@ public class StrategyMapManager :
 
     public void DeregisterStrategyMap(IBuildable buildable)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         StrategyMap? map = _strategyMaps.FindAndRemove(m => m.MapTable.Equals(buildable));
         if (map == null)
             return;
@@ -174,6 +187,8 @@ public class StrategyMapManager :
 
     public void HandleEvent(BarricadePlaced e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         MapTableInfo? mapTableInfo = _configuration.MapTables
             .FirstOrDefault(m => m.BuildableAsset.Guid == e.Buildable.Asset.GUID);
 
@@ -185,6 +200,8 @@ public class StrategyMapManager :
 
     public void HandleEvent(BarricadeDestroyed e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         bool isMapTableBuildable = _configuration.MapTables
             .Any(m => m.BuildableAsset.Guid == e.Buildable.Asset.GUID);
 
@@ -196,6 +213,8 @@ public class StrategyMapManager :
 
     public void HandleEvent(FlagsSetUp e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         foreach (StrategyMap map in _strategyMaps)
         {
             RepopulateFlagTacks(map, e.FlagService);
@@ -204,6 +223,8 @@ public class StrategyMapManager :
 
     public void HandleEvent(FlagCaptured e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         foreach (StrategyMap map in _strategyMaps)
         {
             map.RemoveMapTacks((_, owner) => owner == e.Flag);
@@ -216,6 +237,8 @@ public class StrategyMapManager :
 
     void IEventListener<FlagDiscovered>.HandleEvent(FlagDiscovered e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         foreach (StrategyMap map in StrategyMapsOfTeam(e.Team))
         {
             map.AddMapTack(CreateFlagTack(e.Flag, map), e.Flag);
@@ -224,6 +247,8 @@ public class StrategyMapManager :
 
     public void HandleEvent(FlagNeutralized e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         foreach (StrategyMap map in _strategyMaps)
         {
             map.RemoveMapTacks((_, owner) => owner == e.Flag);
@@ -236,6 +261,8 @@ public class StrategyMapManager :
 
     private void RepopulateFlagTacks(StrategyMap map, IFlagRotationService flagService)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         map.RemoveMapTacks(m => m is FlagMapTack or DeployableMapTack { Deployable: Zone { Type: ZoneType.MainBase } });
 
         foreach (FlagObjective flag in flagService.ActiveFlags)
@@ -249,6 +276,8 @@ public class StrategyMapManager :
 
     private void RepopulateMainBaseFobTacks(StrategyMap map, ITeamManager<Team> teamManager, ZoneStore globalZoneStore)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         map.RemoveMapTacks((_, owner) => owner is Team);
 
         foreach (Team team in teamManager.AllTeams)
@@ -278,12 +307,22 @@ public class StrategyMapManager :
             return new FlagMapTack(this, map, flag.Owner.Faction.MapTackFlag, flag);
     }
 
+    public void Dispose()
+    {
+        for (int i = _strategyMaps.Count - 1; i >= 0; --i)
+        {
+            _strategyMaps[i].Dispose();
+        }
+    }
+
     #region UI Stuff
 
     private int _playersRan;
 
     private void OnUpdated()
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         float time = Time.realtimeSinceStartup;
 
         // run 1/groupPerFrame th of the players per frame
@@ -393,6 +432,8 @@ public class StrategyMapManager :
 
     void IEventListener<PlayerExitedZone>.HandleEvent(PlayerExitedZone e, IServiceProvider serviceProvider)
     {
+        using IDisposable? profiler = ProfilerUtil.Profile();
+
         if (_zoneStore == null || e.Zone.Type != ZoneType.WarRoom || _zoneStore.IsInWarRoom(e.Player))
         {
             return;
